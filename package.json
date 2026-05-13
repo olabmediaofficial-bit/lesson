@@ -1,0 +1,14 @@
+{
+  "name": "guitar-lesson-room",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Guitar lesson room manager with student share links.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
