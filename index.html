@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guitar Lesson Room</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <section class="login-screen" id="adminLogin" hidden>
+      <form class="login-card" id="adminLoginForm">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">G</div>
+          <div>
+            <strong>Lesson Room</strong>
+            <span>admin</span>
+          </div>
+        </div>
+        <h1>관리자 로그인</h1>
+        <label>
+          비밀번호
+          <input id="adminPassword" type="password" autocomplete="current-password" />
+        </label>
+        <button class="primary-button" type="submit">들어가기</button>
+        <p id="loginMessage" class="login-message"></p>
+      </form>
+    </section>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">G</div>
+          <div>
+            <strong>Lesson Room</strong>
+            <span>guitar studio</span>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-item active" data-view="library" type="button">
+            <span aria-hidden="true">▦</span>
+            블럭 보관소
+          </button>
+          <button class="nav-item" data-view="rooms" type="button">
+            <span aria-hidden="true">◎</span>
+            레슨룸
+          </button>
+          <button class="nav-item" data-view="share" type="button">
+            <span aria-hidden="true">↗</span>
+            공유 화면
+          </button>
+        </nav>
+
+        <div class="sidebar-note">
+          <span>오늘 수업 후</span>
+          이론/실습 블럭을 골라 학생의 수업 날짜에 넣으면 됩니다.
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Private lesson dashboard</p>
+            <h1 id="viewTitle">블럭 보관소</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" id="resetDemo" type="button" title="샘플 데이터 복원">↺</button>
+            <button class="primary-button" id="openQuickAdd" type="button">+ 블럭 추가</button>
+          </div>
+        </header>
+
+        <section class="view active" id="libraryView" aria-label="블럭 보관소">
+          <div class="control-row">
+            <label class="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input id="librarySearch" type="search" placeholder="이론, 곡명, 태그 검색" />
+            </label>
+            <div class="segmented small-segmented" id="blockKindTabs">
+              <button class="active" data-kind-filter="all" type="button">전체</button>
+              <button data-kind-filter="theory" type="button">이론</button>
+              <button data-kind-filter="practice" type="button">실습</button>
+            </div>
+            <select id="tagFilter" aria-label="태그 필터">
+              <option value="all">전체 태그</option>
+            </select>
+            <input id="quickLessonDate" type="date" aria-label="배정 날짜" />
+            <button class="secondary-button" id="assignSelected" type="button">선택 블럭 넣기</button>
+          </div>
+
+          <div class="library-layout">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>내 블럭</h2>
+                  <p>이론 블럭과 실습 블럭을 나눠 관리합니다.</p>
+                </div>
+                <span class="count-pill" id="materialCount">0</span>
+              </div>
+              <div class="material-grid" id="materialGrid"></div>
+            </section>
+
+            <section class="panel compact-panel">
+              <div class="panel-head">
+                <div>
+                  <h2>빠른 배정</h2>
+                  <p>선택한 블럭을 넣을 학생방을 고르세요.</p>
+                </div>
+              </div>
+              <div id="quickRoomList" class="room-choice-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="roomsView" aria-label="레슨룸">
+          <div class="room-toolbar">
+            <div class="segmented" id="roomTabs"></div>
+            <button class="secondary-button" id="addStudent" type="button">+ 학생 추가</button>
+          </div>
+
+          <div class="room-layout">
+            <section class="panel room-main">
+              <div class="student-header">
+                <div>
+                  <p class="eyebrow" id="activeStudentLevel">Student</p>
+                  <h2 id="activeStudentName">학생</h2>
+                </div>
+                <div class="student-actions">
+                  <button class="secondary-button danger" id="deleteStudent" type="button">학생 삭제</button>
+                  <button class="primary-button" id="copyShareLink" type="button">공유 링크 복사</button>
+                </div>
+              </div>
+
+              <div class="lesson-composer">
+                <input id="lessonDate" type="date" aria-label="수업 날짜" />
+                <textarea id="lessonMemo" rows="3" placeholder="오늘 수업 메모 또는 다음 과제"></textarea>
+                <div class="composer-actions">
+                  <select id="lessonMaterialPicker" aria-label="레슨 블럭 선택"></select>
+                  <button class="secondary-button" id="attachPickedMaterial" type="button">블럭 붙이기</button>
+                  <button class="primary-button" id="saveLesson" type="button">날짜에 저장</button>
+                </div>
+                <div class="pending-materials" id="pendingMaterialList"></div>
+              </div>
+
+              <div class="lesson-list" id="lessonList"></div>
+            </section>
+
+            <section class="panel compact-panel">
+              <div class="panel-head">
+                <div>
+                  <h2>방에 들어간 블럭</h2>
+                  <p>학생에게 누적 공개된 블럭입니다.</p>
+                </div>
+              </div>
+              <div id="roomMaterialList" class="mini-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="shareView" aria-label="공유 화면">
+          <div class="share-shell">
+            <div class="share-preview">
+              <div class="share-hero">
+                <div>
+                  <p class="eyebrow">Shared lesson room</p>
+                  <h2 id="shareStudentName">학생 레슨룸</h2>
+                </div>
+                <div class="share-actions">
+                  <select id="shareStudentPicker" aria-label="공유 학생 선택"></select>
+                  <button class="primary-button" id="copyPreviewShareLink" type="button">레슨생에게 공유하기</button>
+                </div>
+                <div class="metronome" id="sharedMetronome" aria-label="메트로놈">
+                  <div class="metronome-display">
+                    <div class="beat-dots" id="beatDots" aria-hidden="true"></div>
+                    <strong id="beatLabel">준비</strong>
+                  </div>
+                  <div class="metro-row">
+                    <input id="tempoInput" type="text" inputmode="numeric" pattern="[0-9]*" value="90" aria-label="템포 숫자 입력" />
+                    <span class="tempo-unit">BPM</span>
+                  </div>
+                  <input id="tempoSlider" type="range" min="40" max="220" value="90" aria-label="템포" />
+                  <div class="metro-row">
+                    <div class="segmented meter-tabs" id="meterTabs">
+                      <button class="active" data-meter="4/4" type="button">4/4</button>
+                      <button data-meter="6/8" type="button">6/8</button>
+                    </div>
+                    <button class="primary-button" id="metronomeToggle" type="button">재생</button>
+                  </div>
+                </div>
+              </div>
+              <div id="shareContent" class="share-content"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="materialDialog">
+      <form method="dialog" class="dialog-card" id="materialForm">
+        <div class="dialog-head">
+          <h2 id="blockDialogTitle">블럭 추가</h2>
+          <button class="icon-button" value="cancel" type="submit" title="닫기">×</button>
+        </div>
+        <input id="editingBlockId" type="hidden" />
+        <label>
+          블럭 제목
+          <input id="newTitle" type="text" placeholder="예: 코드 만들기 이론" />
+        </label>
+        <label>
+          블럭 종류
+          <select id="newType">
+            <option value="theory">이론</option>
+            <option value="practice">실습</option>
+          </select>
+        </label>
+        <div class="practice-fields" id="practiceFields">
+          <label>
+            템포
+            <input id="practiceTempo" type="text" inputmode="numeric" placeholder="예: 90" />
+          </label>
+          <label>
+            키
+            <select id="practiceKey">
+              <option value="">선택</option>
+              <option>C</option>
+              <option>Db</option>
+              <option>D</option>
+              <option>Eb</option>
+              <option>E</option>
+              <option>F</option>
+              <option>Gb</option>
+              <option>G</option>
+              <option>Ab</option>
+              <option>A</option>
+              <option>Bb</option>
+              <option>B</option>
+            </select>
+          </label>
+          <label>
+            비트
+            <select id="practiceBeat">
+              <option value="">선택</option>
+              <option value="8">8</option>
+              <option value="16">16</option>
+              <option value="other">그 외</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          설명
+          <textarea id="newSummary" rows="3" placeholder="학생에게 보일 핵심 설명이나 연습 포인트"></textarea>
+        </label>
+        <label>
+          태그
+          <input id="newTags" type="text" placeholder="쉼표로 구분: 코드, 리듬, 초급" />
+        </label>
+        <label>
+          자료 링크
+          <textarea id="newResources" rows="3" placeholder="한 줄에 하나씩 입력: PDF, 영상 링크, 이미지 URL, 파일명"></textarea>
+        </label>
+        <label>
+          음원 링크
+          <input id="newAudioLink" type="url" placeholder="유튜브 링크 또는 음원 링크" />
+        </label>
+        <label>
+          파일 첨부
+          <input id="newFiles" type="file" accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf" multiple />
+        </label>
+        <menu>
+          <button class="secondary-button" value="cancel" type="submit">취소</button>
+          <button class="primary-button" id="saveMaterial" value="default" type="submit">저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="studentDialog">
+      <form method="dialog" class="dialog-card" id="studentForm">
+        <div class="dialog-head">
+          <h2>학생 추가</h2>
+          <button class="icon-button" value="cancel" type="submit" title="닫기">×</button>
+        </div>
+        <label>
+          이름
+          <input id="newStudentName" type="text" required placeholder="예: 민준" />
+        </label>
+        <label>
+          레벨
+          <input id="newStudentLevel" type="text" placeholder="예: 초급, 핑거스타일" />
+        </label>
+        <menu>
+          <button class="secondary-button" value="cancel" type="submit">취소</button>
+          <button class="primary-button" id="saveStudent" value="default" type="submit">저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
