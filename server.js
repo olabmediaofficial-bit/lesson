@@ -12,7 +12,7 @@ const port = Number(process.env.PORT || 5173);
 const host = "0.0.0.0";
 const maxBodyBytes = 150 * 1024 * 1024;
 const adminPassword = process.env.ADMIN_PASSWORD || "lesson-admin";
-const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
+const supabaseUrl = normalizeSupabaseUrl(process.env.SUPABASE_URL || "");
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabaseStateTable = process.env.SUPABASE_STATE_TABLE || "lesson_app_state";
 const supabaseStateId = process.env.SUPABASE_STATE_ID || "main";
@@ -80,6 +80,21 @@ function readJsonBody(request, maxBytes = maxBodyBytes) {
 
 function hasSupabaseStorage() {
   return Boolean(supabaseUrl && supabaseServiceRoleKey);
+}
+
+function normalizeSupabaseUrl(value) {
+  const trimmed = value.trim().replace(/\/$/, "");
+  if (!trimmed) return "";
+
+  try {
+    const url = new URL(trimmed);
+    url.pathname = url.pathname.replace(/\/rest\/v1\/?$/, "");
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return trimmed.replace(/\/rest\/v1\/?$/, "");
+  }
 }
 
 async function supabaseRequest(urlPath, options = {}) {
