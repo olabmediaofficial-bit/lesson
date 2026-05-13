@@ -63,7 +63,6 @@
             <h1 id="viewTitle">블럭 보관소</h1>
           </div>
           <div class="topbar-actions">
-            <button class="icon-button" id="resetDemo" type="button" title="샘플 데이터 복원">↺</button>
             <button class="primary-button" id="openQuickAdd" type="button">+ 블럭 추가</button>
           </div>
         </header>
@@ -243,6 +242,13 @@
               <option value="other">그 외</option>
             </select>
           </label>
+          <fieldset class="practice-category-fields">
+            <legend>분류</legend>
+            <label><input type="checkbox" name="practiceCategory" value="찬양" /> 찬양</label>
+            <label><input type="checkbox" name="practiceCategory" value="가요" /> 가요</label>
+            <label><input type="checkbox" name="practiceCategory" value="재즈" /> 재즈</label>
+            <label><input type="checkbox" name="practiceCategory" value="그외" /> 그외</label>
+          </fieldset>
           <div class="practice-note-fields">
             <div class="segmented practice-note-tabs" id="practiceNoteTabs">
               <button class="active" data-practice-note-tab="rightHand" type="button">오른손</button>

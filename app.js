@@ -153,6 +153,7 @@ const els = {
   practiceTempo: $("#practiceTempo"),
   practiceKey: $("#practiceKey"),
   practiceBeat: $("#practiceBeat"),
+  practiceCategories: document.querySelectorAll('input[name="practiceCategory"]'),
   practiceNoteTabs: $("#practiceNoteTabs"),
   practiceRightHand: $("#practiceRightHand"),
   practiceLeftHand: $("#practiceLeftHand"),
@@ -187,6 +188,7 @@ function normalizePractice(practice = {}) {
     tempo: practice.tempo || "",
     key: practice.key || "",
     beat: practice.beat || "",
+    categories: Array.isArray(practice.categories) ? practice.categories : [],
     rightHand: practice.rightHand || "",
     leftHand: practice.leftHand || "",
     technique: practice.technique || "",
@@ -581,6 +583,7 @@ function filteredBlocks() {
       practice.rightHand,
       practice.leftHand,
       practice.technique,
+      practice.categories.join(" "),
       normalizeResources(block).map(resourceLabel).join(" "),
       blockKindLabel(block.kind),
       ...block.tags,
@@ -757,7 +760,7 @@ function renderLessonList(student) {
           </button>
           <div class="lesson-body ${collapsed ? "collapsed" : ""}">
             ${lesson.memo ? `<p>${escapeHTML(lesson.memo)}</p>` : ""}
-            <div class="lesson-blocks">
+            <div class="lesson-blocks" data-lesson-drop-zone="${lesson.id}">
               ${blocks.map((block, index) => renderLessonBlock(block, { lessonId: lesson.id, index, total: blocks.length, controls: true })).join("")}
             </div>
           </div>
@@ -770,12 +773,13 @@ function renderLessonList(student) {
 function renderLessonBlock(block, options = {}) {
   const { lessonId = "", index = 0, total = 1, controls = false } = options;
   return `
-    <div class="lesson-block ${blockKindClass(block.kind)}">
+    <div class="lesson-block ${blockKindClass(block.kind)}" ${controls ? `draggable="true" data-draggable-block="${block.id}" data-lesson-id="${lessonId}"` : ""}>
       <div class="lesson-block-head">
         <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
         ${
           controls
             ? `<div class="block-controls">
+                <span class="drag-handle" title="드래그해서 순서 바꾸기">↕</span>
                 <button class="icon-button tiny-button" type="button" data-move-block="${block.id}" data-lesson-id="${lessonId}" data-direction="up" ${index === 0 ? "disabled" : ""} title="위로">↑</button>
                 <button class="icon-button tiny-button" type="button" data-move-block="${block.id}" data-lesson-id="${lessonId}" data-direction="down" ${index === total - 1 ? "disabled" : ""} title="아래로">↓</button>
                 <button class="icon-button tiny-button danger" type="button" data-remove-lesson-block="${block.id}" data-lesson-id="${lessonId}" title="수업에서 빼기">×</button>
@@ -797,6 +801,7 @@ function renderPracticeMeta(block) {
   if (block.kind !== "practice") return "";
   const practice = block.practice || {};
   const items = [
+    ...(practice.categories || []),
     practice.tempo ? `${escapeHTML(practice.tempo)} BPM` : "",
     practice.key ? `${escapeHTML(practice.key)} key` : "",
     practice.beat ? `${practice.beat === "other" ? "그 외" : escapeHTML(practice.beat)} 비트` : "",
@@ -978,6 +983,44 @@ document.addEventListener("change", (event) => {
   }
 });
 
+document.addEventListener("dragstart", (event) => {
+  const block = event.target.closest("[data-draggable-block]");
+  if (!block) return;
+  block.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData(
+    "text/plain",
+    JSON.stringify({
+      lessonId: block.dataset.lessonId,
+      blockId: block.dataset.draggableBlock,
+    }),
+  );
+});
+
+document.addEventListener("dragover", (event) => {
+  const zone = event.target.closest("[data-lesson-drop-zone]");
+  if (!zone) return;
+  event.preventDefault();
+  const dragging = document.querySelector(".lesson-block.dragging");
+  if (!dragging) return;
+  const afterElement = getDragAfterElement(zone, event.clientY);
+  if (afterElement) zone.insertBefore(dragging, afterElement);
+  else zone.appendChild(dragging);
+});
+
+document.addEventListener("drop", async (event) => {
+  const zone = event.target.closest("[data-lesson-drop-zone]");
+  if (!zone) return;
+  event.preventDefault();
+  const payload = safeJsonParse(event.dataTransfer.getData("text/plain"));
+  if (!payload || payload.lessonId !== zone.dataset.lessonDropZone) return;
+  await reorderLessonBlocksFromDom(payload.lessonId, zone);
+});
+
+document.addEventListener("dragend", () => {
+  document.querySelectorAll(".lesson-block.dragging").forEach((node) => node.classList.remove("dragging"));
+});
+
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
 els.shareStudentPicker.addEventListener("change", () => {
@@ -1052,6 +1095,9 @@ function openBlockDialog(blockId = "") {
   els.practiceTempo.value = practice.tempo || "";
   els.practiceKey.value = practice.key || "";
   els.practiceBeat.value = practice.beat || "";
+  els.practiceCategories.forEach((checkbox) => {
+    checkbox.checked = practice.categories.includes(checkbox.value);
+  });
   els.practiceRightHand.value = practice.rightHand || "";
   els.practiceLeftHand.value = practice.leftHand || "";
   els.practiceTechnique.value = practice.technique || "";
@@ -1112,6 +1158,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
         tempo: els.practiceTempo.value.trim(),
         key: els.practiceKey.value,
         beat: els.practiceBeat.value,
+        categories: [...els.practiceCategories].filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value),
         rightHand: els.practiceRightHand.value.trim(),
         leftHand: els.practiceLeftHand.value.trim(),
         technique: els.practiceTechnique.value.trim(),
@@ -1177,6 +1224,39 @@ async function moveLessonBlock(lessonId, blockId, direction) {
   lesson.blockIds = copy;
   await saveState();
   render();
+  showToast("블럭 순서를 바꿨습니다.");
+}
+
+function getDragAfterElement(container, y) {
+  const blocks = [...container.querySelectorAll("[data-draggable-block]:not(.dragging)")];
+  return blocks.reduce(
+    (closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, element: child };
+      return closest;
+    },
+    { offset: Number.NEGATIVE_INFINITY, element: null },
+  ).element;
+}
+
+function safeJsonParse(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+async function reorderLessonBlocksFromDom(lessonId, zone) {
+  const lesson = findLessonById(lessonId);
+  if (!lesson) return;
+  const nextIds = [...zone.querySelectorAll("[data-draggable-block]")].map((node) => node.dataset.draggableBlock);
+  if (nextIds.length !== lesson.blockIds.length) return;
+  lesson.blockIds = nextIds;
+  await saveState();
+  render();
+  showToast("블럭 순서를 바꿨습니다.");
 }
 
 async function removeBlockFromLesson(lessonId, blockId) {
@@ -1286,17 +1366,6 @@ async function copyStudentShareLink(student) {
   }
 }
 
-$("#resetDemo").addEventListener("click", async () => {
-  state = structuredClone(starterData);
-  activeStudentId = state.students[0].id;
-  activeShareStudentId = activeStudentId;
-  selectedBlockIds.clear();
-  pendingBlockIds.clear();
-  await saveState();
-  render();
-  showToast("샘플 데이터를 복원했습니다.");
-});
-
 async function init() {
   await loadServerInfo();
   const roomFromUrl = new URLSearchParams(location.search).get("room");
@@ -1305,10 +1374,17 @@ async function init() {
     publicShareMode = true;
     document.body.classList.add("public-share");
     showAppShell();
-    state = await loadPublicRoomState(roomFromUrl);
-    activeStudentId = roomFromUrl;
-    activeShareStudentId = roomFromUrl;
-    switchView("share");
+    try {
+      state = await loadPublicRoomState(roomFromUrl);
+      activeStudentId = roomFromUrl;
+      activeShareStudentId = roomFromUrl;
+      switchView("share");
+    } catch (error) {
+      console.error(error);
+      switchView("share");
+      els.shareStudentName.textContent = "공유 레슨룸";
+      els.shareContent.innerHTML = `<div class="empty">공유 링크를 찾을 수 없습니다.</div>`;
+    }
     return;
   }
 
@@ -1330,6 +1406,15 @@ async function init() {
 
 init().catch((error) => {
   console.error(error);
+  if (new URLSearchParams(location.search).get("room")) {
+    publicShareMode = true;
+    document.body.classList.add("public-share");
+    showAppShell();
+    switchView("share");
+    els.shareStudentName.textContent = "공유 레슨룸";
+    els.shareContent.innerHTML = `<div class="empty">공유 링크를 여는 중 문제가 생겼습니다.</div>`;
+    return;
+  }
   if (String(error.message || "").includes("Unauthorized")) {
     sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     showAdminLogin("다시 로그인해주세요.");

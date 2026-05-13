@@ -905,6 +905,15 @@ textarea {
   background: #fbfdfb;
 }
 
+.lesson-block[draggable="true"] {
+  cursor: grab;
+}
+
+.lesson-block.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
 .lesson-block.practice {
   border-left-color: var(--rose);
   background: #fffafb;
@@ -934,6 +943,19 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.drag-handle {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #fff;
+  font-weight: 900;
+  cursor: grab;
 }
 
 .tiny-button {
@@ -1053,6 +1075,37 @@ dialog::backdrop {
   display: grid;
   grid-column: 1 / -1;
   gap: 10px;
+}
+
+.practice-category-fields {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(45, 106, 79, 0.16);
+  border-radius: 8px;
+}
+
+.practice-category-fields legend {
+  padding: 0 6px;
+  color: #374151;
+  font-weight: 800;
+}
+
+.practice-category-fields label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+  font-weight: 800;
+}
+
+.practice-category-fields input {
+  width: 16px;
+  min-height: 16px;
+  accent-color: var(--accent);
 }
 
 .practice-note-tabs {
