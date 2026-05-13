@@ -16,13 +16,19 @@ npm start
 2. Render에서 `New` → `Blueprint`를 선택합니다.
 3. 이 저장소를 연결하면 `render.yaml` 설정으로 웹 서비스가 만들어집니다.
 4. 환경변수 `ADMIN_PASSWORD`에 관리자 비밀번호를 설정합니다.
-5. 배포 후 생긴 Render 주소로 접속합니다.
+5. Supabase에서 무료 프로젝트를 만들고 `SUPABASE_SETUP.sql` 내용을 SQL Editor에서 실행합니다.
+6. Render 환경변수에 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 추가합니다.
+7. 배포 후 생긴 Render 주소로 접속합니다.
 
 학생 공유 버튼은 배포 주소를 자동으로 사용합니다.
 
 ## 저장 데이터
 
-Render 설정은 `/var/data/state.json`에 데이터를 저장합니다. `render.yaml`에 디스크 설정이 들어 있으므로 재배포 후에도 데이터가 유지됩니다.
+Supabase 환경변수가 있으면 학생, 블럭, 자료 상태가 Supabase의 `lesson_app_state` 테이블에 저장됩니다. Render 무료 서버가 잠들거나 재배포되어도 데이터는 Supabase에 남습니다.
+
+Supabase 환경변수가 없으면 로컬 개발용으로 `data/state.json`에 저장됩니다.
+
+`SUPABASE_SERVICE_ROLE_KEY`는 관리자 서버에서만 쓰는 비밀 키입니다. 브라우저 코드나 공개 문서에 직접 넣지 말고 Render 환경변수에만 저장하세요.
 
 ## 주의
 

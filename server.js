@@ -12,6 +12,10 @@ const port = Number(process.env.PORT || 5173);
 const host = "0.0.0.0";
 const maxBodyBytes = 150 * 1024 * 1024;
 const adminPassword = process.env.ADMIN_PASSWORD || "lesson-admin";
+const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const supabaseStateTable = process.env.SUPABASE_STATE_TABLE || "lesson_app_state";
+const supabaseStateId = process.env.SUPABASE_STATE_ID || "main";
 const sessions = new Set();
 
 const mimeTypes = {
@@ -74,12 +78,75 @@ function readJsonBody(request, maxBytes = maxBodyBytes) {
   });
 }
 
-function readState() {
+function hasSupabaseStorage() {
+  return Boolean(supabaseUrl && supabaseServiceRoleKey);
+}
+
+async function supabaseRequest(urlPath, options = {}) {
+  const response = await fetch(`${supabaseUrl}${urlPath}`, {
+    ...options,
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Supabase request failed: ${response.status} ${detail}`);
+  }
+
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function readSupabaseState() {
+  const rows = await supabaseRequest(
+    `/rest/v1/${encodeURIComponent(supabaseStateTable)}?id=eq.${encodeURIComponent(supabaseStateId)}&select=state&limit=1`,
+    { method: "GET" },
+  );
+  return rows?.[0]?.state || null;
+}
+
+async function writeSupabaseState(state) {
+  await supabaseRequest(`/rest/v1/${encodeURIComponent(supabaseStateTable)}?on_conflict=id`, {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates" },
+    body: JSON.stringify({
+      id: supabaseStateId,
+      state,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+}
+
+function readFileState() {
   try {
     return JSON.parse(fs.readFileSync(dataPath, "utf8"));
   } catch {
     return null;
   }
+}
+
+function writeFileState(state) {
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(dataPath, JSON.stringify(state));
+}
+
+async function readState() {
+  if (hasSupabaseStorage()) return readSupabaseState();
+  return readFileState();
+}
+
+async function writeState(state) {
+  if (hasSupabaseStorage()) {
+    await writeSupabaseState(state);
+    return;
+  }
+  writeFileState(state);
 }
 
 function isAuthorized(request) {
@@ -118,13 +185,18 @@ function serveFile(request, response) {
   });
 }
 
-function handleApiState(request, response) {
+async function handleApiState(request, response) {
   if (!requireAuth(request, response)) return;
 
   if (request.method === "GET") {
-    const state = readState();
-    if (!state) send(response, 204, "");
-    else send(response, 200, JSON.stringify(state), "application/json; charset=utf-8");
+    try {
+      const state = await readState();
+      if (!state) send(response, 204, "");
+      else send(response, 200, JSON.stringify(state), "application/json; charset=utf-8");
+    } catch (error) {
+      console.error(error);
+      send(response, 500, JSON.stringify({ error: "State storage unavailable" }), "application/json; charset=utf-8");
+    }
     return;
   }
 
@@ -134,13 +206,13 @@ function handleApiState(request, response) {
   }
 
   readJsonBody(request)
-    .then((body) => {
-      fs.mkdirSync(dataDir, { recursive: true });
-      fs.writeFileSync(dataPath, JSON.stringify(body));
+    .then(async (body) => {
+      await writeState(body);
       send(response, 200, JSON.stringify({ ok: true }), "application/json; charset=utf-8");
     })
-    .catch(() => {
-      send(response, 400, "Invalid JSON");
+    .catch((error) => {
+      console.error(error);
+      send(response, 400, "Unable to save state");
     });
 }
 
@@ -165,7 +237,7 @@ function handleLogin(request, response) {
     });
 }
 
-function handlePublicRoom(request, response) {
+async function handlePublicRoom(request, response) {
   if (request.method !== "GET") {
     send(response, 405, "Method not allowed");
     return;
@@ -173,7 +245,14 @@ function handlePublicRoom(request, response) {
 
   const url = new URL(request.url, `http://${request.headers.host}`);
   const roomId = url.searchParams.get("room");
-  const state = readState();
+  let state = null;
+  try {
+    state = await readState();
+  } catch (error) {
+    console.error(error);
+    send(response, 500, JSON.stringify({ error: "Room storage unavailable" }), "application/json; charset=utf-8");
+    return;
+  }
   const student = state?.students?.find((item) => item.id === roomId);
 
   if (!state || !student) {
