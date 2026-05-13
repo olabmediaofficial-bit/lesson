@@ -91,6 +91,7 @@ let activeKindFilter = "all";
 let selectedBlockIds = new Set();
 let pendingBlockIds = new Set();
 let collapsedLessonIds = new Set();
+let expandedLibraryBlockIds = new Set();
 let publicShareMode = false;
 let shareOrigin = "";
 let metronome = {
@@ -152,6 +153,10 @@ const els = {
   practiceTempo: $("#practiceTempo"),
   practiceKey: $("#practiceKey"),
   practiceBeat: $("#practiceBeat"),
+  practiceNoteTabs: $("#practiceNoteTabs"),
+  practiceRightHand: $("#practiceRightHand"),
+  practiceLeftHand: $("#practiceLeftHand"),
+  practiceTechnique: $("#practiceTechnique"),
   appShell: $(".app-shell"),
   adminLogin: $("#adminLogin"),
   adminLoginForm: $("#adminLoginForm"),
@@ -165,7 +170,7 @@ function migrateState(data) {
     ...block,
     resources: normalizeResources(block),
     audioLink: block.audioLink || "",
-    practice: block.practice || { tempo: "", key: "", beat: "" },
+    practice: normalizePractice(block.practice),
   }));
   data.students = data.students.map((student) => ({
     ...student,
@@ -175,6 +180,17 @@ function migrateState(data) {
     })),
   }));
   return data;
+}
+
+function normalizePractice(practice = {}) {
+  return {
+    tempo: practice.tempo || "",
+    key: practice.key || "",
+    beat: practice.beat || "",
+    rightHand: practice.rightHand || "",
+    leftHand: practice.leftHand || "",
+    technique: practice.technique || "",
+  };
 }
 
 function openDatabase() {
@@ -558,7 +574,17 @@ function filteredBlocks() {
   const query = els.librarySearch.value.trim().toLowerCase();
   const tag = els.tagFilter.value;
   return state.blocks.filter((block) => {
-    const haystack = [block.title, block.summary, normalizeResources(block).map(resourceLabel).join(" "), blockKindLabel(block.kind), ...block.tags]
+    const practice = normalizePractice(block.practice);
+    const haystack = [
+      block.title,
+      block.summary,
+      practice.rightHand,
+      practice.leftHand,
+      practice.technique,
+      normalizeResources(block).map(resourceLabel).join(" "),
+      blockKindLabel(block.kind),
+      ...block.tags,
+    ]
       .join(" ")
       .toLowerCase();
     const matchesQuery = !query || haystack.includes(query);
@@ -600,20 +626,28 @@ function renderLibrary() {
 }
 
 function renderBlockCard(block) {
+  const expanded = expandedLibraryBlockIds.has(block.id);
   return `
-    <article class="material-card block-card">
-      <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${block.title} 선택" />
-      <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
-      <div>
-        <h3>${escapeHTML(block.title)}</h3>
-        <p>${escapeHTML(block.summary)}</p>
-        <p class="material-meta">${normalizeResources(block).length}개 첨부</p>
+    <article class="material-card block-card ${expanded ? "expanded" : "collapsed"}">
+      <div class="block-card-head">
+        <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
+        <button class="block-title-button" type="button" data-toggle-library-block="${block.id}" aria-expanded="${expanded}">
+          <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
+          <span class="block-title-text">${escapeHTML(block.title)}</span>
+          <span class="material-meta">${normalizeResources(block).length}개 첨부</span>
+          <span class="collapse-indicator">${expanded ? "접기" : "펼치기"}</span>
+        </button>
       </div>
-      <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
-      ${renderResources(block, "compact")}
-      <div class="card-actions">
-        <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
-        <button class="secondary-button mini-button danger" type="button" data-delete-block="${block.id}">삭제</button>
+      <div class="block-card-body">
+        ${renderPracticeMeta(block)}
+        <p>${escapeHTML(block.summary)}</p>
+        ${renderPracticeDetails(block)}
+        <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
+        ${renderResources(block, "compact")}
+        <div class="card-actions">
+          <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
+          <button class="secondary-button mini-button danger" type="button" data-delete-block="${block.id}">삭제</button>
+        </div>
       </div>
     </article>
   `;
@@ -752,6 +786,7 @@ function renderLessonBlock(block, options = {}) {
       <strong>${escapeHTML(block.title)}</strong>
       ${renderPracticeMeta(block)}
       <p>${escapeHTML(block.summary)}</p>
+      ${renderPracticeDetails(block)}
       ${block.audioLink ? `<p class="audio-link">노래 듣기 : <a href="${escapeHTML(block.audioLink)}" target="_blank" rel="noreferrer">${escapeHTML(block.audioLink)}</a></p>` : ""}
       ${renderResources(block, "expanded")}
     </div>
@@ -768,6 +803,31 @@ function renderPracticeMeta(block) {
   ].filter(Boolean);
   if (!items.length) return "";
   return `<div class="practice-meta">${items.map((item) => `<span>${item}</span>`).join("")}</div>`;
+}
+
+function renderPracticeDetails(block) {
+  if (block.kind !== "practice") return "";
+  const practice = normalizePractice(block.practice);
+  const items = [
+    ["오른손", practice.rightHand],
+    ["왼손", practice.leftHand],
+    ["테크닉", practice.technique],
+  ].filter(([, value]) => value);
+  if (!items.length) return "";
+  return `
+    <div class="practice-detail-list">
+      ${items
+        .map(
+          ([label, value]) => `
+            <div class="practice-detail">
+              <strong>${label}</strong>
+              <p>${escapeHTML(value)}</p>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function renderShare() {
@@ -887,6 +947,14 @@ document.addEventListener("click", (event) => {
   const deleteBlock = event.target.closest("[data-delete-block]");
   if (deleteBlock) deleteBlockById(deleteBlock.dataset.deleteBlock);
 
+  const libraryBlockToggle = event.target.closest("[data-toggle-library-block]");
+  if (libraryBlockToggle) {
+    const id = libraryBlockToggle.dataset.toggleLibraryBlock;
+    if (expandedLibraryBlockIds.has(id)) expandedLibraryBlockIds.delete(id);
+    else expandedLibraryBlockIds.add(id);
+    renderLibrary();
+  }
+
   const moveBlock = event.target.closest("[data-move-block]");
   if (moveBlock) moveLessonBlock(moveBlock.dataset.lessonId, moveBlock.dataset.moveBlock, moveBlock.dataset.direction);
 
@@ -958,6 +1026,10 @@ els.adminLoginForm.addEventListener("submit", async (event) => {
   }
 });
 $("#newType").addEventListener("change", updatePracticeFieldsVisibility);
+els.practiceNoteTabs.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-practice-note-tab]");
+  if (tab) activatePracticeNoteTab(tab.dataset.practiceNoteTab);
+});
 
 $("#assignSelected").addEventListener("click", () => {
   const student = getActiveStudent();
@@ -968,7 +1040,7 @@ $("#openQuickAdd").addEventListener("click", () => openBlockDialog());
 
 function openBlockDialog(blockId = "") {
   const block = blockId ? getBlock(blockId) : null;
-  const practice = block?.practice || {};
+  const practice = normalizePractice(block?.practice);
   els.blockDialogTitle.textContent = block ? "블럭 편집" : "블럭 추가";
   els.editingBlockId.value = block?.id || "";
   $("#newTitle").value = block?.title || "";
@@ -980,13 +1052,26 @@ function openBlockDialog(blockId = "") {
   els.practiceTempo.value = practice.tempo || "";
   els.practiceKey.value = practice.key || "";
   els.practiceBeat.value = practice.beat || "";
+  els.practiceRightHand.value = practice.rightHand || "";
+  els.practiceLeftHand.value = practice.leftHand || "";
+  els.practiceTechnique.value = practice.technique || "";
   els.newFiles.value = "";
+  activatePracticeNoteTab("rightHand");
   updatePracticeFieldsVisibility();
   els.materialDialog.showModal();
 }
 
 function updatePracticeFieldsVisibility() {
   els.practiceFields.hidden = $("#newType").value !== "practice";
+}
+
+function activatePracticeNoteTab(activeTab) {
+  els.practiceNoteTabs.querySelectorAll("[data-practice-note-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.practiceNoteTab === activeTab);
+  });
+  document.querySelectorAll("[data-practice-note-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.practiceNotePanel === activeTab);
+  });
 }
 
 function readFileAsResource(file) {
@@ -1027,6 +1112,9 @@ $("#materialForm").addEventListener("submit", async (event) => {
         tempo: els.practiceTempo.value.trim(),
         key: els.practiceKey.value,
         beat: els.practiceBeat.value,
+        rightHand: els.practiceRightHand.value.trim(),
+        leftHand: els.practiceLeftHand.value.trim(),
+        technique: els.practiceTechnique.value.trim(),
       },
       resources: [...linkResources, ...keptFileResources, ...fileResources],
     };

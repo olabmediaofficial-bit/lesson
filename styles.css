@@ -405,17 +405,63 @@ textarea {
 
 .block-card {
   align-content: start;
-  min-height: 260px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .material-card input[type="checkbox"] {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  flex: 0 0 auto;
   width: 20px;
   height: 20px;
   min-height: 20px;
   accent-color: var(--accent);
+}
+
+.block-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+
+.block-title-button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.block-title-text {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapse-indicator {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.block-card-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 12px 14px;
+}
+
+.block-card.collapsed .block-card-body {
+  display: none;
 }
 
 .material-type {
@@ -504,6 +550,7 @@ textarea {
 .resource-list {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .resource-list.compact .score-preview {
@@ -512,6 +559,7 @@ textarea {
 }
 
 .score-preview {
+  min-width: 0;
   margin: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -535,6 +583,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
   padding: 8px 10px;
   border-top: 1px solid var(--line);
   color: var(--muted);
@@ -542,12 +591,15 @@ textarea {
 }
 
 .score-preview figcaption span {
+  min-width: 0;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  text-overflow: ellipsis;
 }
 
 .resource-button {
   display: inline-flex;
-  width: max-content;
+  width: fit-content;
   max-width: 100%;
   min-height: 36px;
   align-items: center;
@@ -560,6 +612,7 @@ textarea {
   font-weight: 800;
   text-decoration: none;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .resource-button.ghost {
@@ -859,6 +912,7 @@ textarea {
 
 .lesson-block p {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .audio-link {
@@ -995,6 +1049,44 @@ dialog::backdrop {
   background: #fbfaf7;
 }
 
+.practice-note-fields {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 10px;
+}
+
+.practice-note-tabs {
+  width: max-content;
+  max-width: 100%;
+}
+
+.practice-note-panel {
+  display: none;
+}
+
+.practice-note-panel.active {
+  display: grid;
+}
+
+.practice-detail-list {
+  display: grid;
+  gap: 8px;
+}
+
+.practice-detail {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(182, 91, 100, 0.18);
+  border-radius: 8px;
+  background: #fff7f8;
+}
+
+.practice-detail strong {
+  color: #8f3f49;
+  font-size: 13px;
+}
+
 .practice-fields[hidden] {
   display: none;
 }
@@ -1107,6 +1199,23 @@ menu {
   }
 
   .material-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .block-title-button {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .block-title-button .material-meta {
+    grid-column: 2 / 3;
+  }
+
+  .collapse-indicator {
+    grid-column: 3 / 4;
+    grid-row: 1 / 3;
+  }
+
+  .practice-fields {
     grid-template-columns: 1fr;
   }
 
