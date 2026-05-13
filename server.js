@@ -137,7 +137,18 @@ function writeFileState(state) {
 }
 
 async function readState() {
-  if (hasSupabaseStorage()) return readSupabaseState();
+  if (hasSupabaseStorage()) {
+    const supabaseState = await readSupabaseState();
+    if (supabaseState) return supabaseState;
+
+    const fileState = readFileState();
+    if (fileState) {
+      await writeSupabaseState(fileState);
+      return fileState;
+    }
+
+    return null;
+  }
   return readFileState();
 }
 
