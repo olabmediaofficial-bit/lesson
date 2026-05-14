@@ -152,6 +152,10 @@ const els = {
   toast: $("#toast"),
   materialDialog: $("#materialDialog"),
   studentDialog: $("#studentDialog"),
+  imageViewerDialog: $("#imageViewerDialog"),
+  imageViewerTitle: $("#imageViewerTitle"),
+  imageViewerImage: $("#imageViewerImage"),
+  closeImageViewer: $("#closeImageViewer"),
   blockDialogTitle: $("#blockDialogTitle"),
   editingBlockId: $("#editingBlockId"),
   newFiles: $("#newFiles"),
@@ -417,7 +421,9 @@ function renderResources(block, mode = "compact") {
           if (type === "image") {
             return `
               <figure class="score-preview">
-                <img src="${href}" alt="${label}" loading="lazy" />
+                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${label}" aria-label="${label} 크게 보기">
+                  <img src="${href}" alt="${label}" loading="lazy" />
+                </button>
                 <figcaption>
                   <span>${label}</span>
                   <a class="resource-button image-download" href="${href}" download="${label}">다운로드</a>
@@ -452,6 +458,18 @@ function showToast(message) {
   els.toast.classList.add("show");
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 2200);
+}
+
+function openImageViewer(src, title) {
+  els.imageViewerImage.src = src;
+  els.imageViewerImage.alt = title || "악보 이미지";
+  els.imageViewerTitle.textContent = title || "악보 보기";
+  els.imageViewerDialog.showModal();
+}
+
+function closeImageViewer() {
+  els.imageViewerDialog.close();
+  els.imageViewerImage.src = "";
 }
 
 function switchView(view) {
@@ -675,14 +693,12 @@ function renderBlockCard(block) {
         <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
         <button class="block-title-button" type="button" data-toggle-library-block="${block.id}" aria-expanded="${expanded}">
           <span class="block-title-text">${escapeHTML(block.title)}</span>
-          <span class="collapse-indicator">${expanded ? "접기" : "펼치기"}</span>
-          <span class="block-card-data">
-            <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
-            ${renderPracticeCategoryText(block)}
-            <span class="material-meta">${normalizeResources(block).length}개 첨부</span>
-          </span>
         </button>
-        <div class="block-card-actions">
+        <div class="block-card-meta-row">
+          <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
+          ${renderPracticeCategoryText(block)}
+          <span class="material-meta">${normalizeResources(block).length}개 첨부</span>
+          <button class="collapse-indicator" type="button" data-toggle-library-block="${block.id}" aria-expanded="${expanded}">${expanded ? "접기" : "펼치기"}</button>
           <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
           <button class="secondary-button mini-button danger" type="button" data-delete-block="${block.id}">삭제</button>
         </div>
@@ -1045,6 +1061,9 @@ document.addEventListener("click", (event) => {
   const deleteBlock = event.target.closest("[data-delete-block]");
   if (deleteBlock) deleteBlockById(deleteBlock.dataset.deleteBlock);
 
+  const imageButton = event.target.closest("[data-view-image]");
+  if (imageButton) openImageViewer(imageButton.dataset.viewImage, imageButton.dataset.viewImageTitle);
+
   const collapseBlockGroup = event.target.closest("[data-collapse-block-group]");
   if (collapseBlockGroup) {
     collapseBlockGroup.dataset.collapseBlockGroup.split(",").filter(Boolean).forEach((id) => expandedLibraryBlockIds.delete(id));
@@ -1170,6 +1189,10 @@ els.views.library.addEventListener("drop", async (event) => {
 
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
+els.closeImageViewer.addEventListener("click", closeImageViewer);
+els.imageViewerDialog.addEventListener("click", (event) => {
+  if (event.target === els.imageViewerDialog) closeImageViewer();
+});
 els.saveResourceLibrary.addEventListener("click", async () => {
   state.resourceLibraryUrl = els.resourceLibraryUrl.value.trim();
   await saveState();

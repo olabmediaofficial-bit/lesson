@@ -463,9 +463,8 @@ textarea {
 }
 
 .block-card-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: grid;
+  gap: 8px;
   padding: 12px;
 }
 
@@ -473,19 +472,18 @@ textarea {
   min-width: 0;
 }
 
-.block-card-actions {
+.block-card-meta-row {
   display: flex;
-  flex: 0 0 auto;
+  min-width: 0;
+  align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .block-title-button {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: block;
   width: 100%;
-  align-items: center;
-  gap: 6px 12px;
-  min-height: 42px;
+  min-height: 26px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -494,8 +492,7 @@ textarea {
 }
 
 .block-title-text {
-  grid-column: 1 / 2;
-  min-width: 0;
+  display: block;
   overflow: hidden;
   font-size: 16px;
   font-weight: 900;
@@ -504,24 +501,17 @@ textarea {
 }
 
 .collapse-indicator {
-  grid-column: 2 / 3;
-  grid-row: 1 / 3;
-  color: var(--accent);
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(45, 106, 79, 0.22);
+  border-radius: 8px;
+  color: var(--accent-strong);
+  background: #eef7f1;
   font-size: 12px;
   font-weight: 900;
 }
 
-.block-card-data {
-  display: flex;
-  grid-column: 1 / 2;
-  grid-row: 2 / 3;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-  overflow: hidden;
-}
-
-.block-card-data .material-meta {
+.block-card-meta-row .material-meta {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -652,12 +642,24 @@ textarea {
   background: #fff;
 }
 
-.score-preview img {
+.score-image-button {
   display: block;
   width: 100%;
-  max-height: 78vh;
+  padding: 0;
+  border: 0;
+  background: #fff;
+}
+
+.score-preview img,
+.image-viewer img {
+  display: block;
+  width: 100%;
   object-fit: contain;
   background: #fff;
+}
+
+.score-preview img {
+  max-height: 78vh;
 }
 
 .resource-list.compact .score-preview img {
@@ -1175,6 +1177,37 @@ dialog::backdrop {
   background: rgba(0, 0, 0, 0.38);
 }
 
+.image-viewer-dialog {
+  width: min(1200px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  background: #111;
+}
+
+.image-viewer-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.image-viewer {
+  display: grid;
+  max-height: calc(100vh - 24px);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.image-viewer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: #fff;
+  background: #111;
+}
+
+.image-viewer img {
+  max-height: calc(100vh - 76px);
+  background: #fff;
+}
+
 .dialog-card {
   display: grid;
   gap: 14px;
@@ -1398,17 +1431,12 @@ menu {
     grid-template-columns: 1fr;
   }
 
-  .block-title-button {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
   .block-card-head,
   .block-section-head {
     align-items: stretch;
-    flex-direction: column;
   }
 
-  .block-card-actions,
+  .block-card-meta-row,
   .block-section-actions {
     width: 100%;
   }
@@ -1420,14 +1448,6 @@ menu {
   .lesson-toggle em {
     grid-column: 1 / -1;
     grid-row: 2;
-  }
-
-  .block-card-data {
-    grid-column: 1 / 2;
-  }
-
-  .collapse-indicator {
-    grid-row: 1 / 3;
   }
 
   .practice-fields {
