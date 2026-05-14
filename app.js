@@ -92,6 +92,7 @@ let selectedBlockIds = new Set();
 let pendingBlockIds = new Set();
 let collapsedLessonIds = new Set();
 let expandedLibraryBlockIds = new Set();
+let editingLessonId = "";
 let publicShareMode = false;
 let shareOrigin = "";
 let metronome = {
@@ -610,22 +611,46 @@ function renderLibrary() {
     return;
   }
 
-  const grouped = ["theory", "practice"]
+  const grouped = activeKindFilter === "practice" ? renderPracticeCategoryGroups(blocks) : renderKindGroups(blocks);
+
+  els.materialGrid.innerHTML = grouped;
+}
+
+function renderKindGroups(blocks) {
+  return ["theory", "practice"]
     .map((kind) => {
       const group = blocks.filter((block) => block.kind === kind);
       if (!group.length) return "";
-      return `
-        <section class="block-section">
-          <h3>${blockKindLabel(kind)} 블럭 모음</h3>
-          <div class="material-grid inner-grid">
-            ${group.map(renderBlockCard).join("")}
-          </div>
-        </section>
-      `;
+      return renderBlockGroup(`${blockKindLabel(kind)} 블럭 모음`, group);
     })
     .join("");
+}
 
-  els.materialGrid.innerHTML = grouped;
+function renderPracticeCategoryGroups(blocks) {
+  const practiceBlocks = blocks.filter((block) => block.kind === "practice");
+  const categories = ["가요", "찬양", "재즈", "그외"];
+  return categories
+    .map((category) => {
+      const group = practiceBlocks.filter((block) => {
+        const blockCategories = normalizePractice(block.practice).categories;
+        if (category === "그외") return !blockCategories.length || blockCategories.includes(category);
+        return blockCategories.includes(category);
+      });
+      if (!group.length) return "";
+      return renderBlockGroup(`${category} 블럭 모음`, group);
+    })
+    .join("");
+}
+
+function renderBlockGroup(title, blocks) {
+  return `
+    <section class="block-section">
+      <h3>${escapeHTML(title)}</h3>
+      <div class="material-grid inner-grid">
+        ${blocks.map(renderBlockCard).join("")}
+      </div>
+    </section>
+  `;
 }
 
 function renderBlockCard(block) {
@@ -635,10 +660,13 @@ function renderBlockCard(block) {
       <div class="block-card-head">
         <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
         <button class="block-title-button" type="button" data-toggle-library-block="${block.id}" aria-expanded="${expanded}">
-          <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
           <span class="block-title-text">${escapeHTML(block.title)}</span>
-          <span class="material-meta">${normalizeResources(block).length}개 첨부</span>
           <span class="collapse-indicator">${expanded ? "접기" : "펼치기"}</span>
+          <span class="block-card-data">
+            <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
+            ${renderPracticeCategoryText(block)}
+            <span class="material-meta">${normalizeResources(block).length}개 첨부</span>
+          </span>
         </button>
       </div>
       <div class="block-card-body">
@@ -654,6 +682,13 @@ function renderBlockCard(block) {
       </div>
     </article>
   `;
+}
+
+function renderPracticeCategoryText(block) {
+  if (block.kind !== "practice") return "";
+  const categories = normalizePractice(block.practice).categories;
+  if (!categories.length) return "";
+  return `<span class="material-meta">${categories.map(escapeHTML).join(" · ")}</span>`;
 }
 
 function renderRoomChoices() {
@@ -751,6 +786,7 @@ function renderLessonList(student) {
     .map((lesson) => {
       const blocks = lesson.blockIds.map(getBlock).filter(Boolean);
       const collapsed = collapsedLessonIds.has(lesson.id);
+      const editing = editingLessonId === lesson.id;
       return `
         <article class="lesson-card" data-lesson-id="${lesson.id}">
           <button class="lesson-toggle" type="button" data-toggle-lesson="${lesson.id}" aria-expanded="${!collapsed}">
@@ -759,6 +795,7 @@ function renderLessonList(student) {
             <small>${blocks.length}개 블럭</small>
           </button>
           <div class="lesson-body ${collapsed ? "collapsed" : ""}">
+            ${editing ? renderLessonEditForm(lesson) : renderLessonViewTools(lesson)}
             ${lesson.memo ? `<p>${escapeHTML(lesson.memo)}</p>` : ""}
             <div class="lesson-blocks" data-lesson-drop-zone="${lesson.id}">
               ${blocks.map((block, index) => renderLessonBlock(block, { lessonId: lesson.id, index, total: blocks.length, controls: true })).join("")}
@@ -768,6 +805,32 @@ function renderLessonList(student) {
       `;
     })
     .join("");
+}
+
+function renderLessonViewTools(lesson) {
+  return `
+    <div class="lesson-edit-actions">
+      <button class="secondary-button mini-button" type="button" data-edit-lesson="${lesson.id}">일지 수정</button>
+    </div>
+  `;
+}
+
+function renderLessonEditForm(lesson) {
+  const availableBlocks = state.blocks.filter((block) => !lesson.blockIds.includes(block.id));
+  return `
+    <div class="lesson-edit-form">
+      <input type="date" value="${escapeHTML(lesson.date)}" data-edit-lesson-date="${lesson.id}" aria-label="수업 날짜 수정" />
+      <textarea rows="3" data-edit-lesson-memo="${lesson.id}" placeholder="오늘 수업 메모 또는 다음 과제">${escapeHTML(lesson.memo || "")}</textarea>
+      <div class="composer-actions">
+        <select data-edit-lesson-block-picker="${lesson.id}" aria-label="추가할 블럭 선택" ${availableBlocks.length ? "" : "disabled"}>
+          ${availableBlocks.map((block) => `<option value="${block.id}">[${blockKindLabel(block.kind)}] ${escapeHTML(block.title)}</option>`).join("")}
+        </select>
+        <button class="secondary-button" type="button" data-add-edit-lesson-block="${lesson.id}" ${availableBlocks.length ? "" : "disabled"}>블럭 추가</button>
+        <button class="primary-button" type="button" data-save-edit-lesson="${lesson.id}">수정 저장</button>
+        <button class="secondary-button" type="button" data-cancel-edit-lesson="${lesson.id}">취소</button>
+      </div>
+    </div>
+  `;
 }
 
 function renderLessonBlock(block, options = {}) {
@@ -814,8 +877,8 @@ function renderPracticeDetails(block) {
   if (block.kind !== "practice") return "";
   const practice = normalizePractice(block.practice);
   const items = [
-    ["오른손", practice.rightHand],
-    ["왼손", practice.leftHand],
+    ["왼손(사운드)", practice.leftHand],
+    ["오른손(리듬)", practice.rightHand],
     ["테크닉", practice.technique],
   ].filter(([, value]) => value);
   if (!items.length) return "";
@@ -966,6 +1029,25 @@ document.addEventListener("click", (event) => {
   const removeLessonBlock = event.target.closest("[data-remove-lesson-block]");
   if (removeLessonBlock) removeBlockFromLesson(removeLessonBlock.dataset.lessonId, removeLessonBlock.dataset.removeLessonBlock);
 
+  const editLesson = event.target.closest("[data-edit-lesson]");
+  if (editLesson) {
+    editingLessonId = editLesson.dataset.editLesson;
+    collapsedLessonIds.delete(editingLessonId);
+    renderLessonList(getActiveStudent());
+  }
+
+  const cancelEditLesson = event.target.closest("[data-cancel-edit-lesson]");
+  if (cancelEditLesson) {
+    editingLessonId = "";
+    renderLessonList(getActiveStudent());
+  }
+
+  const addEditLessonBlock = event.target.closest("[data-add-edit-lesson-block]");
+  if (addEditLessonBlock) addBlockToEditingLesson(addEditLessonBlock.dataset.addEditLessonBlock);
+
+  const saveEditLesson = event.target.closest("[data-save-edit-lesson]");
+  if (saveEditLesson) saveEditingLesson(saveEditLesson.dataset.saveEditLesson);
+
   const lessonToggle = event.target.closest("[data-toggle-lesson]");
   if (lessonToggle) {
     const id = lessonToggle.dataset.toggleLesson;
@@ -1102,7 +1184,7 @@ function openBlockDialog(blockId = "") {
   els.practiceLeftHand.value = practice.leftHand || "";
   els.practiceTechnique.value = practice.technique || "";
   els.newFiles.value = "";
-  activatePracticeNoteTab("rightHand");
+  activatePracticeNoteTab("leftHand");
   updatePracticeFieldsVisibility();
   els.materialDialog.showModal();
 }
@@ -1257,6 +1339,43 @@ async function reorderLessonBlocksFromDom(lessonId, zone) {
   await saveState();
   render();
   showToast("블럭 순서를 바꿨습니다.");
+}
+
+async function addBlockToEditingLesson(lessonId) {
+  const lesson = findLessonById(lessonId);
+  const picker = document.querySelector(`[data-edit-lesson-block-picker="${lessonId}"]`);
+  const blockId = picker?.value;
+  if (!lesson || !blockId) return;
+  lesson.blockIds = [...new Set([...lesson.blockIds, blockId])];
+  await saveState();
+  renderLessonList(getActiveStudent());
+  showToast("일지에 블럭을 추가했습니다.");
+}
+
+async function saveEditingLesson(lessonId) {
+  const student = getActiveStudent();
+  const lesson = student?.lessons.find((item) => item.id === lessonId);
+  if (!lesson) return;
+
+  const dateInput = document.querySelector(`[data-edit-lesson-date="${lessonId}"]`);
+  const memoInput = document.querySelector(`[data-edit-lesson-memo="${lessonId}"]`);
+  const nextDate = dateInput?.value || lesson.date;
+  const nextMemo = memoInput?.value.trim() || "";
+  const sameDateLesson = student.lessons.find((item) => item.id !== lesson.id && item.date === nextDate);
+
+  if (sameDateLesson) {
+    sameDateLesson.memo = nextMemo || sameDateLesson.memo;
+    sameDateLesson.blockIds = [...new Set([...sameDateLesson.blockIds, ...lesson.blockIds])];
+    student.lessons = student.lessons.filter((item) => item.id !== lesson.id);
+  } else {
+    lesson.date = nextDate;
+    lesson.memo = nextMemo;
+  }
+
+  editingLessonId = "";
+  await saveState();
+  render();
+  showToast("수업 일지를 수정했습니다.");
 }
 
 async function removeBlockFromLesson(lessonId, blockId) {

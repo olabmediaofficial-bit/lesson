@@ -427,10 +427,10 @@ textarea {
 
 .block-title-button {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   width: 100%;
   align-items: center;
-  gap: 10px;
+  gap: 6px 12px;
   min-height: 42px;
   padding: 0;
   border: 0;
@@ -440,6 +440,7 @@ textarea {
 }
 
 .block-title-text {
+  grid-column: 1 / 2;
   min-width: 0;
   overflow: hidden;
   font-size: 16px;
@@ -449,9 +450,28 @@ textarea {
 }
 
 .collapse-indicator {
+  grid-column: 2 / 3;
+  grid-row: 1 / 3;
   color: var(--accent);
   font-size: 12px;
   font-weight: 900;
+}
+
+.block-card-data {
+  display: flex;
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.block-card-data .material-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .block-card-body {
@@ -924,6 +944,26 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.lesson-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.lesson-edit-form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(45, 106, 79, 0.18);
+  border-radius: 8px;
+  background: #f7fbf8;
+}
+
+.lesson-edit-form input,
+.lesson-edit-form select,
+.lesson-edit-form textarea {
+  width: 100%;
+}
+
 .audio-link {
   padding: 10px 12px;
   border: 1px solid rgba(59, 108, 149, 0.22);
@@ -1256,15 +1296,14 @@ menu {
   }
 
   .block-title-button {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .block-title-button .material-meta {
-    grid-column: 2 / 3;
+  .block-card-data {
+    grid-column: 1 / 2;
   }
 
   .collapse-indicator {
-    grid-column: 3 / 4;
     grid-row: 1 / 3;
   }
 
