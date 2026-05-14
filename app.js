@@ -1103,6 +1103,29 @@ document.addEventListener("dragend", () => {
   document.querySelectorAll(".lesson-block.dragging").forEach((node) => node.classList.remove("dragging"));
 });
 
+els.views.library.addEventListener("dragenter", (event) => {
+  if (!hasDraggedFiles(event)) return;
+  event.preventDefault();
+  els.views.library.classList.add("file-drop-active");
+});
+
+els.views.library.addEventListener("dragover", (event) => {
+  if (!hasDraggedFiles(event)) return;
+  event.preventDefault();
+});
+
+els.views.library.addEventListener("dragleave", (event) => {
+  if (els.views.library.contains(event.relatedTarget)) return;
+  els.views.library.classList.remove("file-drop-active");
+});
+
+els.views.library.addEventListener("drop", async (event) => {
+  if (!hasDraggedFiles(event)) return;
+  event.preventDefault();
+  els.views.library.classList.remove("file-drop-active");
+  await createBlocksFromDroppedFiles([...event.dataTransfer.files]);
+});
+
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
 els.shareStudentPicker.addEventListener("change", () => {
@@ -1209,6 +1232,55 @@ function readFileAsResource(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function hasDraggedFiles(event) {
+  return [...(event.dataTransfer?.types || [])].includes("Files");
+}
+
+function fileNameWithoutExtension(name) {
+  return name.replace(/\.[^/.]+$/, "") || name;
+}
+
+function droppedFileBlockKind() {
+  if (activeKindFilter === "theory" || activeKindFilter === "practice") return activeKindFilter;
+  return "";
+}
+
+async function createBlocksFromDroppedFiles(files) {
+  const kind = droppedFileBlockKind();
+  const acceptedFiles = files.filter((file) => /^(image\/png|image\/jpeg|application\/pdf)$/.test(file.type));
+
+  if (!kind) {
+    showToast("이론 또는 실습 버튼을 누른 상태에서 파일을 넣어주세요.");
+    return;
+  }
+  if (!acceptedFiles.length) {
+    showToast("PNG, JPG, PDF 파일만 블럭으로 만들 수 있습니다.");
+    return;
+  }
+
+  try {
+    const resources = await Promise.all(acceptedFiles.map(readFileAsResource));
+    const blocks = resources.map((resource) => ({
+      id: uid("blk"),
+      title: fileNameWithoutExtension(resource.name),
+      kind,
+      summary: "",
+      tags: [],
+      audioLink: "",
+      practice: normalizePractice(),
+      resources: [resource],
+    }));
+    state.blocks = [...blocks, ...state.blocks];
+    await saveState();
+    blocks.forEach((block) => expandedLibraryBlockIds.add(block.id));
+    render();
+    showToast(`${blocks.length}개 ${blockKindLabel(kind)} 블럭을 만들었습니다.`);
+  } catch (error) {
+    console.error(error);
+    showToast("파일을 블럭으로 만드는 중 문제가 생겼습니다.");
+  }
 }
 
 $("#materialForm").addEventListener("submit", async (event) => {

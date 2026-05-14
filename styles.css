@@ -302,6 +302,26 @@ menu {
   display: block;
 }
 
+#libraryView {
+  position: relative;
+}
+
+#libraryView.file-drop-active::after {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border: 2px dashed rgba(45, 106, 79, 0.5);
+  border-radius: 8px;
+  color: var(--accent-strong);
+  background: rgba(247, 244, 237, 0.88);
+  font-size: 18px;
+  font-weight: 900;
+  content: "파일을 놓으면 블럭이 자동으로 만들어집니다";
+  pointer-events: none;
+}
+
 .control-row {
   margin-bottom: 16px;
   flex-wrap: wrap;
