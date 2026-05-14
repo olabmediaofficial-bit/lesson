@@ -94,6 +94,14 @@
                 </div>
                 <span class="count-pill" id="materialCount">0</span>
               </div>
+              <div class="library-resource-panel">
+                <div>
+                  <strong>자료실</strong>
+                  <span>학생 공유 화면에 레슨 자료실 버튼으로 표시됩니다.</span>
+                </div>
+                <input id="resourceLibraryUrl" type="url" placeholder="자료실 링크를 붙여넣기" />
+                <button class="secondary-button" id="saveResourceLibrary" type="button">저장</button>
+              </div>
               <div class="material-grid" id="materialGrid"></div>
             </section>
 
@@ -163,6 +171,7 @@
                 <div>
                   <p class="eyebrow">Shared lesson room</p>
                   <h2 id="shareStudentName">학생 레슨룸</h2>
+                  <a class="resource-library-button" id="shareResourceLibrary" href="#" target="_blank" rel="noreferrer" hidden>레슨 자료실</a>
                 </div>
                 <div class="share-actions">
                   <select id="shareStudentPicker" aria-label="공유 학생 선택"></select>

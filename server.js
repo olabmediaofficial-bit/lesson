@@ -288,7 +288,16 @@ async function handlePublicRoom(request, response) {
 
   const blockIds = new Set(student.lessons.flatMap((lesson) => lesson.blockIds || []));
   const blocks = state.blocks.filter((block) => blockIds.has(block.id));
-  send(response, 200, JSON.stringify({ blocks, students: [student] }), "application/json; charset=utf-8");
+  send(
+    response,
+    200,
+    JSON.stringify({
+      blocks,
+      students: [student],
+      resourceLibraryUrl: state.resourceLibraryUrl || "",
+    }),
+    "application/json; charset=utf-8",
+  );
 }
 
 function getLocalAddress() {

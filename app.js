@@ -11,6 +11,7 @@ const SERVER_ROOM_ENDPOINT = "/api/room";
 const ADMIN_TOKEN_KEY = "lessonRoomAdminToken";
 
 const starterData = {
+  resourceLibraryUrl: "",
   blocks: [
     {
       id: "blk-1",
@@ -121,6 +122,8 @@ const els = {
   blockKindTabs: $("#blockKindTabs"),
   materialGrid: $("#materialGrid"),
   materialCount: $("#materialCount"),
+  resourceLibraryUrl: $("#resourceLibraryUrl"),
+  saveResourceLibrary: $("#saveResourceLibrary"),
   quickRoomList: $("#quickRoomList"),
   quickLessonDate: $("#quickLessonDate"),
   roomTabs: $("#roomTabs"),
@@ -144,6 +147,7 @@ const els = {
   shareStudentPicker: $("#shareStudentPicker"),
   copyPreviewShareLink: $("#copyPreviewShareLink"),
   shareStudentName: $("#shareStudentName"),
+  shareResourceLibrary: $("#shareResourceLibrary"),
   shareContent: $("#shareContent"),
   toast: $("#toast"),
   materialDialog: $("#materialDialog"),
@@ -170,6 +174,7 @@ const els = {
 
 function migrateState(data) {
   if (!data.blocks) return structuredClone(starterData);
+  data.resourceLibraryUrl = data.resourceLibraryUrl || "";
   data.blocks = data.blocks.map((block) => ({
     ...block,
     resources: normalizeResources(block),
@@ -469,6 +474,7 @@ function switchView(view) {
 function render() {
   if (!els.quickLessonDate.value) els.quickLessonDate.value = today();
   if (!els.lessonDate.value) els.lessonDate.value = today();
+  els.resourceLibraryUrl.value = state.resourceLibraryUrl || "";
   renderMetronome();
   renderTagFilter();
   renderLibrary();
@@ -939,6 +945,7 @@ function renderShare() {
     els.shareStudentPicker.value = student.id;
   }
   els.shareStudentName.textContent = `${student.name}'s 레슨룸`;
+  renderShareResourceLibrary();
 
   const lessons = [...student.lessons]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -950,6 +957,7 @@ function renderShare() {
           <button class="lesson-toggle" type="button" data-toggle-lesson="${lesson.id}" aria-expanded="${!collapsed}">
             <span>${collapsed ? "펼치기" : "접기"}</span>
             <time>${formatDate(lesson.date)}</time>
+            ${lesson.memo ? `<em>${escapeHTML(lesson.memo)}</em>` : ""}
             <small>${blocks.length}개 블럭</small>
           </button>
           <div class="lesson-body ${collapsed ? "collapsed" : ""}">
@@ -967,6 +975,13 @@ function renderShare() {
       ${lessons || `<div class="empty">아직 수업 기록이 없습니다.</div>`}
     </section>
   `;
+}
+
+function renderShareResourceLibrary() {
+  const url = state.resourceLibraryUrl || "";
+  els.shareResourceLibrary.hidden = !url;
+  if (!url) return;
+  els.shareResourceLibrary.href = url;
 }
 
 function upsertLesson(student, date, blockIds, memo = "") {
@@ -1155,6 +1170,12 @@ els.views.library.addEventListener("drop", async (event) => {
 
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
+els.saveResourceLibrary.addEventListener("click", async () => {
+  state.resourceLibraryUrl = els.resourceLibraryUrl.value.trim();
+  await saveState();
+  renderShare();
+  showToast("레슨 자료실 링크를 저장했습니다.");
+});
 els.shareStudentPicker.addEventListener("change", () => {
   activeShareStudentId = els.shareStudentPicker.value;
   renderShare();

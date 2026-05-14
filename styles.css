@@ -412,6 +412,30 @@ textarea {
   padding: 18px;
 }
 
+.library-resource-panel {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.5fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  background: #fbfaf7;
+}
+
+.library-resource-panel strong,
+.library-resource-panel span {
+  display: block;
+}
+
+.library-resource-panel span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.library-resource-panel input {
+  width: 100%;
+}
+
 .material-card {
   position: relative;
   display: grid;
@@ -1103,6 +1127,23 @@ textarea {
   font-size: clamp(28px, 5vw, 44px);
 }
 
+.resource-library-button {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 34px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 8px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .share-actions {
   display: flex;
   align-items: center;
@@ -1350,6 +1391,10 @@ menu {
   }
 
   .material-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .library-resource-panel {
     grid-template-columns: 1fr;
   }
 
