@@ -93,6 +93,7 @@ let pendingBlockIds = new Set();
 let collapsedLessonIds = new Set();
 let expandedLibraryBlockIds = new Set();
 let editingLessonId = "";
+let publicShareInitialized = false;
 let publicShareMode = false;
 let shareOrigin = "";
 let metronome = {
@@ -135,7 +136,8 @@ const els = {
   sharedMetronome: $("#sharedMetronome"),
   lessonDate: $("#lessonDate"),
   lessonMemo: $("#lessonMemo"),
-  lessonMaterialPicker: $("#lessonMaterialPicker"),
+  lessonTheoryPicker: $("#lessonTheoryPicker"),
+  lessonPracticePicker: $("#lessonPracticePicker"),
   pendingMaterialList: $("#pendingMaterialList"),
   lessonList: $("#lessonList"),
   roomMaterialList: $("#roomMaterialList"),
@@ -645,7 +647,13 @@ function renderPracticeCategoryGroups(blocks) {
 function renderBlockGroup(title, blocks) {
   return `
     <section class="block-section">
-      <h3>${escapeHTML(title)}</h3>
+      <div class="block-section-head">
+        <h3>${escapeHTML(title)}</h3>
+        <div class="block-section-actions">
+          <button class="secondary-button mini-button" type="button" data-collapse-block-group="${blocks.map((block) => block.id).join(",")}">전체 접기</button>
+          <button class="secondary-button mini-button" type="button" data-expand-block-group="${blocks.map((block) => block.id).join(",")}">전체 펼치기</button>
+        </div>
+      </div>
       <div class="material-grid inner-grid">
         ${blocks.map(renderBlockCard).join("")}
       </div>
@@ -668,6 +676,10 @@ function renderBlockCard(block) {
             <span class="material-meta">${normalizeResources(block).length}개 첨부</span>
           </span>
         </button>
+        <div class="block-card-actions">
+          <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
+          <button class="secondary-button mini-button danger" type="button" data-delete-block="${block.id}">삭제</button>
+        </div>
       </div>
       <div class="block-card-body">
         ${renderPracticeMeta(block)}
@@ -675,10 +687,6 @@ function renderBlockCard(block) {
         ${renderPracticeDetails(block)}
         <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
         ${renderResources(block, "compact")}
-        <div class="card-actions">
-          <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
-          <button class="secondary-button mini-button danger" type="button" data-delete-block="${block.id}">삭제</button>
-        </div>
       </div>
     </article>
   `;
@@ -743,16 +751,21 @@ function renderRooms() {
 }
 
 function renderLessonPicker() {
-  const available = state.blocks.filter((block) => !pendingBlockIds.has(block.id));
-  els.lessonMaterialPicker.innerHTML = available
-    .map((block) => `<option value="${block.id}">[${blockKindLabel(block.kind)}] ${block.title}</option>`)
-    .join("");
-  els.lessonMaterialPicker.disabled = !available.length;
+  renderKindPicker(els.lessonTheoryPicker, "theory");
+  renderKindPicker(els.lessonPracticePicker, "practice");
 
   const pending = [...pendingBlockIds].map(getBlock).filter(Boolean);
   els.pendingMaterialList.innerHTML = pending.length
     ? pending.map((block) => `<span class="tag ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)} · ${block.title}</span>`).join("")
     : `<span class="material-meta">아직 붙인 블럭이 없습니다.</span>`;
+}
+
+function renderKindPicker(picker, kind) {
+  const available = state.blocks.filter((block) => block.kind === kind && !pendingBlockIds.has(block.id));
+  picker.innerHTML = available
+    .map((block) => `<option value="${block.id}">${escapeHTML(block.title)}</option>`)
+    .join("");
+  picker.disabled = !available.length;
 }
 
 function renderRoomBlocks(student) {
@@ -792,6 +805,7 @@ function renderLessonList(student) {
           <button class="lesson-toggle" type="button" data-toggle-lesson="${lesson.id}" aria-expanded="${!collapsed}">
             <span>${collapsed ? "펼치기" : "접기"}</span>
             <time>${formatDate(lesson.date)}</time>
+            ${lesson.memo ? `<em>${escapeHTML(lesson.memo)}</em>` : ""}
             <small>${blocks.length}개 블럭</small>
           </button>
           <div class="lesson-body ${collapsed ? "collapsed" : ""}">
@@ -887,10 +901,7 @@ function renderPracticeDetails(block) {
       ${items
         .map(
           ([label, value]) => `
-            <div class="practice-detail">
-              <strong>${label}</strong>
-              <p>${escapeHTML(value)}</p>
-            </div>
+            <span class="practice-detail-pill"><strong>${label}</strong> ${escapeHTML(value)}</span>
           `,
         )
         .join("")}
@@ -914,6 +925,10 @@ function renderShare() {
     els.shareStudentPicker.hidden = true;
     els.copyPreviewShareLink.hidden = true;
     els.sharedMetronome.hidden = false;
+    if (!publicShareInitialized) {
+      collapsedLessonIds = new Set(student.lessons.map((lesson) => lesson.id));
+      publicShareInitialized = true;
+    }
   } else {
     els.shareStudentPicker.hidden = false;
     els.copyPreviewShareLink.hidden = false;
@@ -1014,6 +1029,18 @@ document.addEventListener("click", (event) => {
 
   const deleteBlock = event.target.closest("[data-delete-block]");
   if (deleteBlock) deleteBlockById(deleteBlock.dataset.deleteBlock);
+
+  const collapseBlockGroup = event.target.closest("[data-collapse-block-group]");
+  if (collapseBlockGroup) {
+    collapseBlockGroup.dataset.collapseBlockGroup.split(",").filter(Boolean).forEach((id) => expandedLibraryBlockIds.delete(id));
+    renderLibrary();
+  }
+
+  const expandBlockGroup = event.target.closest("[data-expand-block-group]");
+  if (expandBlockGroup) {
+    expandBlockGroup.dataset.expandBlockGroup.split(",").filter(Boolean).forEach((id) => expandedLibraryBlockIds.add(id));
+    renderLibrary();
+  }
 
   const libraryBlockToggle = event.target.closest("[data-toggle-library-block]");
   if (libraryBlockToggle) {
@@ -1507,14 +1534,18 @@ $("#studentForm").addEventListener("submit", async (event) => {
   showToast(`${student.name} 레슨룸을 만들었습니다.`);
 });
 
-$("#attachPickedMaterial").addEventListener("click", () => {
-  const id = els.lessonMaterialPicker.value;
+function attachPickedBlock(kind) {
+  const picker = kind === "theory" ? els.lessonTheoryPicker : els.lessonPracticePicker;
+  const id = picker.value;
   if (!id) return;
   pendingBlockIds.add(id);
   const block = getBlock(id);
   showToast(`${block.title} 블럭을 이번 날짜에 붙였습니다.`);
   renderRooms();
-});
+}
+
+$("#attachTheoryMaterial").addEventListener("click", () => attachPickedBlock("theory"));
+$("#attachPracticeMaterial").addEventListener("click", () => attachPickedBlock("practice"));
 
 $("#saveLesson").addEventListener("click", async () => {
   const student = getActiveStudent();
@@ -1522,8 +1553,9 @@ $("#saveLesson").addEventListener("click", async () => {
   const memo = els.lessonMemo.value.trim();
   const blockIds = [...pendingBlockIds];
 
-  if (!student || !blockIds.length) {
-    showToast("저장할 블럭을 먼저 붙이세요.");
+  if (!student) return;
+  if (!blockIds.length && !memo) {
+    showToast("메모나 블럭 중 하나는 있어야 저장됩니다.");
     return;
   }
 
