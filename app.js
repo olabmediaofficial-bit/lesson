@@ -688,19 +688,19 @@ function renderBlockGroup(title, blocks) {
 function renderBlockCard(block) {
   const expanded = expandedLibraryBlockIds.has(block.id);
   return `
-    <article class="material-card block-card ${expanded ? "expanded" : "collapsed"}">
+    <article class="material-card block-card ${blockKindClass(block.kind)} ${expanded ? "expanded" : "collapsed"}">
       <div class="block-card-head">
-        <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
         <button class="block-title-button" type="button" data-toggle-library-block="${block.id}" aria-expanded="${expanded}">
           <span class="block-title-text">${escapeHTML(block.title)}</span>
         </button>
         <div class="block-card-meta-row">
-          <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
-          ${renderPracticeCategoryText(block)}
-          <span class="material-meta">${normalizeResources(block).length}개 첨부</span>
           <button class="collapse-indicator" type="button" data-toggle-library-block="${block.id}" aria-expanded="${expanded}">${expanded ? "접기" : "펼치기"}</button>
           <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
           <button class="secondary-button mini-button danger" type="button" data-delete-block="${block.id}">삭제</button>
+          <label class="block-select-control">
+            <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
+            선택
+          </label>
         </div>
       </div>
       <div class="block-card-body">

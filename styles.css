@@ -454,17 +454,19 @@ textarea {
   overflow: hidden;
 }
 
-.material-card input[type="checkbox"] {
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-  min-height: 20px;
-  accent-color: var(--accent);
+.block-card.theory {
+  border-color: rgba(45, 106, 79, 0.2);
+  background: #f7fbf8;
+}
+
+.block-card.practice {
+  border-color: rgba(182, 91, 100, 0.2);
+  background: #fff8f9;
 }
 
 .block-card-head {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   padding: 12px;
 }
 
@@ -478,6 +480,27 @@ textarea {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.block-select-control {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.block-select-control input {
+  width: 15px;
+  height: 15px;
+  min-height: 15px;
+  accent-color: var(--accent);
 }
 
 .block-title-button {
