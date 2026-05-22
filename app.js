@@ -119,6 +119,8 @@ const els = {
   },
   librarySearch: $("#librarySearch"),
   tagFilter: $("#tagFilter"),
+  bulkTagInput: $("#bulkTagInput"),
+  applyBulkTags: $("#applyBulkTags"),
   blockKindTabs: $("#blockKindTabs"),
   materialGrid: $("#materialGrid"),
   materialCount: $("#materialCount"),
@@ -597,6 +599,13 @@ function renderTagFilter() {
     ...tags.map((tag) => `<option value="${tag}">${tag}</option>`),
   ].join("");
   els.tagFilter.value = tags.includes(selected) ? selected : "all";
+}
+
+function parseTags(value) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function filteredBlocks() {
@@ -1189,6 +1198,32 @@ els.views.library.addEventListener("drop", async (event) => {
 
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
+els.applyBulkTags.addEventListener("click", async () => {
+  const tags = parseTags(els.bulkTagInput.value);
+  const selectedIds = [...selectedBlockIds];
+  if (!selectedIds.length) {
+    showToast("먼저 블럭을 선택하세요.");
+    return;
+  }
+  if (!tags.length) {
+    showToast("추가할 태그를 입력하세요.");
+    return;
+  }
+
+  const selectedSet = new Set(selectedIds);
+  state.blocks = state.blocks.map((block) =>
+    selectedSet.has(block.id)
+      ? {
+          ...block,
+          tags: [...new Set([...(block.tags || []), ...tags])],
+        }
+      : block,
+  );
+  els.bulkTagInput.value = "";
+  await saveState();
+  render();
+  showToast(`${selectedIds.length}개 블럭에 태그를 추가했습니다.`);
+});
 els.closeImageViewer.addEventListener("click", closeImageViewer);
 els.imageViewerDialog.addEventListener("click", (event) => {
   if (event.target === els.imageViewerDialog) closeImageViewer();
@@ -1377,7 +1412,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
       title: $("#newTitle").value.trim() || "제목 없는 블럭",
       kind: $("#newType").value,
       summary: $("#newSummary").value.trim(),
-      tags: $("#newTags").value.split(",").map((tag) => tag.trim()).filter(Boolean),
+      tags: parseTags($("#newTags").value),
       audioLink: els.newAudioLink.value.trim(),
       practice: {
         tempo: els.practiceTempo.value.trim(),
@@ -1505,18 +1540,38 @@ async function saveEditingLesson(lessonId) {
   const nextDate = dateInput?.value || lesson.date;
   const nextMemo = memoInput?.value.trim() || "";
   const sameDateLesson = student.lessons.find((item) => item.id !== lesson.id && item.date === nextDate);
+  let nextLessons = [];
 
   if (sameDateLesson) {
-    sameDateLesson.memo = nextMemo || sameDateLesson.memo;
-    sameDateLesson.blockIds = [...new Set([...sameDateLesson.blockIds, ...lesson.blockIds])];
-    student.lessons = student.lessons.filter((item) => item.id !== lesson.id);
+    nextLessons = student.lessons
+      .filter((item) => item.id !== lesson.id)
+      .map((item) =>
+        item.id === sameDateLesson.id
+          ? {
+              ...item,
+              memo: nextMemo || item.memo,
+              blockIds: [...new Set([...item.blockIds, ...lesson.blockIds])],
+            }
+          : item,
+      );
   } else {
-    lesson.date = nextDate;
-    lesson.memo = nextMemo;
+    nextLessons = student.lessons.map((item) =>
+      item.id === lesson.id
+        ? {
+            ...item,
+            date: nextDate,
+            memo: nextMemo,
+          }
+        : item,
+    );
   }
 
+  student.lessons = nextLessons;
   editingLessonId = "";
   await saveState();
+  state = await loadPersistentState();
+  activeStudentId = student.id;
+  activeShareStudentId = student.id;
   render();
   showToast("수업 일지를 수정했습니다.");
 }
