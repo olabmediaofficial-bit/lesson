@@ -323,6 +323,15 @@ async function saveState(options = {}) {
   }
 }
 
+function saveStateInBackground(options = {}, successMessage = "저장되었습니다.") {
+  saveState(options)
+    .then(() => showToast(successMessage))
+    .catch((error) => {
+      console.error(error);
+      showToast("저장 중 문제가 생겼습니다. 새로고침 전에 다시 시도해주세요.");
+    });
+}
+
 function authHeaders() {
   const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -1040,9 +1049,8 @@ async function assignSelectedToStudent(studentId) {
   upsertLesson(student, date, ids);
   activeStudentId = student.id;
   selectedBlockIds.clear();
-  await saveState();
   render();
-  showToast(`${student.name}의 ${formatDate(date)} 수업에 블럭을 넣었습니다.`);
+  saveStateInBackground({}, `${student.name}의 ${formatDate(date)} 수업에 블럭을 넣었습니다.`);
 }
 
 document.addEventListener("click", (event) => {
@@ -1221,9 +1229,8 @@ els.applyBulkTags.addEventListener("click", async () => {
       : block,
   );
   els.bulkTagInput.value = "";
-  await saveState();
   render();
-  showToast(`${selectedIds.length}개 블럭에 태그를 추가했습니다.`);
+  saveStateInBackground({}, `${selectedIds.length}개 블럭에 태그를 추가했습니다.`);
 });
 els.closeImageViewer.addEventListener("click", closeImageViewer);
 els.imageViewerDialog.addEventListener("click", (event) => {
@@ -1231,9 +1238,8 @@ els.imageViewerDialog.addEventListener("click", (event) => {
 });
 els.saveResourceLibrary.addEventListener("click", async () => {
   state.resourceLibraryUrl = els.resourceLibraryUrl.value.trim();
-  await saveState();
   renderShare();
-  showToast("레슨 자료실 링크를 저장했습니다.");
+  saveStateInBackground({}, "레슨 자료실 링크를 저장했습니다.");
 });
 els.shareStudentPicker.addEventListener("change", () => {
   activeShareStudentId = els.shareStudentPicker.value;
@@ -1380,10 +1386,9 @@ async function createBlocksFromDroppedFiles(files) {
       resources: [resource],
     }));
     state.blocks = [...blocks, ...state.blocks];
-    await saveState();
     blocks.forEach((block) => expandedLibraryBlockIds.add(block.id));
     render();
-    showToast(`${blocks.length}개 ${blockKindLabel(kind)} 블럭을 만들었습니다.`);
+    saveStateInBackground({}, `${blocks.length}개 ${blockKindLabel(kind)} 블럭을 만들었습니다.`);
   } catch (error) {
     console.error(error);
     showToast("파일을 블럭으로 만드는 중 문제가 생겼습니다.");
@@ -1427,25 +1432,16 @@ $("#materialForm").addEventListener("submit", async (event) => {
       resources: [...linkResources, ...keptFileResources, ...fileResources],
     };
 
-    const previousBlocks = state.blocks;
     if (existing) {
       state.blocks = state.blocks.map((item) => (item.id === editingId ? block : item));
     } else {
       state.blocks.unshift(block);
     }
 
-    try {
-      await saveState();
-      els.materialDialog.close();
-      event.target.reset();
-      render();
-      showToast(existing ? "블럭을 수정했습니다." : "블럭을 추가했습니다.");
-    } catch (error) {
-      state.blocks = previousBlocks;
-      console.error(error);
-      els.materialDialog.close();
-      showToast("저장 공간이 부족합니다. 이미지 용량을 줄이거나 링크로 넣어주세요.");
-    }
+    els.materialDialog.close();
+    event.target.reset();
+    render();
+    saveStateInBackground({}, existing ? "블럭을 수정했습니다." : "블럭을 추가했습니다.");
   } finally {
     saveButton.disabled = false;
   }
@@ -1464,9 +1460,8 @@ async function deleteBlockById(blockId) {
   });
   selectedBlockIds.delete(blockId);
   pendingBlockIds.delete(blockId);
-  await saveState({ mode: "overwrite" });
   render();
-  showToast("블럭을 삭제했습니다.");
+  saveStateInBackground({ mode: "overwrite" }, "블럭을 삭제했습니다.");
 }
 
 function findLessonById(lessonId) {
@@ -1483,9 +1478,8 @@ async function moveLessonBlock(lessonId, blockId, direction) {
   const copy = [...lesson.blockIds];
   [copy[index], copy[nextIndex]] = [copy[nextIndex], copy[index]];
   lesson.blockIds = copy;
-  await saveState();
   render();
-  showToast("블럭 순서를 바꿨습니다.");
+  saveStateInBackground({}, "블럭 순서를 바꿨습니다.");
 }
 
 function getDragAfterElement(container, y) {
@@ -1515,9 +1509,8 @@ async function reorderLessonBlocksFromDom(lessonId, zone) {
   const nextIds = [...zone.querySelectorAll("[data-draggable-block]")].map((node) => node.dataset.draggableBlock);
   if (nextIds.length !== lesson.blockIds.length) return;
   lesson.blockIds = nextIds;
-  await saveState();
   render();
-  showToast("블럭 순서를 바꿨습니다.");
+  saveStateInBackground({}, "블럭 순서를 바꿨습니다.");
 }
 
 async function addBlockToEditingLesson(lessonId) {
@@ -1526,9 +1519,8 @@ async function addBlockToEditingLesson(lessonId) {
   const blockId = picker?.value;
   if (!lesson || !blockId) return;
   lesson.blockIds = [...new Set([...lesson.blockIds, blockId])];
-  await saveState();
   renderLessonList(getActiveStudent());
-  showToast("일지에 블럭을 추가했습니다.");
+  saveStateInBackground({}, "일지에 블럭을 추가했습니다.");
 }
 
 async function saveEditingLesson(lessonId) {
@@ -1569,12 +1561,10 @@ async function saveEditingLesson(lessonId) {
 
   student.lessons = nextLessons;
   editingLessonId = "";
-  await saveState();
-  state = await loadPersistentState();
   activeStudentId = student.id;
   activeShareStudentId = student.id;
   render();
-  showToast("수업 일지를 수정했습니다.");
+  saveStateInBackground({}, "수업 일지를 수정했습니다.");
 }
 
 async function removeBlockFromLesson(lessonId, blockId) {
@@ -1585,9 +1575,8 @@ async function removeBlockFromLesson(lessonId, blockId) {
   if (!lesson.blockIds.length && !lesson.memo) {
     student.lessons = student.lessons.filter((item) => item.id !== lessonId);
   }
-  await saveState({ mode: "overwrite" });
   render();
-  showToast("해당 수업에서 블럭을 뺐습니다.");
+  saveStateInBackground({ mode: "overwrite" }, "해당 수업에서 블럭을 뺐습니다.");
 }
 
 async function deleteActiveStudent() {
@@ -1600,9 +1589,8 @@ async function deleteActiveStudent() {
   activeShareStudentId = activeStudentId;
   pendingBlockIds.clear();
   selectedBlockIds.clear();
-  await saveState({ mode: "overwrite" });
   render();
-  showToast(`${student.name} 학생을 삭제했습니다.`);
+  saveStateInBackground({ mode: "overwrite" }, `${student.name} 학생을 삭제했습니다.`);
 }
 
 $("#addStudent").addEventListener("click", () => els.studentDialog.showModal());
@@ -1627,11 +1615,10 @@ $("#studentForm").addEventListener("submit", async (event) => {
   state.students.push(student);
   activeStudentId = student.id;
   activeShareStudentId = student.id;
-  await saveState();
   event.target.reset();
   els.studentDialog.close();
   render();
-  showToast(`${student.name} 레슨룸을 만들었습니다.`);
+  saveStateInBackground({}, `${student.name} 레슨룸을 만들었습니다.`);
 });
 
 function attachPickedBlock(kind) {
@@ -1662,9 +1649,8 @@ $("#saveLesson").addEventListener("click", async () => {
   upsertLesson(student, date, blockIds, memo);
   pendingBlockIds.clear();
   els.lessonMemo.value = "";
-  await saveState();
   render();
-  showToast(`${formatDate(date)} 수업에 저장했습니다.`);
+  saveStateInBackground({}, `${formatDate(date)} 수업에 저장했습니다.`);
 });
 
 $("#copyShareLink").addEventListener("click", async () => {
@@ -1724,7 +1710,6 @@ async function init() {
   activeStudentId = state.students[0]?.id || "";
   activeShareStudentId = activeStudentId;
   render();
-  await saveState();
 }
 
 init().catch((error) => {
