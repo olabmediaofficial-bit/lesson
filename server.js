@@ -175,6 +175,72 @@ async function writeState(state) {
   writeFileState(state);
 }
 
+function unique(items = []) {
+  return [...new Set(items.filter(Boolean))];
+}
+
+function mergeLessons(serverLessons = [], incomingLessons = []) {
+  const lessons = new Map();
+
+  serverLessons.forEach((lesson) => {
+    lessons.set(lesson.id, {
+      ...lesson,
+      blockIds: unique(lesson.blockIds || lesson.materialIds || []),
+    });
+  });
+
+  incomingLessons.forEach((lesson) => {
+    const existing = lessons.get(lesson.id);
+    lessons.set(lesson.id, {
+      ...(existing || {}),
+      ...lesson,
+      blockIds: unique([...(existing?.blockIds || []), ...(lesson.blockIds || lesson.materialIds || [])]),
+    });
+  });
+
+  return [...lessons.values()];
+}
+
+function mergeStudents(serverStudents = [], incomingStudents = []) {
+  const students = new Map();
+
+  serverStudents.forEach((student) => {
+    students.set(student.id, {
+      ...student,
+      lessons: mergeLessons([], student.lessons || []),
+    });
+  });
+
+  incomingStudents.forEach((student) => {
+    const existing = students.get(student.id);
+    students.set(student.id, {
+      ...(existing || {}),
+      ...student,
+      lessons: mergeLessons(existing?.lessons || [], student.lessons || []),
+    });
+  });
+
+  return [...students.values()];
+}
+
+function mergeBlocks(serverBlocks = [], incomingBlocks = []) {
+  const blocks = new Map();
+  serverBlocks.forEach((block) => blocks.set(block.id, block));
+  incomingBlocks.forEach((block) => blocks.set(block.id, { ...(blocks.get(block.id) || {}), ...block }));
+  return [...blocks.values()];
+}
+
+function mergeState(serverState, incomingState) {
+  if (!serverState) return incomingState;
+  return {
+    ...serverState,
+    ...incomingState,
+    resourceLibraryUrl: incomingState.resourceLibraryUrl ?? serverState.resourceLibraryUrl ?? "",
+    blocks: mergeBlocks(serverState.blocks || [], incomingState.blocks || []),
+    students: mergeStudents(serverState.students || [], incomingState.students || []),
+  };
+}
+
 function isAuthorized(request) {
   const header = request.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -233,7 +299,9 @@ async function handleApiState(request, response) {
 
   readJsonBody(request)
     .then(async (body) => {
-      await writeState(body);
+      const saveMode = request.headers["x-save-mode"] || "merge";
+      const stateToWrite = saveMode === "overwrite" ? body : mergeState(await readState(), body);
+      await writeState(stateToWrite);
       send(response, 200, JSON.stringify({ ok: true }), "application/json; charset=utf-8");
     })
     .catch((error) => {

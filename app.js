@@ -294,11 +294,12 @@ async function loadServerInfo() {
   }
 }
 
-async function saveState() {
+async function saveState(options = {}) {
+  const saveMode = options.mode || "merge";
   try {
     const response = await fetch(SERVER_STATE_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json", "X-Save-Mode": saveMode, ...authHeaders() },
       body: JSON.stringify(state),
     });
     if (response.status === 401) {
@@ -1463,7 +1464,7 @@ async function deleteBlockById(blockId) {
   });
   selectedBlockIds.delete(blockId);
   pendingBlockIds.delete(blockId);
-  await saveState();
+  await saveState({ mode: "overwrite" });
   render();
   showToast("블럭을 삭제했습니다.");
 }
@@ -1584,7 +1585,7 @@ async function removeBlockFromLesson(lessonId, blockId) {
   if (!lesson.blockIds.length && !lesson.memo) {
     student.lessons = student.lessons.filter((item) => item.id !== lessonId);
   }
-  await saveState();
+  await saveState({ mode: "overwrite" });
   render();
   showToast("해당 수업에서 블럭을 뺐습니다.");
 }
@@ -1599,7 +1600,7 @@ async function deleteActiveStudent() {
   activeShareStudentId = activeStudentId;
   pendingBlockIds.clear();
   selectedBlockIds.clear();
-  await saveState();
+  await saveState({ mode: "overwrite" });
   render();
   showToast(`${student.name} 학생을 삭제했습니다.`);
 }
