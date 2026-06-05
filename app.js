@@ -302,11 +302,13 @@ async function loadServerInfo() {
 async function saveState(options = {}) {
   const saveMode = options.mode || "merge";
   const stateToSave = options.state || state;
+  const body = JSON.stringify(stateToSave);
+  const sizeMb = (new Blob([body]).size / 1024 / 1024).toFixed(1);
   try {
     const response = await fetch(SERVER_STATE_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Save-Mode": saveMode, ...authHeaders() },
-      body: JSON.stringify(stateToSave),
+      body,
     });
     if (response.status === 401) {
       showAdminLogin("다시 로그인해주세요.");
@@ -316,7 +318,7 @@ async function saveState(options = {}) {
       localStorage.setItem(`${STORAGE_KEY}.savedAt`, new Date().toISOString());
       return;
     }
-    throw new Error(`Server save failed: ${response.status}`);
+    throw new Error(`Server save failed: ${response.status}; payload ${sizeMb}MB; ${await response.text()}`);
   } catch (error) {
     console.warn("Server save unavailable.", error);
     if (hasAdminToken() && location.protocol !== "file:") throw error;
@@ -340,7 +342,8 @@ function saveStateInBackground(options = {}, successMessage = "저장되었습�
     .then(() => showToast(successMessage))
     .catch((error) => {
       console.error(error);
-      showToast("저장 중 문제가 생겼습니다. 새로고침 전에 다시 시도해주세요.");
+      const message = String(error.message || error).replace(/\s+/g, " ").slice(0, 140);
+      showToast(`저장 실패: ${message}`);
     });
 }
 

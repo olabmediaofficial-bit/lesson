@@ -320,7 +320,15 @@ async function handleApiState(request, response) {
     })
     .catch((error) => {
       console.error(error);
-      send(response, 400, "Unable to save state");
+      send(
+        response,
+        500,
+        JSON.stringify({
+          error: "Unable to save state",
+          detail: error.message || String(error),
+        }),
+        "application/json; charset=utf-8",
+      );
     });
 }
 
