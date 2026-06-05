@@ -131,7 +131,7 @@ async function supabaseStorageUpload(file) {
 
   const contentType = file.type || match[1] || "application/octet-stream";
   const buffer = Buffer.from(match[2], "base64");
-  const filePath = `lesson-assets/${Date.now()}-${crypto.randomBytes(8).toString("hex")}-${sanitizeFileName(file.name || "file")}`;
+  const filePath = createStoragePath(file.name || "file", contentType);
   const response = await fetch(
     `${supabaseUrl}/storage/v1/object/${encodeURIComponent(supabaseStorageBucket)}/${filePath
       .split("/")
@@ -152,7 +152,7 @@ async function supabaseStorageUpload(file) {
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Supabase storage upload failed: ${response.status} ${detail}`);
+    throw new Error(`Supabase storage upload failed: ${response.status} ${summarizeSupabaseError(detail)}`);
   }
 
   return {
@@ -166,9 +166,32 @@ async function supabaseStorageUpload(file) {
   };
 }
 
-function sanitizeFileName(name) {
-  const normalized = String(name).normalize("NFC").replace(/[^\p{L}\p{N}._ -]+/gu, "-");
-  return normalized.replace(/\s+/g, "-").replace(/-+/g, "-").slice(0, 120) || "file";
+function createStoragePath(name, contentType) {
+  const extension = storageExtension(name, contentType);
+  return `lesson-assets/${Date.now()}-${crypto.randomBytes(12).toString("hex")}${extension}`;
+}
+
+function storageExtension(name, contentType) {
+  const fromName = path.extname(String(name)).toLowerCase().replace(/[^a-z0-9.]/g, "");
+  if ([".png", ".jpg", ".jpeg", ".pdf", ".webp"].includes(fromName)) return fromName;
+
+  const fromType = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/webp": ".webp",
+    "application/pdf": ".pdf",
+  }[contentType];
+
+  return fromType || "";
+}
+
+function summarizeSupabaseError(detail) {
+  try {
+    const parsed = JSON.parse(detail);
+    return parsed.message || parsed.error || parsed.msg || detail;
+  } catch {
+    return detail;
+  }
 }
 
 async function readSupabaseState() {

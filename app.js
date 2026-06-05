@@ -486,11 +486,11 @@ function uniqueLessonBlocks(student) {
   return [...new Set(student.lessons.flatMap((lesson) => lesson.blockIds))].map(getBlock).filter(Boolean);
 }
 
-function showToast(message) {
+function showToast(message, timeout = 2200) {
   els.toast.textContent = message;
   els.toast.classList.add("show");
   window.clearTimeout(showToast.timer);
-  showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 2200);
+  showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), timeout);
 }
 
 function openImageViewer(src, title) {
@@ -1380,7 +1380,12 @@ async function uploadResource(resource) {
   });
 
   if (!response.ok) {
-    throw new Error(`파일 업로드 실패: ${response.status} ${await response.text()}`);
+    let detail = await response.text();
+    try {
+      const parsed = JSON.parse(detail);
+      detail = parsed.detail || parsed.error || detail;
+    } catch {}
+    throw new Error(`파일 업로드 실패: ${response.status} ${detail}`);
   }
 
   return response.json();
@@ -1413,7 +1418,7 @@ async function migrateEmbeddedFilesToStorage() {
     saveStateInBackground({ mode: "overwrite" }, "기존 악보를 Storage로 옮겼습니다.");
   } catch (error) {
     console.error(error);
-    showToast(`악보 옮기기 실패: ${String(error.message || error).slice(0, 120)}`);
+    showToast(`악보 옮기기 실패: ${String(error.message || error)}`, 9000);
   } finally {
     els.migrateStorageFiles.disabled = false;
   }
