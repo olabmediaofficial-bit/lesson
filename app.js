@@ -97,6 +97,7 @@ let editingLessonId = "";
 let publicShareInitialized = false;
 let publicShareMode = false;
 let shareOrigin = "";
+let saveQueue = Promise.resolve();
 let metronome = {
   audioContext: null,
   timer: null,
@@ -186,12 +187,14 @@ function migrateState(data) {
     resources: normalizeResources(block),
     audioLink: block.audioLink || "",
     practice: normalizePractice(block.practice),
+    updatedAt: block.updatedAt || "",
   }));
   data.students = data.students.map((student) => ({
     ...student,
     lessons: student.lessons.map((lesson) => ({
       ...lesson,
       blockIds: lesson.blockIds || lesson.materialIds || [],
+      updatedAt: lesson.updatedAt || "",
     })),
   }));
   return data;
@@ -268,8 +271,10 @@ async function loadPersistentState() {
       const serverState = await response.json();
       if (serverState) return migrateState(serverState);
     }
+    throw new Error(`Server state unavailable: ${response.status}`);
   } catch (error) {
     console.warn("Server state unavailable, using browser storage.", error);
+    if (hasAdminToken() && location.protocol !== "file:") throw error;
   }
 
   try {
@@ -296,35 +301,42 @@ async function loadServerInfo() {
 
 async function saveState(options = {}) {
   const saveMode = options.mode || "merge";
+  const stateToSave = options.state || state;
   try {
     const response = await fetch(SERVER_STATE_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Save-Mode": saveMode, ...authHeaders() },
-      body: JSON.stringify(state),
+      body: JSON.stringify(stateToSave),
     });
     if (response.status === 401) {
       showAdminLogin("다시 로그인해주세요.");
-      return;
+      throw new Error("Unauthorized");
     }
     if (response.ok) {
       localStorage.setItem(`${STORAGE_KEY}.savedAt`, new Date().toISOString());
       return;
     }
+    throw new Error(`Server save failed: ${response.status}`);
   } catch (error) {
-    console.warn("Server save unavailable, using browser storage.", error);
+    console.warn("Server save unavailable.", error);
+    if (hasAdminToken() && location.protocol !== "file:") throw error;
   }
 
   try {
-    await saveIndexedState(state);
+    await saveIndexedState(stateToSave);
     localStorage.setItem(`${STORAGE_KEY}.savedAt`, new Date().toISOString());
   } catch (error) {
     console.warn("IndexedDB save failed, trying local fallback.", error);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
   }
 }
 
 function saveStateInBackground(options = {}, successMessage = "저장되었습니다.") {
-  saveState(options)
+  const snapshot = structuredClone(state);
+  saveQueue = saveQueue
+    .catch(() => {})
+    .then(() => saveState({ ...options, state: snapshot }));
+  saveQueue
     .then(() => showToast(successMessage))
     .catch((error) => {
       console.error(error);
@@ -364,6 +376,10 @@ function uid(prefix) {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function nowIso() {
+  return new Date().toISOString();
 }
 
 function formatDate(dateString) {
@@ -1024,6 +1040,7 @@ function upsertLesson(student, date, blockIds, memo = "") {
   if (lesson) {
     lesson.blockIds = [...new Set([...lesson.blockIds, ...blockIds])];
     if (memo) lesson.memo = memo;
+    lesson.updatedAt = nowIso();
     return lesson;
   }
 
@@ -1032,6 +1049,7 @@ function upsertLesson(student, date, blockIds, memo = "") {
     date,
     memo,
     blockIds: [...new Set(blockIds)],
+    updatedAt: nowIso(),
   };
   student.lessons.unshift(newLesson);
   return newLesson;
@@ -1225,6 +1243,7 @@ els.applyBulkTags.addEventListener("click", async () => {
       ? {
           ...block,
           tags: [...new Set([...(block.tags || []), ...tags])],
+          updatedAt: nowIso(),
         }
       : block,
   );
@@ -1384,6 +1403,7 @@ async function createBlocksFromDroppedFiles(files) {
       audioLink: "",
       practice: normalizePractice(),
       resources: [resource],
+      updatedAt: nowIso(),
     }));
     state.blocks = [...blocks, ...state.blocks];
     blocks.forEach((block) => expandedLibraryBlockIds.add(block.id));
@@ -1420,6 +1440,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
       summary: $("#newSummary").value.trim(),
       tags: parseTags($("#newTags").value),
       audioLink: els.newAudioLink.value.trim(),
+      updatedAt: nowIso(),
       practice: {
         tempo: els.practiceTempo.value.trim(),
         key: els.practiceKey.value,
@@ -1478,6 +1499,7 @@ async function moveLessonBlock(lessonId, blockId, direction) {
   const copy = [...lesson.blockIds];
   [copy[index], copy[nextIndex]] = [copy[nextIndex], copy[index]];
   lesson.blockIds = copy;
+  lesson.updatedAt = nowIso();
   render();
   saveStateInBackground({}, "블럭 순서를 바꿨습니다.");
 }
@@ -1509,6 +1531,7 @@ async function reorderLessonBlocksFromDom(lessonId, zone) {
   const nextIds = [...zone.querySelectorAll("[data-draggable-block]")].map((node) => node.dataset.draggableBlock);
   if (nextIds.length !== lesson.blockIds.length) return;
   lesson.blockIds = nextIds;
+  lesson.updatedAt = nowIso();
   render();
   saveStateInBackground({}, "블럭 순서를 바꿨습니다.");
 }
@@ -1519,6 +1542,7 @@ async function addBlockToEditingLesson(lessonId) {
   const blockId = picker?.value;
   if (!lesson || !blockId) return;
   lesson.blockIds = [...new Set([...lesson.blockIds, blockId])];
+  lesson.updatedAt = nowIso();
   renderLessonList(getActiveStudent());
   saveStateInBackground({}, "일지에 블럭을 추가했습니다.");
 }
@@ -1544,6 +1568,7 @@ async function saveEditingLesson(lessonId) {
               ...item,
               memo: nextMemo || item.memo,
               blockIds: [...new Set([...item.blockIds, ...lesson.blockIds])],
+              updatedAt: nowIso(),
             }
           : item,
       );
@@ -1554,6 +1579,7 @@ async function saveEditingLesson(lessonId) {
             ...item,
             date: nextDate,
             memo: nextMemo,
+            updatedAt: nowIso(),
           }
         : item,
     );
@@ -1572,6 +1598,7 @@ async function removeBlockFromLesson(lessonId, blockId) {
   const lesson = student?.lessons.find((item) => item.id === lessonId);
   if (!lesson) return;
   lesson.blockIds = lesson.blockIds.filter((id) => id !== blockId);
+  lesson.updatedAt = nowIso();
   if (!lesson.blockIds.length && !lesson.memo) {
     student.lessons = student.lessons.filter((item) => item.id !== lessonId);
   }

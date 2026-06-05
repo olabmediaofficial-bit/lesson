@@ -179,6 +179,15 @@ function unique(items = []) {
   return [...new Set(items.filter(Boolean))];
 }
 
+function isIncomingNewer(existing = {}, incoming = {}) {
+  const existingTime = Date.parse(existing.updatedAt || "");
+  const incomingTime = Date.parse(incoming.updatedAt || "");
+  if (Number.isNaN(existingTime) && Number.isNaN(incomingTime)) return true;
+  if (Number.isNaN(existingTime)) return true;
+  if (Number.isNaN(incomingTime)) return false;
+  return incomingTime >= existingTime;
+}
+
 function mergeLessons(serverLessons = [], incomingLessons = []) {
   const lessons = new Map();
 
@@ -191,9 +200,9 @@ function mergeLessons(serverLessons = [], incomingLessons = []) {
 
   incomingLessons.forEach((lesson) => {
     const existing = lessons.get(lesson.id);
+    const base = existing && !isIncomingNewer(existing, lesson) ? existing : { ...(existing || {}), ...lesson };
     lessons.set(lesson.id, {
-      ...(existing || {}),
-      ...lesson,
+      ...base,
       blockIds: unique([...(existing?.blockIds || []), ...(lesson.blockIds || lesson.materialIds || [])]),
     });
   });
@@ -226,7 +235,12 @@ function mergeStudents(serverStudents = [], incomingStudents = []) {
 function mergeBlocks(serverBlocks = [], incomingBlocks = []) {
   const blocks = new Map();
   serverBlocks.forEach((block) => blocks.set(block.id, block));
-  incomingBlocks.forEach((block) => blocks.set(block.id, { ...(blocks.get(block.id) || {}), ...block }));
+  incomingBlocks.forEach((block) => {
+    const existing = blocks.get(block.id);
+    if (!existing || isIncomingNewer(existing, block)) {
+      blocks.set(block.id, { ...(existing || {}), ...block });
+    }
+  });
   return [...blocks.values()];
 }
 
