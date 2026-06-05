@@ -8,6 +8,7 @@ const SERVER_STATE_ENDPOINT = "/api/state";
 const SERVER_INFO_ENDPOINT = "/api/info";
 const SERVER_LOGIN_ENDPOINT = "/api/login";
 const SERVER_ROOM_ENDPOINT = "/api/room";
+const SERVER_UPLOAD_ENDPOINT = "/api/upload";
 const ADMIN_TOKEN_KEY = "lessonRoomAdminToken";
 
 const starterData = {
@@ -127,6 +128,7 @@ const els = {
   materialCount: $("#materialCount"),
   resourceLibraryUrl: $("#resourceLibraryUrl"),
   saveResourceLibrary: $("#saveResourceLibrary"),
+  migrateStorageFiles: $("#migrateStorageFiles"),
   quickRoomList: $("#quickRoomList"),
   quickLessonDate: $("#quickLessonDate"),
   roomTabs: $("#roomTabs"),
@@ -1263,6 +1265,7 @@ els.saveResourceLibrary.addEventListener("click", async () => {
   renderShare();
   saveStateInBackground({}, "레슨 자료실 링크를 저장했습니다.");
 });
+els.migrateStorageFiles.addEventListener("click", migrateEmbeddedFilesToStorage);
 els.shareStudentPicker.addEventListener("change", () => {
   activeShareStudentId = els.shareStudentPicker.value;
   renderShare();
@@ -1369,6 +1372,58 @@ function readFileAsResource(file) {
   });
 }
 
+async function uploadResource(resource) {
+  const response = await fetch(SERVER_UPLOAD_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(resource),
+  });
+
+  if (!response.ok) {
+    throw new Error(`파일 업로드 실패: ${response.status} ${await response.text()}`);
+  }
+
+  return response.json();
+}
+
+function isEmbeddedResource(resource) {
+  return typeof resource === "object" && typeof resource.data === "string" && resource.data.startsWith("data:");
+}
+
+async function migrateEmbeddedFilesToStorage() {
+  const embedded = state.blocks.flatMap((block) => normalizeResources(block).filter(isEmbeddedResource).map((resource) => ({ block, resource })));
+  if (!embedded.length) {
+    showToast("옮길 기존 악보가 없습니다.");
+    return;
+  }
+  if (!confirm(`기존 악보 ${embedded.length}개를 Supabase Storage로 옮길까요?`)) return;
+
+  els.migrateStorageFiles.disabled = true;
+  showToast(`기존 악보 ${embedded.length}개를 옮기는 중입니다.`);
+
+  try {
+    for (let index = 0; index < embedded.length; index += 1) {
+      const { block, resource } = embedded[index];
+      const uploaded = await uploadResource(resource);
+      block.resources = normalizeResources(block).map((item) => (item === resource ? uploaded : item));
+      block.updatedAt = nowIso();
+      if ((index + 1) % 3 === 0) showToast(`${index + 1}/${embedded.length}개 옮기는 중...`);
+    }
+    render();
+    saveStateInBackground({ mode: "overwrite" }, "기존 악보를 Storage로 옮겼습니다.");
+  } catch (error) {
+    console.error(error);
+    showToast(`악보 옮기기 실패: ${String(error.message || error).slice(0, 120)}`);
+  } finally {
+    els.migrateStorageFiles.disabled = false;
+  }
+}
+
+async function readFileAsUploadedResource(file) {
+  const resource = await readFileAsResource(file);
+  return uploadResource(resource);
+}
+
 function hasDraggedFiles(event) {
   return [...(event.dataTransfer?.types || [])].includes("Files");
 }
@@ -1396,7 +1451,7 @@ async function createBlocksFromDroppedFiles(files) {
   }
 
   try {
-    const resources = await Promise.all(acceptedFiles.map(readFileAsResource));
+    const resources = await Promise.all(acceptedFiles.map(readFileAsUploadedResource));
     const blocks = resources.map((resource) => ({
       id: uid("blk"),
       title: fileNameWithoutExtension(resource.name),
@@ -1435,7 +1490,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
     const existing = editingId ? getBlock(editingId) : null;
     const linkResources = $("#newResources").value.split("\n").map((item) => item.trim()).filter(Boolean);
     const keptFileResources = existing ? normalizeResources(existing).filter((resource) => typeof resource === "object") : [];
-    const fileResources = await Promise.all([...els.newFiles.files].map(readFileAsResource));
+    const fileResources = await Promise.all([...els.newFiles.files].map(readFileAsUploadedResource));
     const block = {
       id: editingId || uid("blk"),
       title: $("#newTitle").value.trim() || "제목 없는 블럭",

@@ -16,6 +16,7 @@ const supabaseUrl = normalizeSupabaseUrl(process.env.SUPABASE_URL || "");
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabaseStateTable = process.env.SUPABASE_STATE_TABLE || "lesson_app_state";
 const supabaseStateId = process.env.SUPABASE_STATE_ID || "main";
+const supabaseStorageBucket = process.env.SUPABASE_STORAGE_BUCKET || "lesson-files";
 const sessions = new Set();
 
 const mimeTypes = {
@@ -82,6 +83,10 @@ function hasSupabaseStorage() {
   return Boolean(supabaseUrl && supabaseServiceRoleKey);
 }
 
+function hasSupabaseFileStorage() {
+  return Boolean(hasSupabaseStorage() && supabaseStorageBucket);
+}
+
 function normalizeSupabaseUrl(value) {
   const trimmed = value.trim().replace(/\/$/, "");
   if (!trimmed) return "";
@@ -116,6 +121,54 @@ async function supabaseRequest(urlPath, options = {}) {
   if (response.status === 204) return null;
   const text = await response.text();
   return text ? JSON.parse(text) : null;
+}
+
+async function supabaseStorageUpload(file) {
+  if (!hasSupabaseFileStorage()) throw new Error("Supabase Storage is not configured");
+
+  const match = String(file.data || "").match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid file data");
+
+  const contentType = file.type || match[1] || "application/octet-stream";
+  const buffer = Buffer.from(match[2], "base64");
+  const filePath = `lesson-assets/${Date.now()}-${crypto.randomBytes(8).toString("hex")}-${sanitizeFileName(file.name || "file")}`;
+  const response = await fetch(
+    `${supabaseUrl}/storage/v1/object/${encodeURIComponent(supabaseStorageBucket)}/${filePath
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/")}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: supabaseServiceRoleKey,
+        Authorization: `Bearer ${supabaseServiceRoleKey}`,
+        "Content-Type": contentType,
+        "Cache-Control": "31536000",
+        "x-upsert": "false",
+      },
+      body: buffer,
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Supabase storage upload failed: ${response.status} ${detail}`);
+  }
+
+  return {
+    name: file.name || "첨부 파일",
+    type: contentType,
+    data: `${supabaseUrl}/storage/v1/object/public/${encodeURIComponent(supabaseStorageBucket)}/${filePath
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/")}`,
+    storagePath: filePath,
+  };
+}
+
+function sanitizeFileName(name) {
+  const normalized = String(name).normalize("NFC").replace(/[^\p{L}\p{N}._ -]+/gu, "-");
+  return normalized.replace(/\s+/g, "-").replace(/-+/g, "-").slice(0, 120) || "file";
 }
 
 async function readSupabaseState() {
@@ -353,6 +406,33 @@ function handleLogin(request, response) {
     });
 }
 
+function handleUpload(request, response) {
+  if (!requireAuth(request, response)) return;
+
+  if (request.method !== "POST") {
+    send(response, 405, "Method not allowed");
+    return;
+  }
+
+  readJsonBody(request)
+    .then(async (body) => {
+      const resource = await supabaseStorageUpload(body);
+      send(response, 200, JSON.stringify(resource), "application/json; charset=utf-8");
+    })
+    .catch((error) => {
+      console.error(error);
+      send(
+        response,
+        500,
+        JSON.stringify({
+          error: "Unable to upload file",
+          detail: error.message || String(error),
+        }),
+        "application/json; charset=utf-8",
+      );
+    });
+}
+
 async function handlePublicRoom(request, response) {
   if (request.method !== "GET") {
     send(response, 405, "Method not allowed");
@@ -418,6 +498,10 @@ function getShareOrigin(request) {
 const server = http.createServer((request, response) => {
   if (request.url.startsWith("/api/login")) {
     handleLogin(request, response);
+    return;
+  }
+  if (request.url.startsWith("/api/upload")) {
+    handleUpload(request, response);
     return;
   }
   if (request.url.startsWith("/api/state")) {
