@@ -335,9 +335,21 @@
       <div class="image-viewer">
         <div class="image-viewer-head">
           <strong id="imageViewerTitle">악보 보기</strong>
-          <button class="icon-button" id="closeImageViewer" type="button" title="닫기">×</button>
+          <div class="image-viewer-actions">
+            <button class="icon-button" id="imageViewerZoomOut" type="button" title="축소">−</button>
+            <span id="imageViewerZoomLabel">100%</span>
+            <button class="icon-button" id="imageViewerZoomIn" type="button" title="확대">+</button>
+            <button class="icon-button" id="closeImageViewer" type="button" title="닫기">×</button>
+          </div>
         </div>
-        <img id="imageViewerImage" src="" alt="" />
+        <div class="image-viewer-stage">
+          <button class="image-viewer-nav prev" id="imageViewerPrev" type="button" title="이전 악보">‹</button>
+          <div class="image-viewer-scroll">
+            <img id="imageViewerImage" src="" alt="" />
+          </div>
+          <button class="image-viewer-nav next" id="imageViewerNext" type="button" title="다음 악보">›</button>
+        </div>
+        <div class="image-viewer-foot" id="imageViewerCounter">1 / 1</div>
       </div>
     </dialog>
 

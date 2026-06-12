@@ -99,6 +99,11 @@ let publicShareInitialized = false;
 let publicShareMode = false;
 let shareOrigin = "";
 let saveQueue = Promise.resolve();
+let imageViewer = {
+  items: [],
+  index: 0,
+  zoom: 1,
+};
 let metronome = {
   audioContext: null,
   timer: null,
@@ -160,6 +165,12 @@ const els = {
   imageViewerDialog: $("#imageViewerDialog"),
   imageViewerTitle: $("#imageViewerTitle"),
   imageViewerImage: $("#imageViewerImage"),
+  imageViewerZoomOut: $("#imageViewerZoomOut"),
+  imageViewerZoomIn: $("#imageViewerZoomIn"),
+  imageViewerZoomLabel: $("#imageViewerZoomLabel"),
+  imageViewerPrev: $("#imageViewerPrev"),
+  imageViewerNext: $("#imageViewerNext"),
+  imageViewerCounter: $("#imageViewerCounter"),
   closeImageViewer: $("#closeImageViewer"),
   blockDialogTitle: $("#blockDialogTitle"),
   editingBlockId: $("#editingBlockId"),
@@ -493,16 +504,58 @@ function showToast(message, timeout = 2200) {
   showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), timeout);
 }
 
-function openImageViewer(src, title) {
-  els.imageViewerImage.src = src;
-  els.imageViewerImage.alt = title || "악보 이미지";
-  els.imageViewerTitle.textContent = title || "악보 보기";
+function collectViewerImages(clickedButton) {
+  const activeView = clickedButton.closest(".view.active") || document;
+  const buttons = [...activeView.querySelectorAll("[data-view-image]")];
+  const items = buttons.map((button) => ({
+    src: button.dataset.viewImage,
+    title: button.dataset.viewImageTitle || "악보 이미지",
+  }));
+  const index = Math.max(0, buttons.indexOf(clickedButton));
+  return { items: items.length ? items : [{ src: clickedButton.dataset.viewImage, title: clickedButton.dataset.viewImageTitle || "악보 이미지" }], index };
+}
+
+function openImageViewer(clickedButton) {
+  const gallery = collectViewerImages(clickedButton);
+  imageViewer = {
+    items: gallery.items,
+    index: gallery.index,
+    zoom: 1,
+  };
+  updateImageViewer();
   els.imageViewerDialog.showModal();
 }
 
 function closeImageViewer() {
   els.imageViewerDialog.close();
   els.imageViewerImage.src = "";
+}
+
+function updateImageViewer() {
+  const item = imageViewer.items[imageViewer.index];
+  if (!item) return;
+
+  els.imageViewerImage.src = item.src;
+  els.imageViewerImage.alt = item.title;
+  els.imageViewerTitle.textContent = item.title;
+  els.imageViewerImage.style.transform = `scale(${imageViewer.zoom})`;
+  els.imageViewerImage.style.transformOrigin = "center center";
+  els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
+  els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
+  els.imageViewerPrev.disabled = imageViewer.items.length < 2;
+  els.imageViewerNext.disabled = imageViewer.items.length < 2;
+}
+
+function changeImageViewerZoom(delta) {
+  imageViewer.zoom = Math.min(2.5, Math.max(0.5, Math.round((imageViewer.zoom + delta) * 10) / 10));
+  updateImageViewer();
+}
+
+function moveImageViewer(direction) {
+  if (imageViewer.items.length < 2) return;
+  imageViewer.index = (imageViewer.index + direction + imageViewer.items.length) % imageViewer.items.length;
+  imageViewer.zoom = 1;
+  updateImageViewer();
 }
 
 function switchView(view) {
@@ -1103,7 +1156,7 @@ document.addEventListener("click", (event) => {
   if (deleteBlock) deleteBlockById(deleteBlock.dataset.deleteBlock);
 
   const imageButton = event.target.closest("[data-view-image]");
-  if (imageButton) openImageViewer(imageButton.dataset.viewImage, imageButton.dataset.viewImageTitle);
+  if (imageButton) openImageViewer(imageButton);
 
   const collapseBlockGroup = event.target.closest("[data-collapse-block-group]");
   if (collapseBlockGroup) {
@@ -1257,8 +1310,19 @@ els.applyBulkTags.addEventListener("click", async () => {
   saveStateInBackground({}, `${selectedIds.length}개 블럭에 태그를 추가했습니다.`);
 });
 els.closeImageViewer.addEventListener("click", closeImageViewer);
+els.imageViewerZoomOut.addEventListener("click", () => changeImageViewerZoom(-0.1));
+els.imageViewerZoomIn.addEventListener("click", () => changeImageViewerZoom(0.1));
+els.imageViewerPrev.addEventListener("click", () => moveImageViewer(-1));
+els.imageViewerNext.addEventListener("click", () => moveImageViewer(1));
 els.imageViewerDialog.addEventListener("click", (event) => {
   if (event.target === els.imageViewerDialog) closeImageViewer();
+});
+document.addEventListener("keydown", (event) => {
+  if (!els.imageViewerDialog.open) return;
+  if (event.key === "ArrowLeft") moveImageViewer(-1);
+  if (event.key === "ArrowRight") moveImageViewer(1);
+  if (event.key === "+" || event.key === "=") changeImageViewerZoom(0.1);
+  if (event.key === "-") changeImageViewerZoom(-0.1);
 });
 els.saveResourceLibrary.addEventListener("click", async () => {
   state.resourceLibraryUrl = els.resourceLibraryUrl.value.trim();
