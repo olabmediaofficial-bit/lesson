@@ -1265,22 +1265,21 @@ dialog::backdrop {
 }
 
 .image-viewer-scroll {
-  display: grid;
+  display: block;
   min-height: 0;
-  align-items: center;
-  justify-items: center;
   overflow: auto;
   padding: 14px 58px;
 }
 
 .image-viewer img {
   display: block;
-  width: min(100%, 980px);
+  width: min(calc(100% * var(--viewer-zoom, 1)), calc(980px * var(--viewer-zoom, 1)));
   max-width: none;
-  max-height: calc(100vh - 132px);
+  max-height: none;
+  margin: auto;
   object-fit: contain;
   background: #fff;
-  transition: transform 0.12s ease;
+  transition: width 0.12s ease;
 }
 
 .image-viewer-nav {
@@ -1596,8 +1595,8 @@ menu {
   }
 
   .image-viewer img {
-    width: min(100%, 760px);
-    max-height: calc(100vh - 126px);
+    width: min(calc(100% * var(--viewer-zoom, 1)), calc(760px * var(--viewer-zoom, 1)));
+    max-height: none;
   }
 
   .image-viewer-nav {

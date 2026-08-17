@@ -462,10 +462,11 @@ function renderResources(block, mode = "compact") {
           const type = resourceType(resource);
           const href = escapeHTML(resourceHref(resource));
           const label = escapeHTML(resourceLabel(resource));
+          const viewerTitle = escapeHTML(block.title || resourceLabel(resource));
           if (type === "image") {
             return `
               <figure class="score-preview">
-                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${label}" aria-label="${label} 크게 보기">
+                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" aria-label="${viewerTitle} 크게 보기">
                   <img src="${href}" alt="${label}" loading="lazy" />
                 </button>
                 <figcaption>
@@ -538,8 +539,7 @@ function updateImageViewer() {
   els.imageViewerImage.src = item.src;
   els.imageViewerImage.alt = item.title;
   els.imageViewerTitle.textContent = item.title;
-  els.imageViewerImage.style.transform = `scale(${imageViewer.zoom})`;
-  els.imageViewerImage.style.transformOrigin = "center center";
+  els.imageViewerImage.style.setProperty("--viewer-zoom", imageViewer.zoom);
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
