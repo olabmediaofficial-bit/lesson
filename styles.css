@@ -1273,13 +1273,13 @@ dialog::backdrop {
 
 .image-viewer img {
   display: block;
-  width: min(calc(100% * var(--viewer-zoom, 1)), calc(980px * var(--viewer-zoom, 1)));
+  width: auto;
   max-width: none;
-  max-height: none;
+  height: calc((100vh - 132px) * var(--viewer-zoom, 1));
   margin: auto;
   object-fit: contain;
   background: #fff;
-  transition: width 0.12s ease;
+  transition: height 0.12s ease;
 }
 
 .image-viewer-nav {
@@ -1595,8 +1595,8 @@ menu {
   }
 
   .image-viewer img {
-    width: min(calc(100% * var(--viewer-zoom, 1)), calc(760px * var(--viewer-zoom, 1)));
-    max-height: none;
+    width: auto;
+    height: calc((100vh - 126px) * var(--viewer-zoom, 1));
   }
 
   .image-viewer-nav {
