@@ -10,7 +10,7 @@ run_worker_first = ["/api/*", "/files/*"]
 [[d1_databases]]
 binding = "LESSON_DB"
 database_name = "lesson-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "edb40b6f-c6ca-4f64-8c3a-1f21a32b48da"
 
 [[r2_buckets]]
 binding = "LESSON_FILES"
