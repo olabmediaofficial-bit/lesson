@@ -1,6 +1,11 @@
 name = "guitar-lesson-room"
 compatibility_date = "2026-08-01"
-pages_build_output_dir = "public"
+main = "worker.js"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/files/*"]
 
 [[d1_databases]]
 binding = "LESSON_DB"
