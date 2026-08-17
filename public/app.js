@@ -1455,28 +1455,39 @@ async function uploadResource(resource) {
   return response.json();
 }
 
-function isEmbeddedResource(resource) {
-  return typeof resource === "object" && typeof resource.data === "string" && resource.data.startsWith("data:");
+function isStorageMigrationResource(resource) {
+  if (typeof resource !== "object" || typeof resource.data !== "string") return false;
+  if (resource.data.startsWith("/files/")) return false;
+  if (resource.data.startsWith("data:")) return true;
+
+  const type = resourceType(resource);
+  const isScoreFile = type === "image" || type === "pdf";
+  const isSupabaseStorageUrl = /^https?:\/\//i.test(resource.data) && resource.data.includes("/storage/v1/object/public/");
+  return isScoreFile && isSupabaseStorageUrl;
 }
 
 async function migrateEmbeddedFilesToStorage() {
-  const embedded = state.blocks.flatMap((block) => normalizeResources(block).filter(isEmbeddedResource).map((resource) => ({ block, resource })));
-  if (!embedded.length) {
+  const resourcesToMove = state.blocks.flatMap((block) =>
+    normalizeResources(block)
+      .filter(isStorageMigrationResource)
+      .map((resource) => ({ block, resource })),
+  );
+  if (!resourcesToMove.length) {
     showToast("옮길 기존 악보가 없습니다.");
     return;
   }
-  if (!confirm(`기존 악보 ${embedded.length}개를 파일 저장소로 옮길까요?`)) return;
+  if (!confirm(`기존 악보 ${resourcesToMove.length}개를 파일 저장소로 옮길까요?`)) return;
 
   els.migrateStorageFiles.disabled = true;
-  showToast(`기존 악보 ${embedded.length}개를 옮기는 중입니다.`);
+  showToast(`기존 악보 ${resourcesToMove.length}개를 옮기는 중입니다.`);
 
   try {
-    for (let index = 0; index < embedded.length; index += 1) {
-      const { block, resource } = embedded[index];
+    for (let index = 0; index < resourcesToMove.length; index += 1) {
+      const { block, resource } = resourcesToMove[index];
       const uploaded = await uploadResource(resource);
       block.resources = normalizeResources(block).map((item) => (item === resource ? uploaded : item));
       block.updatedAt = nowIso();
-      if ((index + 1) % 3 === 0) showToast(`${index + 1}/${embedded.length}개 옮기는 중...`);
+      if ((index + 1) % 3 === 0) showToast(`${index + 1}/${resourcesToMove.length}개 옮기는 중...`);
     }
     render();
     saveStateInBackground({ mode: "overwrite" }, "기존 악보를 파일 저장소로 옮겼습니다.");

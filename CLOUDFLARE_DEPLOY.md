@@ -45,4 +45,5 @@ npx wrangler d1 execute lesson-db --file cloudflare-state-import.sql
 새로 올리는 PNG/JPG/PDF 파일은 R2 `lesson-files` 버킷에 저장됩니다.
 앱에서는 `/files/...` 주소로 파일을 보여줍니다.
 
-이미 Supabase Storage URL로 옮겨진 기존 악보는 계속 표시됩니다. 나중에 완전히 R2로 옮기려면 앱의 `기존 악보 옮기기` 버튼 또는 별도 마이그레이션을 사용합니다.
+기존 악보가 Supabase Storage URL로 남아 있으면, 앱의 `기존 악보 옮기기` 버튼으로 R2에 복사할 수 있습니다.
+이 작업을 마치면 악보 주소가 `/files/...`로 바뀌어 Supabase Storage에 의존하지 않습니다.

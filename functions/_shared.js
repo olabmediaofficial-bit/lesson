@@ -88,11 +88,7 @@ export function getShareOrigin(request, env) {
 export async function uploadResourceToR2(env, file) {
   if (!env.LESSON_FILES) throw new Error("R2 bucket is not configured");
 
-  const match = String(file.data || "").match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) throw new Error("Invalid file data");
-
-  const contentType = file.type || match[1] || "application/octet-stream";
-  const bytes = base64ToUint8Array(match[2]);
+  const { bytes, contentType } = await readResourceBytes(file);
   const key = createStorageKey(file.name || "file", contentType);
 
   await env.LESSON_FILES.put(key, bytes, {
@@ -108,6 +104,31 @@ export async function uploadResourceToR2(env, file) {
     data: `/files/${key}`,
     storagePath: key,
   };
+}
+
+async function readResourceBytes(file) {
+  const data = String(file.data || "");
+  const embedded = data.match(/^data:([^;]+);base64,(.+)$/);
+  if (embedded) {
+    return {
+      contentType: file.type || embedded[1] || "application/octet-stream",
+      bytes: base64ToUint8Array(embedded[2]),
+    };
+  }
+
+  if (/^https?:\/\//i.test(data)) {
+    const response = await fetch(data);
+    if (!response.ok) {
+      throw new Error(`원본 파일을 가져오지 못했습니다: ${response.status}`);
+    }
+    const headerType = response.headers.get("Content-Type")?.split(";")[0] || "";
+    return {
+      contentType: inferContentType(file.name, file.type || headerType),
+      bytes: new Uint8Array(await response.arrayBuffer()),
+    };
+  }
+
+  throw new Error("Invalid file data");
 }
 
 export function unique(items = []) {
@@ -243,4 +264,19 @@ function storageExtension(name, contentType) {
     "image/webp": ".webp",
     "application/pdf": ".pdf",
   }[contentType] || "";
+}
+
+function inferContentType(name, fallback = "") {
+  const extension = String(name).toLowerCase().match(/\.[a-z0-9]+$/)?.[0] || "";
+  return (
+    {
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".webp": "image/webp",
+      ".pdf": "application/pdf",
+    }[extension] ||
+    fallback ||
+    "application/octet-stream"
+  );
 }
