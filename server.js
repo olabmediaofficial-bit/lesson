@@ -17,6 +17,7 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const supabaseStateTable = process.env.SUPABASE_STATE_TABLE || "lesson_app_state";
 const supabaseStateId = process.env.SUPABASE_STATE_ID || "main";
 const supabaseStorageBucket = process.env.SUPABASE_STORAGE_BUCKET || "lesson-files";
+const allowFileStateFallback = process.env.ALLOW_FILE_STATE_FALLBACK === "true" || !process.env.PORT;
 const sessions = new Set();
 
 const mimeTypes = {
@@ -232,13 +233,10 @@ async function readState() {
     const supabaseState = await readSupabaseState();
     if (supabaseState) return supabaseState;
 
-    const fileState = readFileState();
-    if (fileState) {
-      await writeSupabaseState(fileState);
-      return fileState;
-    }
-
     return null;
+  }
+  if (!allowFileStateFallback) {
+    throw new Error("Persistent storage is not configured");
   }
   return readFileState();
 }
@@ -247,6 +245,9 @@ async function writeState(state) {
   if (hasSupabaseStorage()) {
     await writeSupabaseState(state);
     return;
+  }
+  if (!allowFileStateFallback) {
+    throw new Error("Persistent storage is not configured");
   }
   writeFileState(state);
 }
@@ -550,5 +551,7 @@ const server = http.createServer((request, response) => {
 server.listen(port, host, () => {
   console.log(`Lesson Room server running at http://localhost:${port}`);
   console.log(`Static files served from ${staticRoot}`);
+  console.log(`State storage: ${hasSupabaseStorage() ? `Supabase table ${supabaseStateTable}` : "not configured"}`);
+  console.log(`File storage: ${hasSupabaseFileStorage() ? `Supabase bucket ${supabaseStorageBucket}` : "not configured"}`);
   console.log("Open this from another device using this Mac's Wi-Fi IP address.");
 });

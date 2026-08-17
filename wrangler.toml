@@ -1,0 +1,12 @@
+name = "guitar-lesson-room"
+compatibility_date = "2026-08-01"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "LESSON_DB"
+database_name = "lesson-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "LESSON_FILES"
+bucket_name = "lesson-files"

@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check app.js"
+    "build:cloudflare": "node scripts/build-cloudflare.js",
+    "check": "node --check server.js && node --check app.js && node --check scripts/build-cloudflare.js && node --check scripts/state-to-d1-sql.js"
   },
   "engines": {
     "node": ">=20"
