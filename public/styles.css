@@ -1201,6 +1201,7 @@ dialog::backdrop {
 
 .image-viewer-dialog {
   width: min(1280px, calc(100vw - 24px));
+  height: calc(100vh - 24px);
   max-height: calc(100vh - 24px);
   padding: 0;
   border: 0;
@@ -1215,6 +1216,7 @@ dialog::backdrop {
 
 .image-viewer {
   display: grid;
+  height: calc(100vh - 24px);
   max-height: calc(100vh - 24px);
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
@@ -1275,11 +1277,11 @@ dialog::backdrop {
   display: block;
   width: auto;
   max-width: none;
-  height: calc((100vh - 132px) * var(--viewer-zoom, 1));
+  height: auto;
   margin: auto;
   object-fit: contain;
   background: #fff;
-  transition: height 0.12s ease;
+  transition: width 0.12s ease;
 }
 
 .image-viewer-nav {
@@ -1564,12 +1566,14 @@ menu {
 
   .image-viewer-dialog {
     width: 100vw;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
   }
 
   .image-viewer {
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
   }
 
   .image-viewer-head {
@@ -1591,26 +1595,29 @@ menu {
   }
 
   .image-viewer-scroll {
-    padding: 10px 44px;
+    padding: 8px 12px 56px;
   }
 
   .image-viewer img {
     width: auto;
-    height: calc((100vh - 126px) * var(--viewer-zoom, 1));
+    height: auto;
   }
 
   .image-viewer-nav {
+    top: auto;
+    bottom: 12px;
     width: 34px;
-    height: 52px;
+    height: 40px;
     font-size: 28px;
+    transform: none;
   }
 
   .image-viewer-nav.prev {
-    left: 5px;
+    left: 12px;
   }
 
   .image-viewer-nav.next {
-    right: 5px;
+    right: 12px;
   }
 
   .practice-fields {

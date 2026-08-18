@@ -103,6 +103,7 @@ let imageViewer = {
   items: [],
   index: 0,
   zoom: 1,
+  src: "",
 };
 let metronome = {
   audioContext: null,
@@ -522,9 +523,10 @@ function openImageViewer(clickedButton) {
     items: gallery.items,
     index: gallery.index,
     zoom: 1,
+    src: "",
   };
-  updateImageViewer();
   els.imageViewerDialog.showModal();
+  updateImageViewer();
 }
 
 function closeImageViewer() {
@@ -536,14 +538,31 @@ function updateImageViewer() {
   const item = imageViewer.items[imageViewer.index];
   if (!item) return;
 
-  els.imageViewerImage.src = item.src;
+  if (imageViewer.src !== item.src) {
+    imageViewer.src = item.src;
+    els.imageViewerImage.removeAttribute("style");
+    els.imageViewerImage.src = item.src;
+  }
   els.imageViewerImage.alt = item.title;
   els.imageViewerTitle.textContent = item.title;
-  els.imageViewerImage.style.setProperty("--viewer-zoom", imageViewer.zoom);
+  fitImageViewerToScreen();
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
   els.imageViewerNext.disabled = imageViewer.items.length < 2;
+}
+
+function fitImageViewerToScreen() {
+  const image = els.imageViewerImage;
+  const scroller = image.closest(".image-viewer-scroll");
+  if (!scroller || !image.naturalWidth || !image.naturalHeight) return;
+
+  const availableWidth = Math.max(120, scroller.clientWidth - 4);
+  const availableHeight = Math.max(120, scroller.clientHeight - 4);
+  const fitScale = Math.min(availableWidth / image.naturalWidth, availableHeight / image.naturalHeight);
+  const fittedWidth = Math.max(80, Math.floor(image.naturalWidth * fitScale * imageViewer.zoom));
+  image.style.width = `${fittedWidth}px`;
+  image.style.height = "auto";
 }
 
 function changeImageViewerZoom(delta) {
@@ -1314,8 +1333,12 @@ els.imageViewerZoomOut.addEventListener("click", () => changeImageViewerZoom(-0.
 els.imageViewerZoomIn.addEventListener("click", () => changeImageViewerZoom(0.1));
 els.imageViewerPrev.addEventListener("click", () => moveImageViewer(-1));
 els.imageViewerNext.addEventListener("click", () => moveImageViewer(1));
+els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
 els.imageViewerDialog.addEventListener("click", (event) => {
   if (event.target === els.imageViewerDialog) closeImageViewer();
+});
+window.addEventListener("resize", () => {
+  if (els.imageViewerDialog.open) fitImageViewerToScreen();
 });
 document.addEventListener("keydown", (event) => {
   if (!els.imageViewerDialog.open) return;
