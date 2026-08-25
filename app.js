@@ -104,6 +104,7 @@ let imageViewer = {
   index: 0,
   zoom: 1,
   src: "",
+  gestureScale: 1,
 };
 let metronome = {
   audioContext: null,
@@ -522,6 +523,7 @@ function openImageViewerItems(items, index = 0) {
     index,
     zoom: 1,
     src: "",
+    gestureScale: 1,
   };
   els.imageViewerDialog.showModal();
   updateImageViewer();
@@ -566,6 +568,17 @@ function fitImageViewerToScreen() {
 function changeImageViewerZoom(delta) {
   imageViewer.zoom = Math.min(2.5, Math.max(0.5, Math.round((imageViewer.zoom + delta) * 10) / 10));
   updateImageViewer();
+}
+
+function setImageViewerZoom(value) {
+  imageViewer.zoom = Math.min(2.5, Math.max(0.5, Math.round(value * 100) / 100));
+  updateImageViewer();
+}
+
+function zoomImageViewerFromPointer(event, delta) {
+  if (!els.imageViewerDialog.open) return;
+  event.preventDefault();
+  setImageViewerZoom(imageViewer.zoom + delta);
 }
 
 function moveImageViewer(direction) {
@@ -1381,6 +1394,36 @@ els.imageViewerZoomIn.addEventListener("click", () => changeImageViewerZoom(0.1)
 els.imageViewerPrev.addEventListener("click", () => moveImageViewer(-1));
 els.imageViewerNext.addEventListener("click", () => moveImageViewer(1));
 els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
+els.imageViewerDialog.addEventListener(
+  "wheel",
+  (event) => {
+    if (!els.imageViewerDialog.open || !event.ctrlKey) return;
+    const delta = event.deltaY < 0 ? 0.08 : -0.08;
+    zoomImageViewerFromPointer(event, delta);
+  },
+  { passive: false },
+);
+els.imageViewerDialog.addEventListener(
+  "gesturestart",
+  (event) => {
+    if (!els.imageViewerDialog.open) return;
+    event.preventDefault();
+    imageViewer.gestureScale = event.scale || 1;
+  },
+  { passive: false },
+);
+els.imageViewerDialog.addEventListener(
+  "gesturechange",
+  (event) => {
+    if (!els.imageViewerDialog.open) return;
+    event.preventDefault();
+    const nextScale = event.scale || 1;
+    const delta = nextScale - imageViewer.gestureScale;
+    imageViewer.gestureScale = nextScale;
+    setImageViewerZoom(imageViewer.zoom + delta * 0.45);
+  },
+  { passive: false },
+);
 els.imageViewerDialog.addEventListener("click", (event) => {
   if (event.target === els.imageViewerDialog) closeImageViewer();
 });
