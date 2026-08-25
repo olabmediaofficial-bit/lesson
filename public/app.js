@@ -141,12 +141,6 @@ const els = {
   activeStudentName: $("#activeStudentName"),
   activeStudentLevel: $("#activeStudentLevel"),
   deleteStudent: $("#deleteStudent"),
-  tempoSlider: $("#tempoSlider"),
-  tempoInput: $("#tempoInput"),
-  meterTabs: $("#meterTabs"),
-  beatDots: $("#beatDots"),
-  beatLabel: $("#beatLabel"),
-  metronomeToggle: $("#metronomeToggle"),
   sharedMetronome: $("#sharedMetronome"),
   lessonDate: $("#lessonDate"),
   lessonMemo: $("#lessonMemo"),
@@ -519,9 +513,13 @@ function collectViewerImages(clickedButton) {
 
 function openImageViewer(clickedButton) {
   const gallery = collectViewerImages(clickedButton);
+  openImageViewerItems(gallery.items, gallery.index);
+}
+
+function openImageViewerItems(items, index = 0) {
   imageViewer = {
-    items: gallery.items,
-    index: gallery.index,
+    items,
+    index,
     zoom: 1,
     src: "",
   };
@@ -577,6 +575,43 @@ function moveImageViewer(direction) {
   updateImageViewer();
 }
 
+function lessonRoomImageItems(student) {
+  if (!student) return [];
+  return [...student.lessons]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .flatMap((lesson) =>
+      lesson.blockIds
+        .map(getBlock)
+        .filter(Boolean)
+        .flatMap((block) =>
+          normalizeResources(block)
+            .filter((resource) => resourceType(resource) === "image")
+            .map((resource) => ({
+              src: resourceHref(resource),
+              title: block.title || resourceLabel(resource),
+              lessonDate: lesson.date,
+            }))
+            .filter((item) => item.src),
+        ),
+    );
+}
+
+function currentPracticeStudent() {
+  if (currentView === "rooms") return getActiveStudent();
+  const shareId = activeShareStudentId || activeStudentId;
+  return state.students.find((student) => student.id === shareId) || getActiveStudent();
+}
+
+function openRandomPracticeScore() {
+  const items = lessonRoomImageItems(currentPracticeStudent());
+  if (!items.length) {
+    showToast("이 레슨룸에 랜덤으로 열 악보 이미지가 없습니다.");
+    return;
+  }
+  const index = Math.floor(Math.random() * items.length);
+  openImageViewerItems(items, index);
+}
+
 function switchView(view) {
   if (publicShareMode && view !== "share") return;
   currentView = view;
@@ -611,19 +646,31 @@ function meterBeatCount() {
 }
 
 function renderMetronome() {
-  els.tempoSlider.value = metronome.tempo;
-  els.tempoInput.value = metronome.tempo;
-  els.meterTabs.querySelectorAll("button").forEach((button) => {
-    button.classList.toggle("active", button.dataset.meter === metronome.meter);
+  document.querySelectorAll("[data-metronome]").forEach((root) => {
+    root.querySelectorAll("[data-tempo-slider]").forEach((input) => {
+      input.value = metronome.tempo;
+    });
+    root.querySelectorAll("[data-tempo-input]").forEach((input) => {
+      if (document.activeElement !== input) input.value = metronome.tempo;
+    });
+    root.querySelectorAll("[data-meter]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.meter === metronome.meter);
+    });
+    root.querySelectorAll("[data-metronome-toggle]").forEach((button) => {
+      button.textContent = metronome.isPlaying ? "정지" : "재생";
+      button.classList.toggle("playing", metronome.isPlaying);
+    });
+    root.querySelectorAll("[data-beat-dots]").forEach((beatDots) => {
+      beatDots.innerHTML = Array.from({ length: meterBeatCount() }, (_, index) => {
+        const active = metronome.isPlaying && index === metronome.visibleBeat;
+        const downbeat = index === 0;
+        return `<span class="${active ? "active" : ""} ${downbeat ? "downbeat" : ""}"></span>`;
+      }).join("");
+    });
+    root.querySelectorAll("[data-beat-label]").forEach((beatLabel) => {
+      beatLabel.textContent = metronome.isPlaying ? `${metronome.visibleBeat + 1} / ${meterBeatCount()}` : "준비";
+    });
   });
-  els.metronomeToggle.textContent = metronome.isPlaying ? "정지" : "재생";
-  els.metronomeToggle.classList.toggle("playing", metronome.isPlaying);
-  els.beatDots.innerHTML = Array.from({ length: meterBeatCount() }, (_, index) => {
-    const active = metronome.isPlaying && index === metronome.visibleBeat;
-    const downbeat = index === 0;
-    return `<span class="${active ? "active" : ""} ${downbeat ? "downbeat" : ""}"></span>`;
-  }).join("");
-  els.beatLabel.textContent = metronome.isPlaying ? `${metronome.visibleBeat + 1} / ${meterBeatCount()}` : "준비";
 }
 
 function setTempo(value) {
@@ -1066,7 +1113,7 @@ function renderShare() {
   } else {
     els.shareStudentPicker.hidden = false;
     els.copyPreviewShareLink.hidden = false;
-    els.sharedMetronome.hidden = true;
+    els.sharedMetronome.hidden = false;
     els.shareStudentPicker.innerHTML = state.students
       .map((item) => `<option value="${item.id}">${item.name}</option>`)
       .join("");
@@ -1357,22 +1404,37 @@ els.shareStudentPicker.addEventListener("change", () => {
   activeShareStudentId = els.shareStudentPicker.value;
   renderShare();
 });
-els.tempoSlider.addEventListener("input", (event) => setTempo(event.target.value));
-els.tempoInput.addEventListener("input", (event) => {
-  const value = Number(event.target.value);
-  if (value >= 40 && value <= 220) setTempo(value);
-});
-els.tempoInput.addEventListener("change", (event) => setTempo(event.target.value));
-els.meterTabs.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-meter]");
-  if (button) setMeter(button.dataset.meter);
-});
-els.metronomeToggle.addEventListener("click", async () => {
-  if (metronome.isPlaying) {
-    stopMetronome();
+document.addEventListener("input", (event) => {
+  if (event.target.matches("[data-tempo-slider]")) {
+    setTempo(event.target.value);
     return;
   }
-  await startMetronome();
+  if (event.target.matches("[data-tempo-input]")) {
+    const value = Number(event.target.value);
+    if (value >= 40 && value <= 220) setTempo(value);
+  }
+});
+document.addEventListener("change", (event) => {
+  if (event.target.matches("[data-tempo-input]")) setTempo(event.target.value);
+});
+document.addEventListener("click", async (event) => {
+  const meterButton = event.target.closest("[data-meter]");
+  if (meterButton) {
+    setMeter(meterButton.dataset.meter);
+    return;
+  }
+
+  const metronomeButton = event.target.closest("[data-metronome-toggle]");
+  if (metronomeButton) {
+    if (metronome.isPlaying) {
+      stopMetronome();
+      return;
+    }
+    await startMetronome();
+    return;
+  }
+
+  if (event.target.closest("[data-random-practice]")) openRandomPracticeScore();
 });
 els.adminLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();

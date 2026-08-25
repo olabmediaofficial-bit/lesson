@@ -138,6 +138,27 @@
                   <button class="primary-button" id="copyShareLink" type="button">공유 링크 복사</button>
                 </div>
               </div>
+              <div class="room-session-bar">
+                <div class="metronome compact-metronome" data-metronome aria-label="메트로놈">
+                  <div class="metronome-display">
+                    <div class="beat-dots" data-beat-dots aria-hidden="true"></div>
+                    <strong data-beat-label>준비</strong>
+                  </div>
+                  <div class="metro-row">
+                    <input data-tempo-input type="text" inputmode="numeric" pattern="[0-9]*" value="90" aria-label="템포 숫자 입력" />
+                    <span class="tempo-unit">BPM</span>
+                    <input data-tempo-slider type="range" min="40" max="220" value="90" aria-label="템포" />
+                  </div>
+                  <div class="metro-row">
+                    <div class="segmented meter-tabs">
+                      <button class="active" data-meter="4/4" type="button">4/4</button>
+                      <button data-meter="6/8" type="button">6/8</button>
+                    </div>
+                    <button class="primary-button" data-metronome-toggle type="button">재생</button>
+                    <button class="secondary-button random-practice-button" data-random-practice="room" type="button">랜덤 연습</button>
+                  </div>
+                </div>
+              </div>
 
               <div class="lesson-composer">
                 <input id="lessonDate" type="date" aria-label="수업 날짜" />
@@ -180,22 +201,23 @@
                   <select id="shareStudentPicker" aria-label="공유 학생 선택"></select>
                   <button class="primary-button" id="copyPreviewShareLink" type="button">레슨생에게 공유하기</button>
                 </div>
-                <div class="metronome" id="sharedMetronome" aria-label="메트로놈">
+                <div class="metronome compact-metronome" id="sharedMetronome" data-metronome aria-label="메트로놈">
                   <div class="metronome-display">
-                    <div class="beat-dots" id="beatDots" aria-hidden="true"></div>
-                    <strong id="beatLabel">준비</strong>
+                    <div class="beat-dots" data-beat-dots aria-hidden="true"></div>
+                    <strong data-beat-label>준비</strong>
                   </div>
                   <div class="metro-row">
-                    <input id="tempoInput" type="text" inputmode="numeric" pattern="[0-9]*" value="90" aria-label="템포 숫자 입력" />
+                    <input data-tempo-input type="text" inputmode="numeric" pattern="[0-9]*" value="90" aria-label="템포 숫자 입력" />
                     <span class="tempo-unit">BPM</span>
+                    <input data-tempo-slider type="range" min="40" max="220" value="90" aria-label="템포" />
                   </div>
-                  <input id="tempoSlider" type="range" min="40" max="220" value="90" aria-label="템포" />
                   <div class="metro-row">
-                    <div class="segmented meter-tabs" id="meterTabs">
+                    <div class="segmented meter-tabs">
                       <button class="active" data-meter="4/4" type="button">4/4</button>
                       <button data-meter="6/8" type="button">6/8</button>
                     </div>
-                    <button class="primary-button" id="metronomeToggle" type="button">재생</button>
+                    <button class="primary-button" data-metronome-toggle type="button">재생</button>
+                    <button class="secondary-button random-practice-button" data-random-practice="share" type="button">랜덤 연습</button>
                   </div>
                 </div>
               </div>
@@ -336,6 +358,24 @@
         <div class="image-viewer-head">
           <strong id="imageViewerTitle">악보 보기</strong>
           <div class="image-viewer-actions">
+            <div class="metronome viewer-metronome" data-metronome aria-label="메트로놈">
+              <div class="metronome-display">
+                <div class="beat-dots" data-beat-dots aria-hidden="true"></div>
+                <strong data-beat-label>준비</strong>
+              </div>
+              <div class="metro-row">
+                <input data-tempo-input type="text" inputmode="numeric" pattern="[0-9]*" value="90" aria-label="템포 숫자 입력" />
+                <span class="tempo-unit">BPM</span>
+              </div>
+              <div class="metro-row">
+                <div class="segmented meter-tabs">
+                  <button class="active" data-meter="4/4" type="button">4/4</button>
+                  <button data-meter="6/8" type="button">6/8</button>
+                </div>
+                <button class="primary-button" data-metronome-toggle type="button">재생</button>
+              </div>
+            </div>
+            <button class="secondary-button random-practice-button viewer-random-button" data-random-practice="viewer" type="button">랜덤</button>
             <button class="icon-button" id="imageViewerZoomOut" type="button" title="축소">−</button>
             <span id="imageViewerZoomLabel">100%</span>
             <button class="icon-button" id="imageViewerZoomIn" type="button" title="확대">+</button>

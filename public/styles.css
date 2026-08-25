@@ -768,6 +768,29 @@ textarea {
   background: rgba(255, 255, 255, 0.12);
 }
 
+.room-session-bar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  margin: 0 -18px 14px;
+  padding: 8px 18px;
+  border-top: 1px solid rgba(45, 106, 79, 0.08);
+  border-bottom: 1px solid rgba(45, 106, 79, 0.12);
+  background: rgba(251, 250, 247, 0.94);
+  backdrop-filter: blur(10px);
+}
+
+.compact-metronome {
+  width: 100%;
+  max-width: 680px;
+  grid-template-columns: minmax(94px, auto) minmax(170px, 1fr) minmax(220px, auto);
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-color: rgba(45, 106, 79, 0.16);
+  background: rgba(45, 106, 79, 0.08);
+}
+
 .metronome input[type="range"] {
   width: 100%;
   min-height: 18px;
@@ -823,7 +846,7 @@ textarea {
   gap: 8px;
 }
 
-.metro-row #tempoInput {
+.metro-row [data-tempo-input] {
   width: 76px;
   min-height: 34px;
   border-color: rgba(255, 255, 255, 0.26);
@@ -861,7 +884,7 @@ textarea {
   background: #fff;
 }
 
-#metronomeToggle {
+[data-metronome-toggle] {
   width: 58px;
   min-height: 34px;
   padding: 0 10px;
@@ -871,9 +894,17 @@ textarea {
   font-weight: 900;
 }
 
-#metronomeToggle.playing {
+[data-metronome-toggle].playing {
   background: var(--rose);
   color: #fff;
+}
+
+.random-practice-button {
+  min-height: 34px;
+  padding: 0 10px;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .chip-button {
@@ -1136,6 +1167,9 @@ textarea {
 }
 
 .share-hero {
+  position: sticky;
+  top: 0;
+  z-index: 8;
   color: #fff;
   background:
     linear-gradient(rgba(24, 57, 45, 0.82), rgba(24, 57, 45, 0.82)),
@@ -1229,6 +1263,51 @@ dialog::backdrop {
   padding: 10px 12px;
   color: #fff;
   background: #111;
+}
+
+.viewer-metronome {
+  width: 330px;
+  grid-template-columns: 82px 86px 1fr;
+  gap: 5px;
+  padding: 5px;
+}
+
+.viewer-metronome .metronome-display {
+  min-height: 28px;
+  padding: 4px 6px;
+}
+
+.viewer-metronome .beat-dots {
+  gap: 4px;
+}
+
+.viewer-metronome .beat-dots span {
+  width: 7px;
+  height: 7px;
+}
+
+.viewer-metronome .beat-dots span.downbeat {
+  width: 9px;
+  height: 9px;
+}
+
+.viewer-metronome [data-tempo-input] {
+  width: 54px;
+  min-height: 28px;
+}
+
+.viewer-metronome .meter-tabs button,
+.viewer-metronome [data-metronome-toggle] {
+  min-height: 28px;
+  font-size: 11px;
+}
+
+.viewer-random-button {
+  width: auto;
+  min-height: 32px;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .image-viewer-head strong {
@@ -1531,6 +1610,24 @@ menu {
     flex-direction: column;
   }
 
+  .room-session-bar {
+    margin: 0 -12px 12px;
+    padding: 8px 12px;
+  }
+
+  .compact-metronome {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .compact-metronome .metro-row {
+    width: 100%;
+  }
+
+  .compact-metronome [data-tempo-slider] {
+    flex: 1;
+  }
+
   .nav-item {
     justify-content: center;
     padding: 0 8px;
@@ -1579,10 +1676,14 @@ menu {
   .image-viewer-head {
     align-items: flex-start;
     gap: 8px;
+    flex-direction: column;
   }
 
   .image-viewer-actions {
+    width: 100%;
+    justify-content: flex-end;
     gap: 4px;
+    flex-wrap: wrap;
   }
 
   .image-viewer-actions .icon-button {
@@ -1592,6 +1693,16 @@ menu {
 
   .image-viewer-actions span {
     min-width: 40px;
+  }
+
+  .viewer-metronome {
+    order: 3;
+    width: 100%;
+    grid-template-columns: minmax(78px, auto) minmax(76px, auto) 1fr;
+  }
+
+  .viewer-random-button {
+    order: 2;
   }
 
   .image-viewer-scroll {
