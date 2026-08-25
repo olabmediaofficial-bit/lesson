@@ -716,6 +716,24 @@ function playClick(isDownbeat) {
   oscillator.stop(now + 0.06);
 }
 
+function createAudioContext() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) throw new Error("AudioContext is not supported.");
+  return new AudioContextClass();
+}
+
+function unlockAudioContext() {
+  if (!metronome.audioContext) return;
+  const now = metronome.audioContext.currentTime;
+  const oscillator = metronome.audioContext.createOscillator();
+  const gain = metronome.audioContext.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  oscillator.connect(gain);
+  gain.connect(metronome.audioContext.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.01);
+}
+
 function tickMetronome() {
   const beat = metronome.beat;
   metronome.visibleBeat = beat;
@@ -726,11 +744,12 @@ function tickMetronome() {
 
 async function startMetronome() {
   if (!metronome.audioContext) {
-    metronome.audioContext = new AudioContext();
+    metronome.audioContext = createAudioContext();
   }
   if (metronome.audioContext.state === "suspended") {
     await metronome.audioContext.resume();
   }
+  unlockAudioContext();
   metronome.isPlaying = true;
   metronome.beat = 0;
   metronome.visibleBeat = 0;
@@ -1473,7 +1492,12 @@ document.addEventListener("click", async (event) => {
       stopMetronome();
       return;
     }
-    await startMetronome();
+    try {
+      await startMetronome();
+    } catch (error) {
+      console.error(error);
+      showToast("메트로놈 소리를 시작하지 못했습니다. 브라우저 소리 권한을 확인해주세요.", 5000);
+    }
     return;
   }
 
