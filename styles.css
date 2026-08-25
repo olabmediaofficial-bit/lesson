@@ -1266,40 +1266,66 @@ dialog::backdrop {
 }
 
 .viewer-metronome {
-  width: 330px;
-  grid-template-columns: 82px 86px 1fr;
-  gap: 5px;
-  padding: 5px;
+  width: min(460px, 46vw);
+  grid-template-columns: minmax(78px, auto) auto minmax(138px, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .viewer-metronome .metronome-display {
-  min-height: 28px;
-  padding: 4px 6px;
+  min-height: 26px;
+  padding: 3px 6px;
+  gap: 6px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.viewer-metronome .metronome-display strong {
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .viewer-metronome .beat-dots {
-  gap: 4px;
+  gap: 3px;
 }
 
 .viewer-metronome .beat-dots span {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 
 .viewer-metronome .beat-dots span.downbeat {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
 }
 
 .viewer-metronome [data-tempo-input] {
-  width: 54px;
-  min-height: 28px;
+  width: 48px;
+  min-height: 26px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+
+.viewer-metronome .tempo-unit {
+  font-size: 11px;
+}
+
+.viewer-metronome .metro-row {
+  gap: 5px;
 }
 
 .viewer-metronome .meter-tabs button,
 .viewer-metronome [data-metronome-toggle] {
-  min-height: 28px;
+  min-height: 26px;
+  padding: 0 7px;
   font-size: 11px;
+}
+
+.viewer-metronome [data-metronome-toggle] {
+  width: 46px;
 }
 
 .viewer-random-button {
@@ -1698,7 +1724,30 @@ menu {
   .viewer-metronome {
     order: 3;
     width: 100%;
-    grid-template-columns: minmax(78px, auto) minmax(76px, auto) 1fr;
+    grid-template-columns: minmax(70px, auto) minmax(70px, auto) minmax(120px, 1fr);
+    gap: 4px;
+    padding: 4px;
+  }
+
+  .viewer-metronome .metronome-display {
+    padding: 3px 5px;
+  }
+
+  .viewer-metronome .beat-dots {
+    gap: 2px;
+  }
+
+  .viewer-metronome [data-tempo-input] {
+    width: 44px;
+  }
+
+  .viewer-metronome .meter-tabs {
+    gap: 4px;
+  }
+
+  .viewer-metronome .meter-tabs button,
+  .viewer-metronome [data-metronome-toggle] {
+    padding: 0 5px;
   }
 
   .viewer-random-button {
