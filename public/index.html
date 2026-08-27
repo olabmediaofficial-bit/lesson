@@ -44,6 +44,10 @@
             <span aria-hidden="true">◎</span>
             레슨룸
           </button>
+          <button class="nav-item" data-view="progress" type="button">
+            <span aria-hidden="true">▱</span>
+            진도표
+          </button>
           <button class="nav-item" data-view="share" type="button">
             <span aria-hidden="true">↗</span>
             공유 화면
@@ -134,6 +138,7 @@
                   <h2 id="activeStudentName">학생</h2>
                 </div>
                 <div class="student-actions">
+                  <button class="secondary-button" data-view="progress" type="button">진도표 보기</button>
                   <button class="secondary-button danger" id="deleteStudent" type="button">학생 삭제</button>
                   <button class="primary-button" id="copyShareLink" type="button">공유 링크 복사</button>
                 </div>
@@ -186,6 +191,20 @@
               <div id="roomMaterialList" class="mini-list"></div>
             </section>
           </div>
+        </section>
+
+        <section class="view" id="progressView" aria-label="진도표">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Practice progress</p>
+                <h2 id="progressStudentName">학생 진도표</h2>
+                <p>완성된 실습곡을 기준으로 왼손, 오른손, 테크닉 균형을 봅니다.</p>
+              </div>
+              <button class="secondary-button" data-view="rooms" type="button">레슨룸으로</button>
+            </div>
+            <div id="progressContent" class="progress-dashboard"></div>
+          </section>
         </section>
 
         <section class="view" id="shareView" aria-label="공유 화면">

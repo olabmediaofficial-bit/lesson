@@ -163,6 +163,7 @@ function mergeStudents(serverStudents = [], incomingStudents = []) {
   serverStudents.forEach((student) => {
     students.set(student.id, {
       ...student,
+      practiceProgress: student.practiceProgress || {},
       lessons: mergeLessons([], student.lessons || []),
     });
   });
@@ -171,6 +172,10 @@ function mergeStudents(serverStudents = [], incomingStudents = []) {
     students.set(student.id, {
       ...(existing || {}),
       ...student,
+      practiceProgress: {
+        ...(existing?.practiceProgress || {}),
+        ...(student.practiceProgress || {}),
+      },
       lessons: mergeLessons(existing?.lessons || [], student.lessons || []),
     });
   });

@@ -96,7 +96,8 @@ button {
 .public-share .sidebar,
 .public-share .topbar,
 .public-share #libraryView,
-.public-share #roomsView {
+.public-share #roomsView,
+.public-share #progressView {
   display: none;
 }
 
@@ -1552,6 +1553,147 @@ dialog::backdrop {
   font-weight: 900;
 }
 
+.mastery-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.mastery-control button,
+.mastery-badge {
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.mastery-control button.active,
+.mastery-badge {
+  color: #fff;
+}
+
+.mastery-control .level-1.active,
+.mastery-badge.level-1 {
+  border-color: #8aa5b7;
+  background: #6d8da3;
+}
+
+.mastery-control .level-2.active,
+.mastery-badge.level-2 {
+  border-color: #bf9850;
+  background: #b7791f;
+}
+
+.mastery-control .level-3.active,
+.mastery-badge.level-3 {
+  border-color: #2d6a4f;
+  background: #2d6a4f;
+}
+
+.progress-dashboard {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.progress-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.progress-stat-card {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfaf7;
+}
+
+.progress-stat-card strong {
+  color: var(--accent-strong);
+  font-size: 28px;
+}
+
+.progress-stat-card span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.skill-gauge-panel,
+.progress-block-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.skill-gauge-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.skill-gauge-row > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.skill-gauge-row strong {
+  font-size: 14px;
+}
+
+.skill-gauge-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.skill-gauge-track {
+  height: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef2ef;
+}
+
+.skill-gauge-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2d6a4f, #7cb58f);
+}
+
+.progress-block-list h3 {
+  margin: 0;
+}
+
+.progress-song-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.progress-song-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
 menu {
   justify-content: flex-end;
   margin: 6px 0 0;
@@ -1788,5 +1930,19 @@ menu {
   .primary-button,
   .secondary-button {
     width: 100%;
+  }
+
+  .progress-summary-grid,
+  .skill-gauge-row,
+  .progress-song-row {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-song-row .mastery-control {
+    width: 100%;
+  }
+
+  .progress-song-row .mastery-control button {
+    flex: 1;
   }
 }
