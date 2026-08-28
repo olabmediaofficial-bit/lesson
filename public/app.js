@@ -536,7 +536,7 @@ function masteryLabel(level) {
     1: "배웠음",
     2: "칠수있음",
     3: "꽤잘침",
-    4: "완벽",
+    4: "잘침",
   }[level] || "배웠음";
 }
 
@@ -676,7 +676,7 @@ function currentPracticeStudent() {
 function openRandomPracticeScore() {
   const items = lessonRoomImageItems(currentPracticeStudent());
   if (!items.length) {
-    showToast("점검할 완벽 전 실습 악보가 없습니다.");
+    showToast("점검할 잘침 전 실습 악보가 없습니다.");
     return;
   }
   const index = Math.floor(Math.random() * items.length);
@@ -1062,7 +1062,7 @@ function renderProgress() {
       </div>
       <div class="progress-stat-card">
         <strong>${completedBlocks.length}</strong>
-        <span>완벽한 곡</span>
+        <span>잘 치는 곡</span>
       </div>
       <div class="progress-stat-card">
         <strong>${inProgressBlocks.length}</strong>
@@ -1087,7 +1087,7 @@ function renderProgress() {
         .join("")}
     </div>
     <section class="progress-block-list">
-      <h3>완벽 전 실습곡</h3>
+      <h3>잘침 전 실습곡</h3>
       ${
         inProgressBlocks.length
           ? inProgressBlocks.map((block) => `<div class="progress-song-row"><span>${escapeHTML(block.title)}</span>${renderMasteryControl(student, block, true)}</div>`).join("")
