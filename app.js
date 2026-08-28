@@ -93,6 +93,10 @@ let activeShareStudentId = activeStudentId;
 let activeKindFilter = "all";
 let lessonRoomMode = "weekly";
 let practiceRoomSort = "date";
+let practiceSortDirection = {
+  date: "desc",
+  level: "asc",
+};
 let selectedBlockIds = new Set();
 let pendingBlockIds = new Set();
 let expandedLessonIds = new Set();
@@ -1143,6 +1147,8 @@ function renderLessonRoomContent(student, { admin = false } = {}) {
 }
 
 function renderLessonRoomControls() {
+  const dateSortLabel = practiceSortDirection.date === "desc" ? "날짜별 보기 ↓" : "날짜별 보기 ↑";
+  const levelSortLabel = practiceSortDirection.level === "asc" ? "연습 정도별 보기 ↑" : "연습 정도별 보기 ↓";
   return `
     <div class="lesson-room-view-controls">
       <div class="segmented small-segmented">
@@ -1152,8 +1158,8 @@ function renderLessonRoomControls() {
       ${
         lessonRoomMode === "practice"
           ? `<div class="segmented small-segmented">
-              <button class="${practiceRoomSort === "date" ? "active" : ""}" data-practice-sort="date" type="button">날짜별 보기</button>
-              <button class="${practiceRoomSort === "level" ? "active" : ""}" data-practice-sort="level" type="button">연습 정도별 보기</button>
+              <button class="${practiceRoomSort === "date" ? "active" : ""}" data-practice-sort="date" type="button">${dateSortLabel}</button>
+              <button class="${practiceRoomSort === "level" ? "active" : ""}" data-practice-sort="level" type="button">${levelSortLabel}</button>
             </div>`
           : ""
       }
@@ -1248,7 +1254,8 @@ function renderPracticeSongRow(student, block, date, admin = false) {
 }
 
 function groupPracticeSongsByMastery(student, items) {
-  return [1, 2, 3, 4]
+  const levels = practiceSortDirection.level === "asc" ? [1, 2, 3, 4] : [4, 3, 2, 1];
+  return levels
     .map((level) => ({
       title: masteryLabel(level),
       items: items.filter(({ block }) => masteryLevel(student, block.id) === level),
@@ -1270,9 +1277,10 @@ function practiceSongItems(student) {
     });
   const items = [...itemsByBlock.values()];
   if (practiceRoomSort === "level") {
-    return items.sort((a, b) => masteryLevel(student, a.block.id) - masteryLevel(student, b.block.id) || b.date.localeCompare(a.date));
+    const direction = practiceSortDirection.level === "asc" ? 1 : -1;
+    return items.sort((a, b) => (masteryLevel(student, a.block.id) - masteryLevel(student, b.block.id)) * direction || b.date.localeCompare(a.date));
   }
-  return items.sort((a, b) => b.date.localeCompare(a.date));
+  return items.sort((a, b) => (practiceSortDirection.date === "asc" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)));
 }
 
 function renderPracticeMetaText(block) {
@@ -1512,7 +1520,12 @@ document.addEventListener("click", (event) => {
   const practiceSortButton = event.target.closest("[data-practice-sort]");
   if (practiceSortButton) {
     event.preventDefault();
-    practiceRoomSort = practiceSortButton.dataset.practiceSort;
+    const nextSort = practiceSortButton.dataset.practiceSort;
+    if (practiceRoomSort === nextSort) {
+      practiceSortDirection[nextSort] = practiceSortDirection[nextSort] === "asc" ? "desc" : "asc";
+    } else {
+      practiceRoomSort = nextSort;
+    }
     render();
     return;
   }
