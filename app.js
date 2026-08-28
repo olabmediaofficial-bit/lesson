@@ -12,6 +12,7 @@ const SERVER_UPLOAD_ENDPOINT = "/api/upload";
 const ADMIN_TOKEN_KEY = "lessonRoomAdminToken";
 
 const starterData = {
+  practiceProgressScale: "four-step",
   resourceLibraryUrl: "",
   blocks: [
     {
@@ -202,15 +203,25 @@ function migrateState(data) {
     practice: normalizePractice(block.practice),
     updatedAt: block.updatedAt || "",
   }));
-  data.students = data.students.map((student) => ({
-    ...student,
-    practiceProgress: student.practiceProgress || {},
-    lessons: student.lessons.map((lesson) => ({
-      ...lesson,
-      blockIds: lesson.blockIds || lesson.materialIds || [],
-      updatedAt: lesson.updatedAt || "",
-    })),
-  }));
+  const shouldUpgradePracticeProgress = data.practiceProgressScale !== "four-step";
+  data.students = data.students.map((student) => {
+    const practiceProgress = { ...(student.practiceProgress || {}) };
+    if (shouldUpgradePracticeProgress) {
+      Object.entries(practiceProgress).forEach(([blockId, level]) => {
+        if (Number(level) === 3) practiceProgress[blockId] = 4;
+      });
+    }
+    return {
+      ...student,
+      practiceProgress,
+      lessons: student.lessons.map((lesson) => ({
+        ...lesson,
+        blockIds: lesson.blockIds || lesson.materialIds || [],
+        updatedAt: lesson.updatedAt || "",
+      })),
+    };
+  });
+  data.practiceProgressScale = "four-step";
   return data;
 }
 
@@ -506,22 +517,23 @@ function studentPracticeProgress(student) {
 
 function masteryLevel(student, blockId) {
   const value = Number(studentPracticeProgress(student)[blockId]);
-  if (value === 2 || value === 3) return value;
+  if (value >= 2 && value <= 4) return value;
   return 1;
 }
 
 function setMasteryLevel(student, blockId, level) {
   const block = getBlock(blockId);
   if (!student || block?.kind !== "practice") return;
-  studentPracticeProgress(student)[blockId] = Math.min(3, Math.max(1, Number(level) || 1));
+  studentPracticeProgress(student)[blockId] = Math.min(4, Math.max(1, Number(level) || 1));
 }
 
 function masteryLabel(level) {
   return {
-    1: "시작",
-    2: "다듬기",
-    3: "완성",
-  }[level] || "시작";
+    1: "배웠음",
+    2: "칠수있음",
+    3: "꽤잘침",
+    4: "완벽",
+  }[level] || "배웠음";
 }
 
 function ensurePracticeProgress(student, blockIds = []) {
@@ -636,7 +648,7 @@ function lessonRoomImageItems(student) {
     .flatMap((lesson) =>
       lesson.blockIds
         .map(getBlock)
-        .filter((block) => block?.kind === "practice" && masteryLevel(student, block.id) < 3)
+        .filter((block) => block?.kind === "practice" && masteryLevel(student, block.id) < 4)
         .flatMap((block) =>
           normalizeResources(block)
             .filter((resource) => resourceType(resource) === "image")
@@ -660,7 +672,7 @@ function currentPracticeStudent() {
 function openRandomPracticeScore() {
   const items = lessonRoomImageItems(currentPracticeStudent());
   if (!items.length) {
-    showToast("점검할 시작/다듬기 실습 악보가 없습니다.");
+    showToast("점검할 완벽 전 실습 악보가 없습니다.");
     return;
   }
   const index = Math.floor(Math.random() * items.length);
@@ -1034,8 +1046,8 @@ function renderProgress() {
   els.progressStudentName.textContent = `${student.name}'s 진도표`;
 
   const practiceBlocks = uniqueLessonBlocks(student).filter((block) => block.kind === "practice");
-  const completedBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) === 3);
-  const inProgressBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) < 3);
+  const completedBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) === 4);
+  const inProgressBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) < 4);
   const stats = progressStats(completedBlocks);
 
   els.progressContent.innerHTML = `
@@ -1046,7 +1058,7 @@ function renderProgress() {
       </div>
       <div class="progress-stat-card">
         <strong>${completedBlocks.length}</strong>
-        <span>완성곡</span>
+        <span>완벽한 곡</span>
       </div>
       <div class="progress-stat-card">
         <strong>${inProgressBlocks.length}</strong>
@@ -1071,7 +1083,7 @@ function renderProgress() {
         .join("")}
     </div>
     <section class="progress-block-list">
-      <h3>완성이 아닌 실습곡</h3>
+      <h3>완벽 전 실습곡</h3>
       ${
         inProgressBlocks.length
           ? inProgressBlocks.map((block) => `<div class="progress-song-row"><span>${escapeHTML(block.title)}</span>${renderMasteryControl(student, block, true)}</div>`).join("")
@@ -1141,7 +1153,7 @@ function renderLessonRoomControls() {
         lessonRoomMode === "practice"
           ? `<div class="segmented small-segmented">
               <button class="${practiceRoomSort === "date" ? "active" : ""}" data-practice-sort="date" type="button">날짜순</button>
-              <button class="${practiceRoomSort === "level" ? "active" : ""}" data-practice-sort="level" type="button">레벨순</button>
+              <button class="${practiceRoomSort === "level" ? "active" : ""}" data-practice-sort="level" type="button">연습 정도순</button>
             </div>`
           : ""
       }
@@ -1314,8 +1326,8 @@ function renderMasteryControl(student, block, editable = false) {
   const level = masteryLevel(student, block.id);
   if (!editable) return renderMasteryBadge(student, block);
   return `
-    <div class="mastery-control" aria-label="${escapeHTML(block.title)} 숙련도">
-      ${[1, 2, 3]
+    <div class="mastery-control" aria-label="${escapeHTML(block.title)} 연습 정도">
+      ${[1, 2, 3, 4]
         .map(
           (item) => `
             <button class="${item === level ? "active" : ""} level-${item}" type="button" data-mastery-block="${block.id}" data-mastery-level="${item}">
@@ -2147,7 +2159,7 @@ function updateMastery(blockId, level) {
   setMasteryLevel(student, blockId, level);
   student.updatedAt = nowIso();
   render();
-  saveStateInBackground({}, "숙련도를 저장했습니다.");
+  saveStateInBackground({}, "연습 정도를 저장했습니다.");
 }
 
 async function deleteActiveStudent() {

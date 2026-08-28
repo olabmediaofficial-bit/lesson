@@ -1697,6 +1697,12 @@ dialog::backdrop {
 
 .mastery-control .level-3.active,
 .mastery-badge.level-3 {
+  border-color: #6f6a35;
+  background: #8a7d28;
+}
+
+.mastery-control .level-4.active,
+.mastery-badge.level-4 {
   border-color: #2d6a4f;
   background: #2d6a4f;
 }
