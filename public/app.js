@@ -152,7 +152,6 @@ const els = {
   lessonPracticePicker: $("#lessonPracticePicker"),
   pendingMaterialList: $("#pendingMaterialList"),
   lessonList: $("#lessonList"),
-  roomMaterialList: $("#roomMaterialList"),
   progressStudentName: $("#progressStudentName"),
   progressContent: $("#progressContent"),
   shareStudentPicker: $("#shareStudentPicker"),
@@ -1000,7 +999,6 @@ function renderRooms() {
     els.activeStudentLevel.textContent = "Student";
     els.deleteStudent.disabled = true;
     els.lessonList.innerHTML = `<div class="empty">학생을 추가하면 레슨룸이 만들어집니다.</div>`;
-    els.roomMaterialList.innerHTML = "";
     return;
   }
 
@@ -1021,7 +1019,6 @@ function renderRooms() {
   els.activeStudentLevel.textContent = student.level || "Student";
   els.deleteStudent.disabled = false;
   renderLessonPicker();
-  renderRoomBlocks(student);
   renderLessonList(student);
 }
 
@@ -1117,26 +1114,6 @@ function renderKindPicker(picker, kind) {
     .map((block) => `<option value="${block.id}">${escapeHTML(block.title)}</option>`)
     .join("");
   picker.disabled = !available.length;
-}
-
-function renderRoomBlocks(student) {
-  const blocks = uniqueLessonBlocks(student);
-  if (!blocks.length) {
-    els.roomMaterialList.innerHTML = `<div class="empty">아직 배정된 블럭이 없습니다.</div>`;
-    return;
-  }
-
-  els.roomMaterialList.innerHTML = blocks
-    .map(
-      (block) => `
-        <div class="mini-item">
-          <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
-          <strong>${escapeHTML(block.title)}</strong>
-          <span class="material-meta">${block.tags.map(escapeHTML).join(", ")}</span>
-        </div>
-      `,
-    )
-    .join("");
 }
 
 function renderLessonList(student) {
@@ -1236,11 +1213,12 @@ function renderPracticeSongMode(student, { admin = false } = {}) {
           ({ block, date }) => `
             <article class="practice-song-row">
               <div class="practice-song-main">
-                <strong>${escapeHTML(block.title)}</strong>
+                <button class="practice-song-title-button" type="button" data-open-practice-score="${block.id}">
+                  ${escapeHTML(block.title)}
+                </button>
                 <span>${formatDate(date)} · ${renderPracticeMetaText(block)}</span>
               </div>
               ${renderMasteryControl(student, block, admin)}
-              <button class="secondary-button mini-button" type="button" data-open-practice-score="${block.id}">악보 보기</button>
             </article>
           `,
         )
