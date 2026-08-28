@@ -1110,6 +1110,13 @@ textarea {
   gap: 10px;
 }
 
+.practice-song-group-title {
+  margin: 8px 0 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .practice-song-row {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto;

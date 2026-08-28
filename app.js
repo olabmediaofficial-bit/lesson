@@ -1152,8 +1152,8 @@ function renderLessonRoomControls() {
       ${
         lessonRoomMode === "practice"
           ? `<div class="segmented small-segmented">
-              <button class="${practiceRoomSort === "date" ? "active" : ""}" data-practice-sort="date" type="button">날짜순</button>
-              <button class="${practiceRoomSort === "level" ? "active" : ""}" data-practice-sort="level" type="button">연습 정도순</button>
+              <button class="${practiceRoomSort === "date" ? "active" : ""}" data-practice-sort="date" type="button">날짜별 보기</button>
+              <button class="${practiceRoomSort === "level" ? "active" : ""}" data-practice-sort="level" type="button">연습 정도별 보기</button>
             </div>`
           : ""
       }
@@ -1218,25 +1218,42 @@ function renderLessonPreview(student, blocks) {
 function renderPracticeSongMode(student, { admin = false } = {}) {
   const items = practiceSongItems(student);
   if (!items.length) return `<div class="empty">아직 실습곡이 없습니다.</div>`;
+  const groupedItems = practiceRoomSort === "level" ? groupPracticeSongsByMastery(student, items) : [{ title: "", items }];
   return `
     <div class="practice-song-list">
-      ${items
+      ${groupedItems
         .map(
-          ({ block, date }) => `
-            <article class="practice-song-row">
-              <div class="practice-song-main">
-                <button class="practice-song-title-button" type="button" data-open-practice-score="${block.id}">
-                  ${escapeHTML(block.title)}
-                </button>
-                <span>${formatDate(date)} · ${renderPracticeMetaText(block)}</span>
-              </div>
-              ${renderMasteryControl(student, block, admin)}
-            </article>
+          (group) => `
+            ${group.title ? `<h4 class="practice-song-group-title">${group.title}</h4>` : ""}
+            ${group.items.map(({ block, date }) => renderPracticeSongRow(student, block, date, admin)).join("")}
           `,
         )
         .join("")}
     </div>
   `;
+}
+
+function renderPracticeSongRow(student, block, date, admin = false) {
+  return `
+    <article class="practice-song-row">
+      <div class="practice-song-main">
+        <button class="practice-song-title-button" type="button" data-open-practice-score="${block.id}">
+          ${escapeHTML(block.title)}
+        </button>
+        <span>${formatDate(date)} · ${renderPracticeMetaText(block)}</span>
+      </div>
+      ${renderMasteryControl(student, block, admin)}
+    </article>
+  `;
+}
+
+function groupPracticeSongsByMastery(student, items) {
+  return [1, 2, 3, 4]
+    .map((level) => ({
+      title: masteryLabel(level),
+      items: items.filter(({ block }) => masteryLevel(student, block.id) === level),
+    }))
+    .filter((group) => group.items.length);
 }
 
 function practiceSongItems(student) {
@@ -1486,14 +1503,18 @@ document.addEventListener("click", (event) => {
 
   const lessonModeButton = event.target.closest("[data-lesson-room-mode]");
   if (lessonModeButton) {
+    event.preventDefault();
     lessonRoomMode = lessonModeButton.dataset.lessonRoomMode;
     render();
+    return;
   }
 
   const practiceSortButton = event.target.closest("[data-practice-sort]");
   if (practiceSortButton) {
+    event.preventDefault();
     practiceRoomSort = practiceSortButton.dataset.practiceSort;
     render();
+    return;
   }
 
   const editBlock = event.target.closest("[data-edit-block]");
