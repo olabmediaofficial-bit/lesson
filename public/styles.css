@@ -993,7 +993,7 @@ textarea {
   gap: 10px;
   min-height: 48px;
   margin-bottom: 12px;
-  padding: 0 12px;
+  padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
@@ -1026,6 +1026,49 @@ textarea {
   color: var(--muted);
 }
 
+.lesson-preview-line {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lesson-preview-item {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 26px;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.lesson-preview-item b {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-kind,
+.mastery-badge.tiny {
+  min-height: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.mini-kind.theory {
+  color: #2d6a4f;
+  background: #e9f5ee;
+}
+
 .lesson-body {
   display: grid;
   gap: 12px;
@@ -1045,6 +1088,48 @@ textarea {
 .lesson-blocks {
   display: grid;
   gap: 10px;
+}
+
+.lesson-room-view-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.practice-song-list {
+  display: grid;
+  gap: 10px;
+}
+
+.practice-song-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffafb;
+}
+
+.practice-song-main {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.practice-song-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.practice-song-main span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .lesson-block {
@@ -1556,19 +1641,19 @@ dialog::backdrop {
 .mastery-control {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   margin: 4px 0;
 }
 
 .mastery-control button,
 .mastery-badge {
-  min-height: 28px;
-  padding: 4px 9px;
+  min-height: 24px;
+  padding: 3px 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
   color: #4b5563;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
 }
 
@@ -1828,6 +1913,28 @@ menu {
   .lesson-toggle em {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+
+  .lesson-preview-line {
+    grid-column: 1 / -1;
+  }
+
+  .lesson-room-view-controls {
+    flex-direction: column;
+  }
+
+  .practice-song-row {
+    grid-template-columns: 1fr;
+  }
+
+  .lesson-room-view-controls .segmented,
+  .practice-song-row .mastery-control,
+  .practice-song-row .secondary-button {
+    width: 100%;
+  }
+
+  .practice-song-row .mastery-control button {
+    flex: 1;
   }
 
   .image-viewer-dialog {

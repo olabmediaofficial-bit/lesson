@@ -90,9 +90,11 @@ let currentView = "library";
 let activeStudentId = state.students[0]?.id || "";
 let activeShareStudentId = activeStudentId;
 let activeKindFilter = "all";
+let lessonRoomMode = "weekly";
+let practiceRoomSort = "date";
 let selectedBlockIds = new Set();
 let pendingBlockIds = new Set();
-let collapsedLessonIds = new Set();
+let expandedLessonIds = new Set();
 let expandedLibraryBlockIds = new Set();
 let editingLessonId = "";
 let publicShareInitialized = false;
@@ -517,10 +519,10 @@ function setMasteryLevel(student, blockId, level) {
 
 function masteryLabel(level) {
   return {
-    1: "1단계",
-    2: "2단계",
-    3: "3단계 완성",
-  }[level] || "1단계";
+    1: "시작",
+    2: "다듬기",
+    3: "완성",
+  }[level] || "시작";
 }
 
 function ensurePracticeProgress(student, blockIds = []) {
@@ -659,11 +661,28 @@ function currentPracticeStudent() {
 function openRandomPracticeScore() {
   const items = lessonRoomImageItems(currentPracticeStudent());
   if (!items.length) {
-    showToast("점검할 1-2단계 실습 악보가 없습니다.");
+    showToast("점검할 시작/다듬기 실습 악보가 없습니다.");
     return;
   }
   const index = Math.floor(Math.random() * items.length);
   openImageViewerItems(items, index);
+}
+
+function openPracticeScoreByBlock(blockId) {
+  const block = getBlock(blockId);
+  if (!block) return;
+  const items = normalizeResources(block)
+    .filter((resource) => resourceType(resource) === "image")
+    .map((resource) => ({
+      src: resourceHref(resource),
+      title: block.title || resourceLabel(resource),
+    }))
+    .filter((item) => item.src);
+  if (!items.length) {
+    showToast("이 실습곡에 볼 수 있는 이미지 악보가 없습니다.");
+    return;
+  }
+  openImageViewerItems(items, 0);
 }
 
 function switchView(view) {
@@ -1121,17 +1140,44 @@ function renderRoomBlocks(student) {
 }
 
 function renderLessonList(student) {
-  ensurePracticeProgress(student, student.lessons.flatMap((lesson) => lesson.blockIds));
-  const lessons = [...student.lessons].sort((a, b) => b.date.localeCompare(a.date));
-  if (!lessons.length) {
-    els.lessonList.innerHTML = `<div class="empty">첫 수업 날짜에 블럭을 넣어보세요.</div>`;
-    return;
-  }
+  els.lessonList.innerHTML = renderLessonRoomContent(student, { admin: true });
+}
 
-  els.lessonList.innerHTML = lessons
+function renderLessonRoomContent(student, { admin = false } = {}) {
+  ensurePracticeProgress(student, student.lessons.flatMap((lesson) => lesson.blockIds));
+  if (!student.lessons.length) return `<div class="empty">첫 수업 날짜에 블럭을 넣어보세요.</div>`;
+
+  return `
+    ${renderLessonRoomControls()}
+    ${lessonRoomMode === "practice" ? renderPracticeSongMode(student, { admin }) : renderWeeklyLessonMode(student, { admin })}
+  `;
+}
+
+function renderLessonRoomControls() {
+  return `
+    <div class="lesson-room-view-controls">
+      <div class="segmented small-segmented">
+        <button class="${lessonRoomMode === "weekly" ? "active" : ""}" data-lesson-room-mode="weekly" type="button">주차별 보기</button>
+        <button class="${lessonRoomMode === "practice" ? "active" : ""}" data-lesson-room-mode="practice" type="button">실습곡 보기</button>
+      </div>
+      ${
+        lessonRoomMode === "practice"
+          ? `<div class="segmented small-segmented">
+              <button class="${practiceRoomSort === "date" ? "active" : ""}" data-practice-sort="date" type="button">날짜순</button>
+              <button class="${practiceRoomSort === "level" ? "active" : ""}" data-practice-sort="level" type="button">레벨순</button>
+            </div>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function renderWeeklyLessonMode(student, { admin = false } = {}) {
+  const lessons = [...student.lessons].sort((a, b) => b.date.localeCompare(a.date));
+  return lessons
     .map((lesson) => {
       const blocks = lesson.blockIds.map(getBlock).filter(Boolean);
-      const collapsed = collapsedLessonIds.has(lesson.id);
+      const collapsed = !expandedLessonIds.has(lesson.id);
       const editing = editingLessonId === lesson.id;
       return `
         <article class="lesson-card" data-lesson-id="${lesson.id}">
@@ -1140,18 +1186,95 @@ function renderLessonList(student) {
             <time>${formatDate(lesson.date)}</time>
             ${lesson.memo ? `<em>${escapeHTML(lesson.memo)}</em>` : ""}
             <small>${blocks.length}개 블럭</small>
+            ${renderLessonPreview(student, blocks)}
           </button>
           <div class="lesson-body ${collapsed ? "collapsed" : ""}">
-            ${editing ? renderLessonEditForm(lesson) : renderLessonViewTools(lesson)}
+            ${admin ? (editing ? renderLessonEditForm(lesson) : renderLessonViewTools(lesson)) : ""}
             ${lesson.memo ? `<p>${escapeHTML(lesson.memo)}</p>` : ""}
-            <div class="lesson-blocks" data-lesson-drop-zone="${lesson.id}">
-              ${blocks.map((block, index) => renderLessonBlock(block, { student, lessonId: lesson.id, index, total: blocks.length, controls: true, masteryEditable: true })).join("")}
+            <div class="lesson-blocks" ${admin ? `data-lesson-drop-zone="${lesson.id}"` : ""}>
+              ${blocks
+                .map((block, index) =>
+                  renderLessonBlock(block, {
+                    student,
+                    lessonId: lesson.id,
+                    index,
+                    total: blocks.length,
+                    controls: admin,
+                    masteryEditable: admin,
+                  }),
+                )
+                .join("")}
             </div>
           </div>
         </article>
       `;
     })
     .join("");
+}
+
+function renderLessonPreview(student, blocks) {
+  if (!blocks.length) return "";
+  return `
+    <div class="lesson-preview-line">
+      ${blocks
+        .map((block) => {
+          const label = block.kind === "practice" ? renderMasteryBadge(student, block, "tiny") : `<span class="mini-kind theory">이론</span>`;
+          return `<span class="lesson-preview-item">${label}<b>${escapeHTML(block.title)}</b></span>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderPracticeSongMode(student, { admin = false } = {}) {
+  const items = practiceSongItems(student);
+  if (!items.length) return `<div class="empty">아직 실습곡이 없습니다.</div>`;
+  return `
+    <div class="practice-song-list">
+      ${items
+        .map(
+          ({ block, date }) => `
+            <article class="practice-song-row">
+              <div class="practice-song-main">
+                <strong>${escapeHTML(block.title)}</strong>
+                <span>${formatDate(date)} · ${renderPracticeMetaText(block)}</span>
+              </div>
+              ${renderMasteryControl(student, block, admin)}
+              <button class="secondary-button mini-button" type="button" data-open-practice-score="${block.id}">악보 보기</button>
+            </article>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function practiceSongItems(student) {
+  const itemsByBlock = new Map();
+  [...student.lessons]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .forEach((lesson) => {
+      lesson.blockIds
+        .map(getBlock)
+        .filter((block) => block?.kind === "practice")
+        .forEach((block) => {
+          if (!itemsByBlock.has(block.id)) itemsByBlock.set(block.id, { block, date: lesson.date });
+        });
+    });
+  const items = [...itemsByBlock.values()];
+  if (practiceRoomSort === "level") {
+    return items.sort((a, b) => masteryLevel(student, a.block.id) - masteryLevel(student, b.block.id) || b.date.localeCompare(a.date));
+  }
+  return items.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function renderPracticeMetaText(block) {
+  const practice = normalizePractice(block.practice);
+  const text = [practice.tempo ? `${practice.tempo} BPM` : "", practice.key ? `${practice.key} key` : "", practice.beat ? `${practice.beat === "other" ? "그 외" : practice.beat} 비트` : ""]
+    .filter(Boolean)
+    .map(escapeHTML)
+    .join(" · ");
+  return text || "실습곡";
 }
 
 function renderLessonViewTools(lesson) {
@@ -1211,7 +1334,7 @@ function renderLessonBlock(block, options = {}) {
 function renderMasteryControl(student, block, editable = false) {
   if (block.kind !== "practice" || !student) return "";
   const level = masteryLevel(student, block.id);
-  if (!editable) return `<div class="mastery-badge level-${level}">${masteryLabel(level)}</div>`;
+  if (!editable) return renderMasteryBadge(student, block);
   return `
     <div class="mastery-control" aria-label="${escapeHTML(block.title)} 숙련도">
       ${[1, 2, 3]
@@ -1225,6 +1348,12 @@ function renderMasteryControl(student, block, editable = false) {
         .join("")}
     </div>
   `;
+}
+
+function renderMasteryBadge(student, block, size = "") {
+  if (block.kind !== "practice" || !student) return "";
+  const level = masteryLevel(student, block.id);
+  return `<span class="mastery-badge ${size} level-${level}">${masteryLabel(level)}</span>`;
 }
 
 function renderPracticeMeta(block) {
@@ -1279,10 +1408,7 @@ function renderShare() {
     els.shareStudentPicker.hidden = true;
     els.copyPreviewShareLink.hidden = true;
     els.sharedMetronome.hidden = false;
-    if (!publicShareInitialized) {
-      collapsedLessonIds = new Set(student.lessons.map((lesson) => lesson.id));
-      publicShareInitialized = true;
-    }
+    if (!publicShareInitialized) publicShareInitialized = true;
   } else {
     els.shareStudentPicker.hidden = false;
     els.copyPreviewShareLink.hidden = false;
@@ -1295,32 +1421,10 @@ function renderShare() {
   els.shareStudentName.textContent = `${student.name}'s 레슨룸`;
   renderShareResourceLibrary();
 
-  const lessons = [...student.lessons]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .map((lesson) => {
-      const blocks = lesson.blockIds.map(getBlock).filter(Boolean);
-      const collapsed = collapsedLessonIds.has(lesson.id);
-      return `
-        <article class="lesson-card">
-          <button class="lesson-toggle" type="button" data-toggle-lesson="${lesson.id}" aria-expanded="${!collapsed}">
-            <span>${collapsed ? "펼치기" : "접기"}</span>
-            <time>${formatDate(lesson.date)}</time>
-            ${lesson.memo ? `<em>${escapeHTML(lesson.memo)}</em>` : ""}
-            <small>${blocks.length}개 블럭</small>
-          </button>
-          <div class="lesson-body ${collapsed ? "collapsed" : ""}">
-            ${lesson.memo ? `<p>${escapeHTML(lesson.memo)}</p>` : ""}
-            <div class="lesson-blocks">${blocks.map((block) => renderLessonBlock(block, { student, controls: false, masteryEditable: false })).join("")}</div>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
   els.shareContent.innerHTML = `
     <section class="share-section">
-      <h3>날짜별 수업 내용</h3>
-      ${lessons || `<div class="empty">아직 수업 기록이 없습니다.</div>`}
+      <h3>${lessonRoomMode === "practice" ? "실습곡 보기" : "날짜별 수업 내용"}</h3>
+      ${renderLessonRoomContent(student, { admin: false })}
     </section>
   `;
 }
@@ -1386,6 +1490,19 @@ document.addEventListener("click", (event) => {
   if (studentTab) {
     activeStudentId = studentTab.dataset.studentTab;
     pendingBlockIds.clear();
+    expandedLessonIds.clear();
+    render();
+  }
+
+  const lessonModeButton = event.target.closest("[data-lesson-room-mode]");
+  if (lessonModeButton) {
+    lessonRoomMode = lessonModeButton.dataset.lessonRoomMode;
+    render();
+  }
+
+  const practiceSortButton = event.target.closest("[data-practice-sort]");
+  if (practiceSortButton) {
+    practiceRoomSort = practiceSortButton.dataset.practiceSort;
     render();
   }
 
@@ -1427,7 +1544,7 @@ document.addEventListener("click", (event) => {
   const editLesson = event.target.closest("[data-edit-lesson]");
   if (editLesson) {
     editingLessonId = editLesson.dataset.editLesson;
-    collapsedLessonIds.delete(editingLessonId);
+    expandedLessonIds.add(editingLessonId);
     renderLessonList(getActiveStudent());
   }
 
@@ -1446,11 +1563,14 @@ document.addEventListener("click", (event) => {
   const masteryButton = event.target.closest("[data-mastery-block]");
   if (masteryButton) updateMastery(masteryButton.dataset.masteryBlock, masteryButton.dataset.masteryLevel);
 
+  const openPracticeScore = event.target.closest("[data-open-practice-score]");
+  if (openPracticeScore) openPracticeScoreByBlock(openPracticeScore.dataset.openPracticeScore);
+
   const lessonToggle = event.target.closest("[data-toggle-lesson]");
   if (lessonToggle) {
     const id = lessonToggle.dataset.toggleLesson;
-    if (collapsedLessonIds.has(id)) collapsedLessonIds.delete(id);
-    else collapsedLessonIds.add(id);
+    if (expandedLessonIds.has(id)) expandedLessonIds.delete(id);
+    else expandedLessonIds.add(id);
     render();
   }
 });
