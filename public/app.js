@@ -10,6 +10,35 @@ const SERVER_LOGIN_ENDPOINT = "/api/login";
 const SERVER_ROOM_ENDPOINT = "/api/room";
 const SERVER_UPLOAD_ENDPOINT = "/api/upload";
 const ADMIN_TOKEN_KEY = "lessonRoomAdminToken";
+const CURRICULUM_AREAS = [
+  {
+    key: "left",
+    label: "왼손",
+    description: "코드 사운드와 지판 운용",
+    skills: ["일반코드", "바코드", "파워코드", "오픈코드", "재즈코드", "코드이론", "다이어토닉", "스케일"],
+  },
+  {
+    key: "right",
+    label: "오른손",
+    description: "리듬과 반주 주법",
+    skills: ["4비트", "8비트", "16비트", "6/8", "스트로크", "핑거링", "퍼커시브", "피킹"],
+  },
+  {
+    key: "technique",
+    label: "테크닉",
+    description: "뮤트와 표현 기법",
+    skills: ["왼손뮤트", "오른손뮤트", "팜뮤트", "해머링온", "풀링오프", "슬라이드", "하모닉스"],
+  },
+];
+
+const CURRICULUM_SKILL_ALIASES = {
+  왼손뮤트: ["왼손 뮤트"],
+  오른손뮤트: ["오른손 뮤트"],
+  팜뮤트: ["팜 뮤트"],
+  해머링온: ["해머링", "hammering", "hammer-on"],
+  풀링오프: ["풀링", "pulling", "pull-off"],
+  "6/8": ["6/8리듬", "6/8 리듬"],
+};
 
 const starterData = {
   practiceProgressScale: "four-step",
@@ -139,6 +168,7 @@ const els = {
   bulkTagInput: $("#bulkTagInput"),
   applyBulkTags: $("#applyBulkTags"),
   blockKindTabs: $("#blockKindTabs"),
+  libraryInsight: $("#libraryInsight"),
   materialGrid: $("#materialGrid"),
   materialCount: $("#materialCount"),
   resourceLibraryUrl: $("#resourceLibraryUrl"),
@@ -892,11 +922,225 @@ function filteredBlocks() {
   });
 }
 
+function normalizeSkillText(value) {
+  return String(value || "")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+}
+
+function blockSkillSet(block) {
+  const tags = new Set((block.tags || []).map(normalizeSkillText));
+  return new Set(
+    CURRICULUM_AREAS.flatMap((area) => area.skills).filter((skill) => {
+      const names = [skill, ...(CURRICULUM_SKILL_ALIASES[skill] || [])].map(normalizeSkillText);
+      return names.some((name) => tags.has(name));
+    }),
+  );
+}
+
+function analyzeCurriculumBlocks(blocks, { student = null, weighted = false } = {}) {
+  const practiceBlocks = blocks.filter((block) => block?.kind === "practice");
+  const areaRows = CURRICULUM_AREAS.map((area) => ({
+    ...area,
+    score: 0,
+    count: 0,
+    skills: area.skills.map((skill) => ({ label: skill, score: 0, count: 0, blocks: [] })),
+  }));
+
+  practiceBlocks.forEach((block) => {
+    const skillSet = blockSkillSet(block);
+    const weight = weighted && student ? masteryLevel(student, block.id) : 1;
+    areaRows.forEach((area) => {
+      area.skills.forEach((skill) => {
+        if (!skillSet.has(skill.label)) return;
+        skill.score += weight;
+        skill.count += 1;
+        skill.blocks.push(block);
+        area.score += weight;
+        area.count += 1;
+      });
+    });
+  });
+
+  const maxAreaScore = Math.max(1, ...areaRows.map((area) => area.score));
+  const maxSkillScore = Math.max(1, ...areaRows.flatMap((area) => area.skills.map((skill) => skill.score)));
+  areaRows.forEach((area) => {
+    area.percent = Math.round((area.score / maxAreaScore) * 100);
+    area.skills.forEach((skill) => {
+      skill.percent = Math.round((skill.score / maxSkillScore) * 100);
+    });
+  });
+
+  const weakSkills = areaRows
+    .flatMap((area) => area.skills.map((skill) => ({ ...skill, area: area.label })))
+    .sort((a, b) => a.score - b.score || a.label.localeCompare(b.label))
+    .slice(0, 5);
+
+  const strongSkills = areaRows
+    .flatMap((area) => area.skills.map((skill) => ({ ...skill, area: area.label })))
+    .filter((skill) => skill.score > 0)
+    .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))
+    .slice(0, 5);
+
+  return {
+    practiceBlocks,
+    areaRows,
+    weakSkills,
+    strongSkills,
+  };
+}
+
+function curriculumSkillScoreMap(analysis) {
+  return new Map(analysis.areaRows.flatMap((area) => area.skills.map((skill) => [skill.label, skill.score])));
+}
+
+function averageSkillScore(scoreMap, labels) {
+  if (!labels.length) return 0;
+  return labels.reduce((sum, label) => sum + (scoreMap.get(label) || 0), 0) / labels.length;
+}
+
+function curriculumRadarAxes(analysis) {
+  const scoreMap = curriculumSkillScoreMap(analysis);
+  const rows = [
+    { label: "코드폼", score: averageSkillScore(scoreMap, ["일반코드", "바코드", "파워코드", "오픈코드", "재즈코드"]) },
+    { label: "리듬", score: averageSkillScore(scoreMap, ["4비트", "8비트", "16비트", "6/8", "스트로크"]) },
+    { label: "핑거링", score: averageSkillScore(scoreMap, ["핑거링", "퍼커시브", "피킹"]) },
+    { label: "뮤트", score: averageSkillScore(scoreMap, ["왼손뮤트", "오른손뮤트", "팜뮤트"]) },
+    { label: "표현기법", score: averageSkillScore(scoreMap, ["해머링온", "풀링오프", "슬라이드", "하모닉스", "스케일"]) },
+  ];
+  const maxScore = Math.max(1, ...rows.map((row) => row.score));
+  return rows.map((row) => ({ ...row, percent: Math.round((row.score / maxScore) * 100) }));
+}
+
+function radarPoint(index, total, radius) {
+  const angle = -Math.PI / 2 + (Math.PI * 2 * index) / total;
+  return {
+    x: 50 + Math.cos(angle) * radius,
+    y: 50 + Math.sin(angle) * radius,
+  };
+}
+
+function renderCurriculumRadar(analysis) {
+  const axes = curriculumRadarAxes(analysis);
+  const polygon = axes
+    .map((axis, index) => {
+      const point = radarPoint(index, axes.length, 8 + axis.percent * 0.32);
+      return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+    })
+    .join(" ");
+  const grid = [40, 30, 20].map((radius) => {
+    const points = axes.map((_, index) => {
+      const point = radarPoint(index, axes.length, radius);
+      return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+    });
+    return `<polygon points="${points.join(" ")}" />`;
+  });
+  return `
+    <section class="curriculum-radar-card">
+      <svg class="curriculum-radar" viewBox="0 0 100 100" role="img" aria-label="커리큘럼 5축 지도">
+        <g class="radar-grid">${grid.join("")}</g>
+        <polygon class="radar-shape" points="${polygon}" />
+        ${axes
+          .map((_, index) => {
+            const end = radarPoint(index, axes.length, 40);
+            return `<line class="radar-axis" x1="50" y1="50" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}" />`;
+          })
+          .join("")}
+      </svg>
+      <div class="radar-axis-list">
+        ${axes.map((axis) => `<span><b>${axis.label}</b>${axis.percent}%</span>`).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderCurriculumMap(analysis, { mode = "library" } = {}) {
+  const isStudent = mode === "student";
+  const areaUnit = isStudent ? "점" : "태그";
+  const skillUnit = isStudent ? "점" : "곡";
+  return `
+    ${renderCurriculumRadar(analysis)}
+    <section class="curriculum-summary">
+      ${analysis.areaRows
+        .map(
+          (area) => `
+            <article class="curriculum-area-card">
+              <div>
+                <strong>${area.label}</strong>
+                <span>${area.description}</span>
+              </div>
+              <div class="skill-gauge-track" aria-label="${area.label} ${area.percent}%">
+                <span style="width: ${area.percent}%"></span>
+              </div>
+              <small>${area.score}${areaUnit}</small>
+            </article>
+          `,
+        )
+        .join("")}
+    </section>
+    <section class="curriculum-skill-grid">
+      ${analysis.areaRows
+        .map(
+          (area) => `
+            <article class="curriculum-skill-card">
+              <h3>${area.label}</h3>
+              ${area.skills
+                .map(
+                  (skill) => `
+                    <div class="curriculum-skill-row ${skill.score ? "" : "is-empty"}">
+                      <div>
+                        <strong>${skill.label}</strong>
+                        <span>${skill.score}${skillUnit}</span>
+                      </div>
+                      <div class="skill-gauge-track" aria-label="${skill.label} ${skill.percent}%">
+                        <span style="width: ${skill.percent}%"></span>
+                      </div>
+                    </div>
+                  `,
+                )
+                .join("")}
+            </article>
+          `,
+        )
+        .join("")}
+    </section>
+    <section class="curriculum-recommendations">
+      <article>
+        <h3>${isStudent ? "다음 점검 후보" : "보완하면 좋은 자료"}</h3>
+        ${renderCurriculumSkillList(analysis.weakSkills, skillUnit)}
+      </article>
+      <article>
+        <h3>${isStudent ? "많이 쌓인 영역" : "충분히 있는 자료"}</h3>
+        ${renderCurriculumSkillList(analysis.strongSkills, skillUnit)}
+      </article>
+    </section>
+  `;
+}
+
+function renderCurriculumSkillList(skills, unit) {
+  if (!skills.length) return `<div class="empty">아직 분석할 실습곡 태그가 없습니다.</div>`;
+  return `
+    <div class="curriculum-chip-list">
+      ${skills
+        .map(
+          (skill) => `
+            <span class="${skill.score ? "" : "is-empty"}">
+              ${skill.area} · ${skill.label}
+              <b>${skill.score}${unit}</b>
+            </span>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderLibrary() {
   els.blockKindTabs.querySelectorAll("button").forEach((button) => {
     button.classList.toggle("active", button.dataset.kindFilter === activeKindFilter);
   });
 
+  renderLibraryInsight();
   const blocks = filteredBlocks();
   els.materialCount.textContent = blocks.length;
 
@@ -908,6 +1152,20 @@ function renderLibrary() {
   const grouped = activeKindFilter === "practice" ? renderPracticeCategoryGroups(blocks) : renderKindGroups(blocks);
 
   els.materialGrid.innerHTML = grouped;
+}
+
+function renderLibraryInsight() {
+  const analysis = analyzeCurriculumBlocks(state.blocks);
+  els.libraryInsight.innerHTML = `
+    <div class="curriculum-map-head">
+      <div>
+        <strong>자료 진단</strong>
+        <span>실습 블럭 태그를 기준으로 내 커리큘럼 자료 분포를 봅니다.</span>
+      </div>
+      <span class="count-pill">${analysis.practiceBlocks.length}</span>
+    </div>
+    ${renderCurriculumMap(analysis)}
+  `;
 }
 
 function renderKindGroups(blocks) {
@@ -1052,7 +1310,7 @@ function renderProgress() {
   const practiceBlocks = uniqueLessonBlocks(student).filter((block) => block.kind === "practice");
   const completedBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) === 4);
   const inProgressBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) < 4);
-  const stats = progressStats(completedBlocks);
+  const analysis = analyzeCurriculumBlocks(practiceBlocks, { student, weighted: true });
 
   els.progressContent.innerHTML = `
     <div class="progress-summary-grid">
@@ -1069,23 +1327,13 @@ function renderProgress() {
         <span>점검할 곡</span>
       </div>
     </div>
-    <div class="skill-gauge-panel">
-      ${stats
-        .map(
-          (item) => `
-            <div class="skill-gauge-row">
-              <div>
-                <strong>${item.label}</strong>
-                <span>${item.count}곡</span>
-              </div>
-              <div class="skill-gauge-track" aria-label="${item.label} ${item.percent}%">
-                <span style="width: ${item.percent}%"></span>
-              </div>
-            </div>
-          `,
-        )
-        .join("")}
+    <div class="curriculum-map-head">
+      <div>
+        <strong>반주력 지도</strong>
+        <span>실습곡 태그와 연습 정도를 합산해서 영역별 균형을 봅니다.</span>
+      </div>
     </div>
+    ${renderCurriculumMap(analysis, { mode: "student" })}
     <section class="progress-block-list">
       <h3>잘침 전 실습곡</h3>
       ${
@@ -1095,23 +1343,6 @@ function renderProgress() {
       }
     </section>
   `;
-}
-
-function progressStats(blocks) {
-  const rows = [
-    ["왼손", "leftHand"],
-    ["오른손", "rightHand"],
-    ["테크닉", "technique"],
-  ];
-  const max = Math.max(1, blocks.length);
-  return rows.map(([label, key]) => {
-    const count = blocks.filter((block) => normalizePractice(block.practice)[key]).length;
-    return {
-      label,
-      count,
-      percent: Math.round((count / max) * 100),
-    };
-  });
 }
 
 function renderLessonPicker() {

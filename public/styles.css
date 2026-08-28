@@ -1720,6 +1720,203 @@ dialog::backdrop {
   padding: 18px;
 }
 
+.curriculum-map {
+  display: grid;
+  gap: 14px;
+  padding: 16px 18px 18px;
+  border-top: 1px solid var(--line);
+}
+
+.curriculum-map-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.curriculum-map-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.curriculum-map-head strong {
+  color: var(--accent-strong);
+  font-size: 16px;
+}
+
+.curriculum-map-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.curriculum-radar-card {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfaf7;
+}
+
+.curriculum-radar {
+  width: 180px;
+  max-width: 100%;
+  aspect-ratio: 1;
+}
+
+.radar-grid polygon {
+  fill: none;
+  stroke: #dfe7df;
+  stroke-width: 0.8;
+}
+
+.radar-axis {
+  stroke: #dfe7df;
+  stroke-width: 0.7;
+}
+
+.radar-shape {
+  fill: rgba(45, 106, 79, 0.22);
+  stroke: #2d6a4f;
+  stroke-width: 1.6;
+}
+
+.radar-axis-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.radar-axis-list span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.radar-axis-list b {
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.curriculum-summary,
+.curriculum-recommendations {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.curriculum-recommendations {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.curriculum-area-card,
+.curriculum-skill-card,
+.curriculum-recommendations article {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.curriculum-area-card > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.curriculum-area-card strong,
+.curriculum-skill-card h3,
+.curriculum-recommendations h3 {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
+.curriculum-area-card span,
+.curriculum-area-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.curriculum-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.curriculum-skill-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.curriculum-skill-row.is-empty {
+  opacity: 0.48;
+}
+
+.curriculum-skill-row > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.curriculum-skill-row strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.curriculum-skill-row span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.curriculum-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.curriculum-chip-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef5ef;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.curriculum-chip-list span.is-empty {
+  background: #fff2f4;
+  color: #8f3f49;
+}
+
+.curriculum-chip-list b {
+  color: inherit;
+}
+
 .progress-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1880,6 +2077,15 @@ menu {
   .room-layout {
     grid-template-columns: 1fr;
   }
+
+  .curriculum-summary,
+  .curriculum-skill-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .curriculum-recommendations {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1928,6 +2134,22 @@ menu {
 
   .library-resource-panel {
     grid-template-columns: 1fr;
+  }
+
+  .curriculum-radar-card {
+    grid-template-columns: 1fr;
+  }
+
+  .curriculum-radar {
+    justify-self: center;
+  }
+
+  .radar-axis-list {
+    grid-template-columns: 1fr;
+  }
+
+  .curriculum-skill-row {
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .block-card-head,
