@@ -849,6 +849,10 @@ function shouldPlayMetronomeClick(beat) {
   return Boolean(pattern[beat]);
 }
 
+function isMetronomeDownbeat(beat) {
+  return beat === 0 || (metronome.advanced && metronome.bar < 0);
+}
+
 function playClick(isDownbeat) {
   if (!metronome.audioContext) return;
   const now = metronome.audioContext.currentTime;
@@ -885,7 +889,7 @@ function unlockAudioContext() {
 function tickMetronome() {
   const beat = metronome.beat;
   metronome.visibleBeat = beat;
-  if (shouldPlayMetronomeClick(beat)) playClick(beat === 0);
+  if (shouldPlayMetronomeClick(beat)) playClick(isMetronomeDownbeat(beat));
   renderMetronome();
   metronome.beat = (beat + 1) % meterBeatCount();
   if (metronome.beat === 0) {
