@@ -145,6 +145,7 @@ let practiceSortDirection = {
   level: "asc",
 };
 let selectedBlockIds = new Set();
+let selectedCurriculumSkills = new Set();
 let pendingBlockIds = new Set();
 let expandedLessonIds = new Set();
 let expandedLibraryBlockIds = new Set();
@@ -188,6 +189,7 @@ const els = {
   bulkTagInput: $("#bulkTagInput"),
   applyBulkTags: $("#applyBulkTags"),
   blockKindTabs: $("#blockKindTabs"),
+  bulkCurriculumPanel: $("#bulkCurriculumPanel"),
   libraryInsight: $("#libraryInsight"),
   materialGrid: $("#materialGrid"),
   materialCount: $("#materialCount"),
@@ -1190,6 +1192,7 @@ function renderLibrary() {
     button.classList.toggle("active", button.dataset.kindFilter === activeKindFilter);
   });
 
+  renderBulkCurriculumPanel();
   renderLibraryInsight();
   const blocks = filteredBlocks();
   els.materialCount.textContent = blocks.length;
@@ -1202,6 +1205,57 @@ function renderLibrary() {
   const grouped = activeKindFilter === "practice" ? renderPracticeCategoryGroups(blocks) : renderKindGroups(blocks);
 
   els.materialGrid.innerHTML = grouped;
+}
+
+function selectedPracticeBlockCount() {
+  return [...selectedBlockIds].map(getBlock).filter((block) => block?.kind === "practice").length;
+}
+
+function updateBulkCurriculumSelectedCount() {
+  document.querySelectorAll("[data-selected-practice-count]").forEach((node) => {
+    node.textContent = selectedPracticeBlockCount();
+  });
+}
+
+function renderBulkCurriculumPanel() {
+  els.bulkCurriculumPanel.innerHTML = `
+    <div class="bulk-curriculum-head">
+      <div>
+        <strong>선택 곡 일괄 분류</strong>
+        <span>여러 실습곡을 선택하고 필요한 커리큘럼 항목을 한 번에 태그로 넣습니다.</span>
+      </div>
+      <div class="bulk-curriculum-status">
+        <span>선택 곡 <b data-selected-practice-count>${selectedPracticeBlockCount()}</b></span>
+        <span>체크 항목 <b data-selected-skill-count>${selectedCurriculumSkills.size}</b></span>
+      </div>
+    </div>
+    <div class="bulk-curriculum-grid">
+      ${CURRICULUM_AREAS.map(
+        (area) => `
+          <fieldset>
+            <legend>${area.label}</legend>
+            <div class="bulk-skill-list">
+              ${area.skills
+                .map(
+                  (skill) => `
+                    <label>
+                      <input type="checkbox" data-bulk-curriculum-skill="${escapeHTML(skill)}" ${selectedCurriculumSkills.has(skill) ? "checked" : ""} />
+                      ${escapeHTML(skill)}
+                    </label>
+                  `,
+                )
+                .join("")}
+            </div>
+          </fieldset>
+        `,
+      ).join("")}
+    </div>
+    <div class="bulk-curriculum-actions">
+      <button class="secondary-button" type="button" data-select-visible-practice-blocks>보이는 실습곡 선택</button>
+      <button class="secondary-button" type="button" data-clear-bulk-curriculum>체크 해제</button>
+      <button class="primary-button" type="button" data-apply-bulk-curriculum>선택 곡에 적용</button>
+    </div>
+  `;
 }
 
 function renderLibraryInsight() {
@@ -1769,6 +1823,45 @@ async function assignSelectedToStudent(studentId) {
   saveStateInBackground({}, `${student.name}의 ${formatDate(date)} 수업에 블럭을 넣었습니다.`);
 }
 
+function selectVisiblePracticeBlocks() {
+  filteredBlocks()
+    .filter((block) => block.kind === "practice")
+    .forEach((block) => selectedBlockIds.add(block.id));
+  renderLibrary();
+}
+
+function clearBulkCurriculumChecks() {
+  selectedCurriculumSkills.clear();
+  renderBulkCurriculumPanel();
+}
+
+function applyBulkCurriculumTags() {
+  const tags = [...selectedCurriculumSkills];
+  const selectedPracticeIds = [...selectedBlockIds].filter((id) => getBlock(id)?.kind === "practice");
+  if (!selectedPracticeIds.length) {
+    showToast("먼저 실습곡을 선택하세요.");
+    return;
+  }
+  if (!tags.length) {
+    showToast("추가할 커리큘럼 항목을 체크하세요.");
+    return;
+  }
+
+  const selectedSet = new Set(selectedPracticeIds);
+  state.blocks = state.blocks.map((block) =>
+    selectedSet.has(block.id)
+      ? {
+          ...block,
+          tags: [...new Set([...(block.tags || []), ...tags])],
+          updatedAt: nowIso(),
+        }
+      : block,
+  );
+  selectedCurriculumSkills.clear();
+  render();
+  saveStateInBackground({}, `${selectedPracticeIds.length}개 실습곡에 커리큘럼 태그를 추가했습니다.`);
+}
+
 document.addEventListener("click", (event) => {
   const nav = event.target.closest("[data-view]");
   if (nav) switchView(nav.dataset.view);
@@ -1885,6 +1978,16 @@ document.addEventListener("change", (event) => {
   if (checkbox) {
     if (checkbox.checked) selectedBlockIds.add(checkbox.dataset.blockCheck);
     else selectedBlockIds.delete(checkbox.dataset.blockCheck);
+    updateBulkCurriculumSelectedCount();
+  }
+
+  const bulkSkill = event.target.closest("[data-bulk-curriculum-skill]");
+  if (bulkSkill) {
+    if (bulkSkill.checked) selectedCurriculumSkills.add(bulkSkill.dataset.bulkCurriculumSkill);
+    else selectedCurriculumSkills.delete(bulkSkill.dataset.bulkCurriculumSkill);
+    document.querySelectorAll("[data-selected-skill-count]").forEach((node) => {
+      node.textContent = selectedCurriculumSkills.size;
+    });
   }
 });
 
@@ -2073,6 +2176,20 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("[data-random-practice]")) openRandomPracticeScore();
+
+  if (event.target.closest("[data-select-visible-practice-blocks]")) {
+    selectVisiblePracticeBlocks();
+    return;
+  }
+
+  if (event.target.closest("[data-clear-bulk-curriculum]")) {
+    clearBulkCurriculumChecks();
+    return;
+  }
+
+  if (event.target.closest("[data-apply-bulk-curriculum]")) {
+    applyBulkCurriculumTags();
+  }
 });
 els.adminLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();

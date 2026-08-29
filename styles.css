@@ -444,6 +444,108 @@ textarea {
   width: 100%;
 }
 
+.bulk-curriculum-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px 18px 16px;
+  border-top: 1px solid var(--line);
+  background: #fffdf9;
+}
+
+.bulk-curriculum-head,
+.bulk-curriculum-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bulk-curriculum-head > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.bulk-curriculum-head strong {
+  color: var(--accent-strong);
+  font-size: 15px;
+}
+
+.bulk-curriculum-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bulk-curriculum-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.bulk-curriculum-status span {
+  min-height: 28px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef5ef;
+  color: var(--accent-strong);
+}
+
+.bulk-curriculum-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bulk-curriculum-grid fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.bulk-curriculum-grid legend {
+  padding: 0 4px;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.bulk-skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bulk-skill-list label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fbfaf7;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.bulk-skill-list input {
+  width: 13px;
+  height: 13px;
+  min-height: auto;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.bulk-curriculum-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 .material-card {
   position: relative;
   display: grid;
@@ -2112,7 +2214,8 @@ menu {
   }
 
   .curriculum-summary,
-  .curriculum-skill-grid {
+  .curriculum-skill-grid,
+  .bulk-curriculum-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2167,6 +2270,16 @@ menu {
 
   .library-resource-panel {
     grid-template-columns: 1fr;
+  }
+
+  .bulk-curriculum-head,
+  .bulk-curriculum-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bulk-curriculum-status {
+    justify-content: flex-start;
   }
 
   .curriculum-radar-card {
