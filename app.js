@@ -19,6 +19,14 @@ const ADVANCED_METRONOME_PATTERN_4_4 = [
   [true, false, true, false],
   [true, false, false, false],
   [true, false, false, false],
+  [true, true, true, true],
+  [true, false, true, false],
+  [true, false, false, false],
+  [true, false, false, false],
+  [true, true, true, true],
+  [true, false, false, false],
+  [true, false, false, false],
+  [false, false, false, false],
 ];
 const CURRICULUM_AREAS = [
   {
@@ -819,7 +827,7 @@ function setTempo(value) {
 function setMeter(value) {
   metronome.meter = value;
   metronome.beat = 0;
-  metronome.bar = 0;
+  metronome.bar = metronome.advanced ? -1 : 0;
   metronome.visibleBeat = 0;
   if (metronome.isPlaying) restartMetronome();
   renderMetronome();
@@ -828,13 +836,14 @@ function setMeter(value) {
 function setAdvancedMetronome(enabled) {
   metronome.advanced = enabled;
   metronome.beat = 0;
-  metronome.bar = 0;
+  metronome.bar = enabled ? -1 : 0;
   metronome.visibleBeat = 0;
   renderMetronome();
 }
 
 function shouldPlayMetronomeClick(beat) {
   if (!metronome.advanced) return true;
+  if (metronome.bar < 0) return true;
   const pattern = ADVANCED_METRONOME_PATTERN_4_4[metronome.bar % ADVANCED_METRONOME_PATTERN_4_4.length];
   if (metronome.meter === "6/8") return beat === 0 || (beat === 3 && pattern[2]);
   return Boolean(pattern[beat]);
@@ -879,7 +888,9 @@ function tickMetronome() {
   if (shouldPlayMetronomeClick(beat)) playClick(beat === 0);
   renderMetronome();
   metronome.beat = (beat + 1) % meterBeatCount();
-  if (metronome.beat === 0) metronome.bar = (metronome.bar + 1) % ADVANCED_METRONOME_PATTERN_4_4.length;
+  if (metronome.beat === 0) {
+    metronome.bar = metronome.bar < 0 ? 0 : (metronome.bar + 1) % ADVANCED_METRONOME_PATTERN_4_4.length;
+  }
 }
 
 async function startMetronome() {
@@ -892,7 +903,7 @@ async function startMetronome() {
   unlockAudioContext();
   metronome.isPlaying = true;
   metronome.beat = 0;
-  metronome.bar = 0;
+  metronome.bar = metronome.advanced ? -1 : 0;
   metronome.visibleBeat = 0;
   tickMetronome();
   metronome.timer = window.setInterval(tickMetronome, 60000 / metronome.tempo);
@@ -904,7 +915,7 @@ function stopMetronome() {
   metronome.timer = null;
   metronome.isPlaying = false;
   metronome.beat = 0;
-  metronome.bar = 0;
+  metronome.bar = metronome.advanced ? -1 : 0;
   metronome.visibleBeat = 0;
   renderMetronome();
 }
