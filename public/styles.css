@@ -848,6 +848,10 @@ textarea {
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
 }
 
+.beat-dots span.muted {
+  opacity: 0.28;
+}
+
 .metro-row {
   display: flex;
   align-items: center;
@@ -905,6 +909,29 @@ textarea {
 [data-metronome-toggle].playing {
   background: var(--rose);
   color: #fff;
+}
+
+.advanced-metronome-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.advanced-metronome-toggle input {
+  width: 14px;
+  height: 14px;
+  min-height: auto;
+  padding: 0;
+  accent-color: #fff;
 }
 
 .random-practice-button {
@@ -1433,7 +1460,8 @@ dialog::backdrop {
 }
 
 .viewer-metronome .meter-tabs button,
-.viewer-metronome [data-metronome-toggle] {
+.viewer-metronome [data-metronome-toggle],
+.viewer-metronome .advanced-metronome-toggle {
   min-height: 26px;
   padding: 0 6px;
   font-size: 11px;
@@ -1441,6 +1469,11 @@ dialog::backdrop {
 
 .viewer-metronome [data-metronome-toggle] {
   width: 46px;
+}
+
+.viewer-metronome .advanced-metronome-toggle input {
+  width: 11px;
+  height: 11px;
 }
 
 .viewer-random-button {

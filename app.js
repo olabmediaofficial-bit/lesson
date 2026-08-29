@@ -10,6 +10,16 @@ const SERVER_LOGIN_ENDPOINT = "/api/login";
 const SERVER_ROOM_ENDPOINT = "/api/room";
 const SERVER_UPLOAD_ENDPOINT = "/api/upload";
 const ADMIN_TOKEN_KEY = "lessonRoomAdminToken";
+const ADVANCED_METRONOME_PATTERN_4_4 = [
+  [true, true, true, true],
+  [true, false, true, false],
+  [true, false, false, false],
+  [true, false, true, false],
+  [true, true, true, true],
+  [true, false, true, false],
+  [true, false, false, false],
+  [true, false, false, false],
+];
 const CURRICULUM_AREAS = [
   {
     key: "left",
@@ -149,6 +159,8 @@ let metronome = {
   tempo: 90,
   meter: "4/4",
   beat: 0,
+  bar: 0,
+  advanced: false,
   visibleBeat: 0,
 };
 
@@ -780,11 +792,15 @@ function renderMetronome() {
       button.textContent = metronome.isPlaying ? "정지" : "재생";
       button.classList.toggle("playing", metronome.isPlaying);
     });
+    root.querySelectorAll("[data-advanced-metronome]").forEach((input) => {
+      input.checked = metronome.advanced;
+    });
     root.querySelectorAll("[data-beat-dots]").forEach((beatDots) => {
       beatDots.innerHTML = Array.from({ length: meterBeatCount() }, (_, index) => {
         const active = metronome.isPlaying && index === metronome.visibleBeat;
         const downbeat = index === 0;
-        return `<span class="${active ? "active" : ""} ${downbeat ? "downbeat" : ""}"></span>`;
+        const muted = metronome.advanced && !shouldPlayMetronomeClick(index);
+        return `<span class="${active ? "active" : ""} ${downbeat ? "downbeat" : ""} ${muted ? "muted" : ""}"></span>`;
       }).join("");
     });
     root.querySelectorAll("[data-beat-label]").forEach((beatLabel) => {
@@ -803,9 +819,25 @@ function setTempo(value) {
 function setMeter(value) {
   metronome.meter = value;
   metronome.beat = 0;
+  metronome.bar = 0;
   metronome.visibleBeat = 0;
   if (metronome.isPlaying) restartMetronome();
   renderMetronome();
+}
+
+function setAdvancedMetronome(enabled) {
+  metronome.advanced = enabled;
+  metronome.beat = 0;
+  metronome.bar = 0;
+  metronome.visibleBeat = 0;
+  renderMetronome();
+}
+
+function shouldPlayMetronomeClick(beat) {
+  if (!metronome.advanced) return true;
+  const pattern = ADVANCED_METRONOME_PATTERN_4_4[metronome.bar % ADVANCED_METRONOME_PATTERN_4_4.length];
+  if (metronome.meter === "6/8") return beat === 0 || (beat === 3 && pattern[2]);
+  return Boolean(pattern[beat]);
 }
 
 function playClick(isDownbeat) {
@@ -844,9 +876,10 @@ function unlockAudioContext() {
 function tickMetronome() {
   const beat = metronome.beat;
   metronome.visibleBeat = beat;
-  playClick(beat === 0);
+  if (shouldPlayMetronomeClick(beat)) playClick(beat === 0);
   renderMetronome();
   metronome.beat = (beat + 1) % meterBeatCount();
+  if (metronome.beat === 0) metronome.bar = (metronome.bar + 1) % ADVANCED_METRONOME_PATTERN_4_4.length;
 }
 
 async function startMetronome() {
@@ -859,6 +892,7 @@ async function startMetronome() {
   unlockAudioContext();
   metronome.isPlaying = true;
   metronome.beat = 0;
+  metronome.bar = 0;
   metronome.visibleBeat = 0;
   tickMetronome();
   metronome.timer = window.setInterval(tickMetronome, 60000 / metronome.tempo);
@@ -870,6 +904,7 @@ function stopMetronome() {
   metronome.timer = null;
   metronome.isPlaying = false;
   metronome.beat = 0;
+  metronome.bar = 0;
   metronome.visibleBeat = 0;
   renderMetronome();
 }
@@ -1998,6 +2033,7 @@ document.addEventListener("input", (event) => {
 });
 document.addEventListener("change", (event) => {
   if (event.target.matches("[data-tempo-input]")) setTempo(event.target.value);
+  if (event.target.matches("[data-advanced-metronome]")) setAdvancedMetronome(event.target.checked);
 });
 document.addEventListener("click", async (event) => {
   const meterButton = event.target.closest("[data-meter]");
