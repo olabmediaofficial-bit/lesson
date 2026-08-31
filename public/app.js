@@ -271,7 +271,7 @@ let practiceSortDirection = {
 };
 let selectedBlockIds = new Set();
 let selectedCurriculumSkills = new Set();
-let selectedChordNames = new Set();
+let selectedChordNames = [];
 let pendingBlockIds = new Set();
 let expandedLessonIds = new Set();
 let expandedLibraryBlockIds = new Set();
@@ -424,6 +424,7 @@ const els = {
   chordPickerDialog: $("#chordPickerDialog"),
   chordPickerBlockId: $("#chordPickerBlockId"),
   chordPickerSearch: $("#chordPickerSearch"),
+  selectedChordOrder: $("#selectedChordOrder"),
   chordPickerGrid: $("#chordPickerGrid"),
   saveChordPicker: $("#saveChordPicker"),
   blockDialogTitle: $("#blockDialogTitle"),
@@ -1632,19 +1633,42 @@ function filteredPickerChords() {
 function renderChordPickerGrid() {
   if (!els.chordPickerGrid) return;
   const chords = filteredPickerChords();
+  const selectedChordSet = new Set(selectedChordNames);
   els.chordPickerGrid.innerHTML = chords.length
     ? chords
         .map(
           (chord) => `
-            <button class="chord-card picker-card ${selectedChordNames.has(chord.fileName) ? "selected" : ""}" type="button" data-picker-chord="${escapeHTML(chord.fileName)}">
+            <button class="chord-card picker-card ${selectedChordSet.has(chord.fileName) ? "selected" : ""}" type="button" data-picker-chord="${escapeHTML(chord.fileName)}">
               <strong>${escapeHTML(chord.name)}</strong>
               <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
-              <span>${escapeHTML(chordCategoryLabel(chord.category))} · ${selectedChordNames.has(chord.fileName) ? "선택됨" : "선택"}</span>
+              <span>${escapeHTML(chordCategoryLabel(chord.category))} · ${selectedChordSet.has(chord.fileName) ? "선택됨" : "선택"}</span>
             </button>
           `,
         )
         .join("")
     : `<div class="empty">찾는 코드가 없습니다.</div>`;
+  renderSelectedChordOrder();
+}
+
+function renderSelectedChordOrder() {
+  if (!els.selectedChordOrder) return;
+  if (!selectedChordNames.length) {
+    els.selectedChordOrder.innerHTML = `<span class="empty-inline">선택한 코드가 없습니다.</span>`;
+    return;
+  }
+  els.selectedChordOrder.innerHTML = selectedChordNames
+    .map((name, index) => {
+      const chord = getChordByName(name);
+      const label = chord?.name || name;
+      return `
+        <span class="selected-chord-pill" draggable="true" data-selected-chord="${escapeHTML(name)}" data-selected-chord-index="${index}">
+          <span class="drag-handle" aria-hidden="true">↕</span>
+          <b>${escapeHTML(label)}</b>
+          <button class="icon-button tiny-button" type="button" data-remove-selected-chord="${escapeHTML(name)}" aria-label="${escapeHTML(label)} 제거">×</button>
+        </span>
+      `;
+    })
+    .join("");
 }
 
 function openChordPicker(blockId) {
@@ -1652,7 +1676,7 @@ function openChordPicker(blockId) {
   if (!block || block.kind !== "practice") return;
   els.chordPickerBlockId.value = blockId;
   els.chordPickerSearch.value = "";
-  selectedChordNames = new Set(normalizeChordNames(block.chords || []).map((name) => getChordByName(name)?.fileName || name));
+  selectedChordNames = normalizeChordNames(block.chords || []).map((name) => getChordByName(name)?.fileName || name);
   renderChordPickerGrid();
   els.chordPickerDialog.showModal();
 }
@@ -1660,12 +1684,20 @@ function openChordPicker(blockId) {
 function saveChordPickerSelection() {
   const block = getBlock(els.chordPickerBlockId.value);
   if (!block || block.kind !== "practice") return;
-  const dictionaryOrder = CHORD_DICTIONARY.map((chord) => chord.fileName);
-  block.chords = [...selectedChordNames].sort((a, b) => dictionaryOrder.indexOf(a) - dictionaryOrder.indexOf(b));
+  block.chords = [...selectedChordNames];
   block.updatedAt = nowIso();
   els.chordPickerDialog.close();
   render();
   saveStateInBackground({}, "코드표를 연결했습니다.");
+}
+
+function reorderSelectedChord(fromIndex, toIndex) {
+  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+  if (fromIndex >= selectedChordNames.length || toIndex >= selectedChordNames.length) return;
+  const next = [...selectedChordNames];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  selectedChordNames = next;
 }
 
 function renderKindGroups(blocks) {
@@ -2335,8 +2367,16 @@ document.addEventListener("click", (event) => {
   if (pickerChord) {
     event.preventDefault();
     const chordName = pickerChord.dataset.pickerChord;
-    if (selectedChordNames.has(chordName)) selectedChordNames.delete(chordName);
-    else selectedChordNames.add(chordName);
+    if (selectedChordNames.includes(chordName)) selectedChordNames = selectedChordNames.filter((name) => name !== chordName);
+    else selectedChordNames.push(chordName);
+    renderChordPickerGrid();
+    return;
+  }
+
+  const removeSelectedChord = event.target.closest("[data-remove-selected-chord]");
+  if (removeSelectedChord) {
+    event.preventDefault();
+    selectedChordNames = selectedChordNames.filter((name) => name !== removeSelectedChord.dataset.removeSelectedChord);
     renderChordPickerGrid();
     return;
   }
@@ -2422,7 +2462,7 @@ document.addEventListener("change", (event) => {
 els.chordPickerSearch.addEventListener("input", renderChordPickerGrid);
 els.chordPickerDialog.addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") {
-    selectedChordNames.clear();
+    selectedChordNames = [];
     return;
   }
   event.preventDefault();
@@ -2430,6 +2470,20 @@ els.chordPickerDialog.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("dragstart", (event) => {
+  const selectedChord = event.target.closest("[data-selected-chord]");
+  if (selectedChord) {
+    selectedChord.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(
+      "text/plain",
+      JSON.stringify({
+        type: "selected-chord",
+        index: Number(selectedChord.dataset.selectedChordIndex),
+      }),
+    );
+    return;
+  }
+
   const block = event.target.closest("[data-draggable-block]");
   if (!block) return;
   block.classList.add("dragging");
@@ -2444,6 +2498,13 @@ document.addEventListener("dragstart", (event) => {
 });
 
 document.addEventListener("dragover", (event) => {
+  const chordOrder = event.target.closest("[data-selected-chord], #selectedChordOrder");
+  if (chordOrder && els.chordPickerDialog.open) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    return;
+  }
+
   const zone = event.target.closest("[data-lesson-drop-zone]");
   if (!zone) return;
   event.preventDefault();
@@ -2455,6 +2516,18 @@ document.addEventListener("dragover", (event) => {
 });
 
 document.addEventListener("drop", async (event) => {
+  const chordOrder = event.target.closest("[data-selected-chord], #selectedChordOrder");
+  if (chordOrder && els.chordPickerDialog.open) {
+    event.preventDefault();
+    const payload = safeJsonParse(event.dataTransfer.getData("text/plain"));
+    if (payload?.type !== "selected-chord") return;
+    const target = event.target.closest("[data-selected-chord]");
+    const toIndex = target ? Number(target.dataset.selectedChordIndex) : selectedChordNames.length - 1;
+    reorderSelectedChord(payload.index, toIndex);
+    renderChordPickerGrid();
+    return;
+  }
+
   const zone = event.target.closest("[data-lesson-drop-zone]");
   if (!zone) return;
   event.preventDefault();
@@ -2465,6 +2538,7 @@ document.addEventListener("drop", async (event) => {
 
 document.addEventListener("dragend", () => {
   document.querySelectorAll(".lesson-block.dragging").forEach((node) => node.classList.remove("dragging"));
+  document.querySelectorAll(".selected-chord-pill.dragging").forEach((node) => node.classList.remove("dragging"));
 });
 
 els.views.library.addEventListener("dragenter", (event) => {

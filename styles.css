@@ -2052,6 +2052,46 @@ dialog::backdrop {
   padding: 2px;
 }
 
+.selected-chord-order {
+  display: flex;
+  min-height: 42px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(166, 125, 92, 0.24);
+  border-radius: 12px;
+  background: #fbf6ef;
+}
+
+.selected-chord-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 180px;
+  padding: 5px 6px 5px 8px;
+  border: 1px solid rgba(166, 125, 92, 0.26);
+  border-radius: 999px;
+  background: #fffaf4;
+  box-shadow: 2px 2px 5px rgba(91, 62, 43, 0.08);
+  cursor: grab;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.selected-chord-pill.dragging {
+  opacity: 0.55;
+}
+
+.selected-chord-pill b {
+  min-width: 0;
+  overflow: hidden;
+  color: #3e2a1d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .chord-card.picker-card {
   cursor: pointer;
 }
@@ -2122,26 +2162,27 @@ dialog::backdrop {
 
 .mastery-control .level-1.active,
 .mastery-badge.level-1 {
-  border-color: #a7c3d2;
-  background: #d8ecf4;
+  border-color: #ead9c7;
+  background: #fbf0e4;
 }
 
 .mastery-control .level-2.active,
 .mastery-badge.level-2 {
-  border-color: #e2c88d;
-  background: #fff0bf;
+  border-color: #dfc2a4;
+  background: #f4dfc8;
 }
 
 .mastery-control .level-3.active,
 .mastery-badge.level-3 {
-  border-color: #cfc78f;
-  background: #eeebbd;
+  border-color: #cda27d;
+  background: #e5c09d;
 }
 
 .mastery-control .level-4.active,
 .mastery-badge.level-4 {
-  border-color: #d8b98f;
-  background: #f0d9bd;
+  border-color: #aa7651;
+  background: #c89168;
+  color: #fffaf4;
 }
 
 .progress-dashboard {
