@@ -44,6 +44,10 @@
             <span aria-hidden="true">◎</span>
             레슨룸
           </button>
+          <button class="nav-item" data-view="chords" type="button">
+            <span aria-hidden="true">♬</span>
+            코드사전
+          </button>
           <button class="nav-item" data-view="share" type="button">
             <span aria-hidden="true">↗</span>
             공유 화면
@@ -200,6 +204,26 @@
           </section>
         </section>
 
+        <section class="view" id="chordsView" aria-label="코드사전">
+          <section class="panel chord-dictionary-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Chord dictionary</p>
+                <h2>코드사전</h2>
+                <p>코드표를 둘러보거나 필요한 코드를 검색합니다.</p>
+              </div>
+              <button class="secondary-button" data-view="share" data-share-back-button type="button">레슨룸으로</button>
+            </div>
+            <div class="control-row">
+              <label class="search-box">
+                <span aria-hidden="true">⌕</span>
+                <input id="chordSearch" type="search" placeholder="예: A, F#m7, Dadd9" />
+              </label>
+            </div>
+            <div id="chordGrid" class="chord-grid"></div>
+          </section>
+        </section>
+
         <section class="view" id="shareView" aria-label="공유 화면">
           <div class="share-shell">
             <div class="share-preview">
@@ -208,6 +232,7 @@
                   <p class="eyebrow">Shared lesson room</p>
                   <h2 id="shareStudentName">학생 레슨룸</h2>
                   <a class="resource-library-button" id="shareResourceLibrary" href="#" target="_blank" rel="noreferrer" hidden>레슨 자료실</a>
+                  <button class="secondary-button chord-dictionary-link" data-view="chords" type="button">코드사전</button>
                 </div>
                 <div class="share-actions">
                   <select id="shareStudentPicker" aria-label="공유 학생 선택"></select>
@@ -320,6 +345,10 @@
               <textarea id="practiceTechnique" rows="4" placeholder="벤딩, 뮤트, 슬라이드 같은 세부 연습"></textarea>
             </label>
           </div>
+          <label>
+            사용 코드
+            <input id="practiceChords" type="text" placeholder="쉼표로 구분: A, E, F#m7, D" />
+          </label>
         </div>
         <label>
           설명

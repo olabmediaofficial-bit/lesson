@@ -28,6 +28,42 @@ const ADVANCED_METRONOME_PATTERN_4_4 = [
   [true, false, false, false],
   [false, false, false, false],
 ];
+const CHORD_IMAGE_FILES = [
+  "A_add9.png",
+  "A_dominant7.png",
+  "A_major.png",
+  "A_major7.png",
+  "A_minor.png",
+  "A_minor7.png",
+  "A_sus4.png",
+  "B_dominant7.png",
+  "C_add9.png",
+  "C_dominant7.png",
+  "C_major.png",
+  "C_major7.png",
+  "C_sus4.png",
+  "D_add9.png",
+  "D_dominant7.png",
+  "D_major.png",
+  "D_major7.png",
+  "D_minor.png",
+  "D_minor7.png",
+  "D_sus4.png",
+  "E_add9.png",
+  "E_dominant7.png",
+  "E_major.png",
+  "E_major7.png",
+  "E_minor.png",
+  "E_minor7.png",
+  "E_sus4.png",
+  "F_major7.png",
+  "F_sharp_minor7.png",
+  "G_add9.png",
+  "G_dominant7.png",
+  "G_major.png",
+  "G_major7.png",
+  "G_sus4.png",
+];
 const CURRICULUM_AREAS = [
   {
     key: "left",
@@ -84,7 +120,8 @@ const starterData = {
       title: "소문의 낙원",
       summary: "인트로 코드 전환과 8비트 스트로크를 끊기지 않게 연결한다.",
       tags: ["곡", "스트로크", "초급"],
-      resources: ["somun-paradise.png"],
+    resources: ["somun-paradise.png"],
+      chords: ["A", "E", "D"],
     },
     {
       id: "blk-4",
@@ -92,7 +129,8 @@ const starterData = {
       title: "Autumn Leaves 코드톤",
       summary: "2마디 단위로 3도와 7도를 연결하며 코드톤 라인을 만든다.",
       tags: ["재즈", "코드톤", "중급"],
-      resources: ["autumn-leaves-leadsheet.pdf"],
+    resources: ["autumn-leaves-leadsheet.pdf"],
+      chords: ["Am7", "D7", "Gmaj7", "Cmaj7"],
     },
     {
       id: "blk-5",
@@ -175,6 +213,30 @@ let metronome = {
 
 const $ = (selector) => document.querySelector(selector);
 
+function chordNameFromFile(fileName) {
+  const base = fileName.replace(/\.png$/i, "");
+  const [root, ...qualityParts] = base.split("_");
+  const note = root === "F" && qualityParts[0] === "sharp" ? "F#" : root;
+  const quality = note === "F#" ? qualityParts.slice(1).join("_") : qualityParts.join("_");
+  const suffixes = {
+    major: "",
+    minor: "m",
+    major7: "maj7",
+    minor7: "m7",
+    dominant7: "7",
+    sus4: "sus4",
+    add9: "add9",
+  };
+  return `${note}${suffixes[quality] ?? quality}`;
+}
+
+const CHORD_DICTIONARY = CHORD_IMAGE_FILES.map((fileName) => ({
+  name: chordNameFromFile(fileName),
+  fileName,
+  src: `./chords/general/${fileName}`,
+  family: fileName.includes("minor") ? "minor" : fileName.includes("7") ? "seventh" : "basic",
+})).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+
 const els = {
   viewTitle: $("#viewTitle"),
   navItems: document.querySelectorAll(".nav-item"),
@@ -182,6 +244,7 @@ const els = {
     library: $("#libraryView"),
     rooms: $("#roomsView"),
     progress: $("#progressView"),
+    chords: $("#chordsView"),
     share: $("#shareView"),
   },
   librarySearch: $("#librarySearch"),
@@ -193,6 +256,8 @@ const els = {
   libraryInsight: $("#libraryInsight"),
   materialGrid: $("#materialGrid"),
   materialCount: $("#materialCount"),
+  chordSearch: $("#chordSearch"),
+  chordGrid: $("#chordGrid"),
   resourceLibraryUrl: $("#resourceLibraryUrl"),
   saveResourceLibrary: $("#saveResourceLibrary"),
   migrateStorageFiles: $("#migrateStorageFiles"),
@@ -237,6 +302,7 @@ const els = {
   practiceTempo: $("#practiceTempo"),
   practiceKey: $("#practiceKey"),
   practiceBeat: $("#practiceBeat"),
+  practiceChords: $("#practiceChords"),
   practiceCategories: document.querySelectorAll('input[name="practiceCategory"]'),
   practiceNoteTabs: $("#practiceNoteTabs"),
   practiceRightHand: $("#practiceRightHand"),
@@ -256,6 +322,7 @@ function migrateState(data) {
     ...block,
     resources: normalizeResources(block),
     audioLink: block.audioLink || "",
+    chords: normalizeChordNames(block.chords || []),
     practice: normalizePractice(block.practice),
     updatedAt: block.updatedAt || "",
   }));
@@ -753,7 +820,7 @@ function openPracticeScoreByBlock(blockId) {
 }
 
 function switchView(view) {
-  if (publicShareMode && view !== "share") return;
+  if (publicShareMode && view !== "share" && view !== "chords") return;
   currentView = view;
   if (view === "share") activeShareStudentId = activeStudentId;
 
@@ -761,6 +828,7 @@ function switchView(view) {
     library: "블럭 보관소",
     rooms: "레슨룸",
     progress: "진도표",
+    chords: "코드사전",
     share: "공유 화면",
   };
 
@@ -780,6 +848,7 @@ function render() {
   renderRoomChoices();
   renderRooms();
   renderProgress();
+  renderChordDictionary();
   renderShare();
 }
 
@@ -947,6 +1016,30 @@ function parseTags(value) {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+function normalizeChordSearch(value) {
+  return String(value || "")
+    .replace(/♯/g, "#")
+    .replace(/＃/g, "#")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+}
+
+function normalizeChordName(value) {
+  const raw = String(value || "").trim().replace(/♯/g, "#").replace(/＃/g, "#");
+  const match = CHORD_DICTIONARY.find((chord) => normalizeChordSearch(chord.name) === normalizeChordSearch(raw));
+  return match?.name || raw;
+}
+
+function normalizeChordNames(value) {
+  const items = Array.isArray(value) ? value : String(value || "").split(",");
+  return [...new Set(items.map(normalizeChordName).filter(Boolean))];
+}
+
+function getChordByName(name) {
+  const normalized = normalizeChordSearch(name);
+  return CHORD_DICTIONARY.find((chord) => normalizeChordSearch(chord.name) === normalized);
 }
 
 function filteredBlocks() {
@@ -1272,6 +1365,52 @@ function renderLibraryInsight() {
   `;
 }
 
+function filteredChords() {
+  const query = normalizeChordSearch(els.chordSearch?.value || "");
+  if (!query) return CHORD_DICTIONARY;
+  return CHORD_DICTIONARY.filter((chord) => normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query));
+}
+
+function renderChordDictionary() {
+  if (!els.chordGrid) return;
+  const chords = filteredChords();
+  els.chordGrid.innerHTML = chords.length ? renderChordCards(chords) : `<div class="empty">찾는 코드가 없습니다.</div>`;
+  document.querySelectorAll("[data-share-back-button]").forEach((button) => {
+    button.hidden = !publicShareMode;
+  });
+}
+
+function renderChordCards(chords, { compact = false } = {}) {
+  return chords
+    .map(
+      (chord) => `
+        <article class="chord-card ${compact ? "compact" : ""}">
+          <strong>${escapeHTML(chord.name)}</strong>
+          <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderBlockChordDictionary(block) {
+  if (block.kind !== "practice") return "";
+  const chordNames = normalizeChordNames(block.chords || []);
+  if (!chordNames.length) return "";
+
+  const foundChords = chordNames.map(getChordByName).filter(Boolean);
+  const missingChords = chordNames.filter((name) => !getChordByName(name));
+  return `
+    <details class="used-chord-panel">
+      <summary>사용 코드 ${chordNames.length}개</summary>
+      <div class="used-chord-grid">
+        ${foundChords.length ? renderChordCards(foundChords, { compact: true }) : ""}
+        ${missingChords.map((name) => `<span class="missing-chord">${escapeHTML(name)}</span>`).join("")}
+      </div>
+    </details>
+  `;
+}
+
 function renderKindGroups(blocks) {
   return ["theory", "practice"]
     .map((kind) => {
@@ -1338,6 +1477,7 @@ function renderBlockCard(block) {
         <p>${escapeHTML(block.summary)}</p>
         ${renderPracticeDetails(block)}
         <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
+        ${renderBlockChordDictionary(block)}
         ${renderResources(block, "compact")}
       </div>
     </article>
@@ -1675,6 +1815,7 @@ function renderLessonBlock(block, options = {}) {
       ${renderPracticeMeta(block)}
       <p>${escapeHTML(block.summary)}</p>
       ${renderPracticeDetails(block)}
+      ${renderBlockChordDictionary(block)}
       ${block.audioLink ? `<p class="audio-link">노래 듣기 : <a href="${escapeHTML(block.audioLink)}" target="_blank" rel="noreferrer">${escapeHTML(block.audioLink)}</a></p>` : ""}
       ${renderResources(block, "expanded")}
     </div>
@@ -2054,6 +2195,7 @@ els.views.library.addEventListener("drop", async (event) => {
 
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
+els.chordSearch.addEventListener("input", renderChordDictionary);
 els.applyBulkTags.addEventListener("click", async () => {
   const tags = parseTags(els.bulkTagInput.value);
   const selectedIds = [...selectedBlockIds];
@@ -2242,6 +2384,7 @@ function openBlockDialog(blockId = "") {
   els.practiceTempo.value = practice.tempo || "";
   els.practiceKey.value = practice.key || "";
   els.practiceBeat.value = practice.beat || "";
+  els.practiceChords.value = normalizeChordNames(block?.chords || []).join(", ");
   els.practiceCategories.forEach((checkbox) => {
     checkbox.checked = practice.categories.includes(checkbox.value);
   });
@@ -2379,6 +2522,7 @@ async function createBlocksFromDroppedFiles(files) {
       summary: "",
       tags: [],
       audioLink: "",
+      chords: [],
       practice: normalizePractice(),
       resources: [resource],
       updatedAt: nowIso(),
@@ -2418,6 +2562,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
       summary: $("#newSummary").value.trim(),
       tags: parseTags($("#newTags").value),
       audioLink: els.newAudioLink.value.trim(),
+      chords: $("#newType").value === "practice" ? normalizeChordNames(els.practiceChords.value) : [],
       updatedAt: nowIso(),
       practice: {
         tempo: els.practiceTempo.value.trim(),

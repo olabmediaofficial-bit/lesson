@@ -1445,6 +1445,85 @@ textarea {
   text-decoration: none;
 }
 
+.chord-dictionary-link {
+  width: max-content;
+  max-width: 100%;
+  margin-top: 8px;
+}
+
+.chord-dictionary-panel {
+  overflow: hidden;
+}
+
+.chord-grid,
+.used-chord-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 18px;
+}
+
+.chord-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.chord-card strong {
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
+.chord-card img {
+  width: 100%;
+  border-radius: 6px;
+  background: #fbfaf7;
+}
+
+.chord-card.compact {
+  padding: 8px;
+}
+
+.chord-card.compact strong {
+  font-size: 12px;
+}
+
+.used-chord-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf9;
+}
+
+.used-chord-panel summary {
+  min-height: 34px;
+  padding: 8px 10px;
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.used-chord-grid {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.missing-chord {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .share-actions {
   display: flex;
   align-items: center;
@@ -2197,7 +2276,7 @@ menu {
   }
 
   .nav {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .sidebar-note {
@@ -2270,6 +2349,15 @@ menu {
 
   .library-resource-panel {
     grid-template-columns: 1fr;
+  }
+
+  .chord-grid {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    padding: 14px;
+  }
+
+  .used-chord-grid {
+    grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
   }
 
   .bulk-curriculum-head,
