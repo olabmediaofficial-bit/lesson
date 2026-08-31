@@ -10,15 +10,27 @@ if (!fs.existsSync(sourceDir)) {
   throw new Error(`코드사전 폴더를 찾을 수 없습니다: ${sourceDir}`);
 }
 
+function collectPngFiles(dir, base = dir) {
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) => {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) return collectPngFiles(fullPath, base);
+      if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".png")) return [];
+      return [path.relative(base, fullPath).split(path.sep).join("/")];
+    })
+    .sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+}
+
+fs.rmSync(targetDir, { recursive: true, force: true });
 fs.mkdirSync(targetDir, { recursive: true });
 
-const files = fs
-  .readdirSync(sourceDir)
-  .filter((file) => file.toLowerCase().endsWith(".png"))
-  .sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+const files = collectPngFiles(sourceDir);
 
 files.forEach((file) => {
-  fs.copyFileSync(path.join(sourceDir, file), path.join(targetDir, file));
+  const targetPath = path.join(targetDir, file);
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  fs.copyFileSync(path.join(sourceDir, file), targetPath);
 });
 
 const appSource = fs.readFileSync(appPath, "utf8");

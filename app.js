@@ -29,6 +29,7 @@ const ADVANCED_METRONOME_PATTERN_4_4 = [
   [false, false, false, false],
 ];
 const CHORD_IMAGE_FILES = [
+  "A R6 (bar).png",
   "A_add9.png",
   "A_dominant7_sus4.png",
   "A_dominant7.png",
@@ -37,20 +38,62 @@ const CHORD_IMAGE_FILES = [
   "A_minor.png",
   "A_minor7.png",
   "A_sus4.png",
+  "A7 R6 (bar).png",
+  "A7sus4 R6 (bar).png",
+  "Ab R6 (bar).png",
+  "Ab7 R6 (bar).png",
+  "Ab7sus4 R6 (bar).png",
+  "Abm R6 (bar).png",
+  "Abmaj7 R6 (bar).png",
+  "Absus4 R6 (bar).png",
+  "Am R6 (bar).png",
+  "Amaj7 R6 (bar).png",
+  "Asus4 R6 (bar).png",
+  "B R5 (bar).png",
   "B_dominant7.png",
+  "B7 R5 (bar).png",
+  "B7sus4 R5 (bar).png",
+  "Bb R5 (bar).png",
+  "Bb7 R5 (bar).png",
+  "Bb7sus4 R5 (bar).png",
+  "Bbm R5 (bar).png",
+  "Bbmaj7 R5 (bar).png",
+  "Bbsus4 R5 (bar).png",
+  "Bm R5 (bar).png",
+  "Bmaj7 R5 (bar).png",
+  "Bsus4 R5 (bar).png",
+  "C R5 (bar).png",
   "C_add9.png",
   "C_dominant7.png",
   "C_major.png",
   "C_major7.png",
   "C_sus4.png",
+  "C# R5 (bar).png",
+  "C#7 R5 (bar).png",
+  "C#7sus4 R5 (bar).png",
+  "C#m R5 (bar).png",
+  "C#maj7 R5 (bar).png",
+  "C#sus4 R5 (bar).png",
+  "C7 R5 (bar).png",
+  "C7sus4 R5 (bar).png",
+  "Cm R5 (bar).png",
+  "Cmaj7 R5 (bar).png",
+  "Csus4 R5 (bar).png",
+  "D R5 (bar).png",
   "D_add9.png",
   "D_dominant7.png",
   "D_major.png",
   "D_major7.png",
   "D_minor.png",
   "D_minor7.png",
-  "D_minor9.png",
+  "D_minor9 (jazz).png",
   "D_sus4.png",
+  "D7 R5 (bar).png",
+  "D7sus4 R5 (bar).png",
+  "Dm R5 (bar).png",
+  "Dmaj7 R5 (bar).png",
+  "Dsus4 R5 (bar).png",
+  "E R5 (bar).png",
   "E_add9.png",
   "E_dominant7.png",
   "E_major.png",
@@ -58,14 +101,53 @@ const CHORD_IMAGE_FILES = [
   "E_minor.png",
   "E_minor7.png",
   "E_sus4.png",
+  "E7 R5 (bar).png",
+  "E7sus4 R5 (bar).png",
+  "Eb R5 (bar).png",
+  "Eb7 R5 (bar).png",
+  "Eb7sus4 R5 (bar).png",
+  "Ebm R5 (bar).png",
+  "Ebmaj7 R5 (bar).png",
+  "Ebsus4 R5 (bar).png",
+  "Em R5 (bar).png",
+  "Emaj7 R5 (bar).png",
+  "Esus4 R5 (bar).png",
+  "F R6 (bar).png",
   "F_major7.png",
   "F_sharp_minor7.png",
+  "F# R6 (bar).png",
+  "F#7 R6 (bar).png",
+  "F#7sus4 R6 (bar).png",
+  "F#m R6 (bar).png",
+  "F#maj7 R6 (bar).png",
+  "F#sus4 R6 (bar).png",
+  "F7 R6 (bar).png",
+  "F7sus4 R6 (bar).png",
+  "Fm R6 (bar).png",
+  "Fmaj7 R6 (bar).png",
+  "Fsus4 R6 (bar).png",
+  "G R6 (bar).png",
   "G_add9.png",
   "G_dominant7.png",
   "G_major.png",
   "G_major7.png",
   "G_sus4.png",
+  "G7 R6 (bar).png",
+  "G7sus4 R6 (bar).png",
+  "Gm R6 (bar).png",
+  "Gmaj7 R6 (bar).png",
+  "Gsus4 R6 (bar).png",
 ];
+const CHORD_CATEGORY_TABS = [
+  { key: "all", label: "전체" },
+  { key: "general", label: "일반" },
+  { key: "bar", label: "바레" },
+  { key: "worship", label: "워십" },
+  { key: "jazz", label: "재즈" },
+  { key: "slash", label: "분수" },
+  { key: "other", label: "그외" },
+];
+const CHORD_CATEGORY_ORDER = CHORD_CATEGORY_TABS.map((tab) => tab.key);
 const CURRICULUM_AREAS = [
   {
     key: "left",
@@ -180,6 +262,7 @@ let currentView = "library";
 let activeStudentId = state.students[0]?.id || "";
 let activeShareStudentId = activeStudentId;
 let activeKindFilter = "all";
+let activeChordCategory = "all";
 let lessonRoomMode = "weekly";
 let practiceRoomSort = "date";
 let practiceSortDirection = {
@@ -219,7 +302,13 @@ let metronome = {
 const $ = (selector) => document.querySelector(selector);
 
 function chordNameFromFile(fileName) {
-  const base = fileName.replace(/\.png$/i, "");
+  const baseName = fileName.split("/").pop() || fileName;
+  const base = baseName
+    .replace(/\.png$/i, "")
+    .replace(/\s*\([^)]*\)\s*$/g, "")
+    .replace(/\s+R[0-9]+\s*$/i, "")
+    .trim();
+  if (!base.includes("_")) return base;
   const [root, ...qualityParts] = base.split("_");
   const note = root === "F" && qualityParts[0] === "sharp" ? "F#" : root;
   const quality = note === "F#" ? qualityParts.slice(1).join("_") : qualityParts.join("_");
@@ -237,12 +326,42 @@ function chordNameFromFile(fileName) {
   return `${note}${suffixes[quality] ?? quality}`;
 }
 
+function chordCategoryFromFile(fileName) {
+  const lower = fileName.toLowerCase();
+  const pathParts = lower.split("/");
+  if (pathParts.some((part) => part.includes("바레") || part.includes("bar"))) return "bar";
+  if (pathParts.some((part) => part.includes("워십") || part.includes("worship"))) return "worship";
+  if (pathParts.some((part) => part.includes("재즈") || part.includes("jazz"))) return "jazz";
+  if (pathParts.some((part) => part.includes("분수") || part.includes("slash"))) return "slash";
+  if (pathParts.some((part) => part.includes("그외") || part.includes("other"))) return "other";
+  if (/\((bar|barre)\)/i.test(fileName)) return "bar";
+  if (/\((worship)\)/i.test(fileName)) return "worship";
+  if (/\((jazz)\)/i.test(fileName)) return "jazz";
+  if (/\((slash|fraction|bass)\)/i.test(fileName)) return "slash";
+  if (/\((other|etc)\)/i.test(fileName)) return "other";
+  return "general";
+}
+
+function chordCategoryLabel(category) {
+  return CHORD_CATEGORY_TABS.find((item) => item.key === category)?.label || "일반";
+}
+
+function chordSrcFromFile(fileName) {
+  return `./chords/general/${fileName.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 const CHORD_DICTIONARY = CHORD_IMAGE_FILES.map((fileName) => ({
   name: chordNameFromFile(fileName),
   fileName,
-  src: `./chords/general/${fileName}`,
+  src: chordSrcFromFile(fileName),
+  category: chordCategoryFromFile(fileName),
   family: fileName.includes("minor") ? "minor" : fileName.includes("7") ? "seventh" : "basic",
-})).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+})).sort(
+  (a, b) =>
+    a.name.localeCompare(b.name, "en", { numeric: true }) ||
+    CHORD_CATEGORY_ORDER.indexOf(a.category) - CHORD_CATEGORY_ORDER.indexOf(b.category) ||
+    a.fileName.localeCompare(b.fileName, "en", { numeric: true }),
+);
 
 const els = {
   viewTitle: $("#viewTitle"),
@@ -264,6 +383,7 @@ const els = {
   materialGrid: $("#materialGrid"),
   materialCount: $("#materialCount"),
   chordSearch: $("#chordSearch"),
+  chordCategoryTabs: $("#chordCategoryTabs"),
   chordGrid: $("#chordGrid"),
   resourceLibraryUrl: $("#resourceLibraryUrl"),
   saveResourceLibrary: $("#saveResourceLibrary"),
@@ -836,8 +956,8 @@ function openPracticeScoreByBlock(blockId) {
   openImageViewerItems(items, 0, { mode: "score" });
 }
 
-function openChordViewer(chordName) {
-  const chord = getChordByName(chordName);
+function openChordViewer(chordName, fileName = "") {
+  const chord = CHORD_DICTIONARY.find((item) => item.fileName === fileName) || getChordByName(chordName);
   if (!chord) {
     showToast("코드표를 찾을 수 없습니다.");
     return;
@@ -1065,7 +1185,7 @@ function normalizeChordNames(value) {
 
 function getChordByName(name) {
   const normalized = normalizeChordSearch(name);
-  return CHORD_DICTIONARY.find((chord) => normalizeChordSearch(chord.name) === normalized);
+  return CHORD_DICTIONARY.find((chord) => chord.fileName === name) || CHORD_DICTIONARY.find((chord) => normalizeChordSearch(chord.name) === normalized);
 }
 
 function allCurriculumSkillLabels() {
@@ -1438,25 +1558,42 @@ function renderLibraryInsight() {
 
 function filteredChords() {
   const query = normalizeChordSearch(els.chordSearch?.value || "");
-  if (!query) return CHORD_DICTIONARY;
-  return CHORD_DICTIONARY.filter((chord) => normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query));
+  return CHORD_DICTIONARY.filter((chord) => {
+    const matchesCategory = activeChordCategory === "all" || chord.category === activeChordCategory;
+    const matchesQuery = !query || normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query);
+    return matchesCategory && matchesQuery;
+  });
 }
 
 function renderChordDictionary() {
   if (!els.chordGrid) return;
   const chords = filteredChords();
+  renderChordCategoryTabs();
   els.chordGrid.innerHTML = chords.length ? renderChordCards(chords) : `<div class="empty">찾는 코드가 없습니다.</div>`;
   document.querySelectorAll("[data-share-back-button]").forEach((button) => {
     button.hidden = !publicShareMode;
   });
 }
 
+function renderChordCategoryTabs() {
+  if (!els.chordCategoryTabs) return;
+  els.chordCategoryTabs.innerHTML = CHORD_CATEGORY_TABS.map((tab) => {
+    const count = tab.key === "all" ? CHORD_DICTIONARY.length : CHORD_DICTIONARY.filter((chord) => chord.category === tab.key).length;
+    return `
+      <button class="${activeChordCategory === tab.key ? "active" : ""}" type="button" data-chord-category="${tab.key}">
+        ${escapeHTML(tab.label)} <span>${count}</span>
+      </button>
+    `;
+  }).join("");
+}
+
 function renderChordCards(chords, { compact = false } = {}) {
   return chords
     .map(
       (chord) => `
-        <button class="chord-card ${compact ? "compact" : ""}" type="button" data-view-chord="${escapeHTML(chord.name)}">
+        <button class="chord-card ${compact ? "compact" : ""}" type="button" data-view-chord="${escapeHTML(chord.name)}" data-view-chord-file="${escapeHTML(chord.fileName)}">
           <strong>${escapeHTML(chord.name)}</strong>
+          <span class="chord-category-badge">${escapeHTML(chordCategoryLabel(chord.category))}</span>
           <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
         </button>
       `,
@@ -1499,10 +1636,10 @@ function renderChordPickerGrid() {
     ? chords
         .map(
           (chord) => `
-            <button class="chord-card picker-card ${selectedChordNames.has(chord.name) ? "selected" : ""}" type="button" data-picker-chord="${escapeHTML(chord.name)}">
+            <button class="chord-card picker-card ${selectedChordNames.has(chord.fileName) ? "selected" : ""}" type="button" data-picker-chord="${escapeHTML(chord.fileName)}">
               <strong>${escapeHTML(chord.name)}</strong>
               <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
-              <span>${selectedChordNames.has(chord.name) ? "선택됨" : "선택"}</span>
+              <span>${escapeHTML(chordCategoryLabel(chord.category))} · ${selectedChordNames.has(chord.fileName) ? "선택됨" : "선택"}</span>
             </button>
           `,
         )
@@ -1515,7 +1652,7 @@ function openChordPicker(blockId) {
   if (!block || block.kind !== "practice") return;
   els.chordPickerBlockId.value = blockId;
   els.chordPickerSearch.value = "";
-  selectedChordNames = new Set(normalizeChordNames(block.chords || []));
+  selectedChordNames = new Set(normalizeChordNames(block.chords || []).map((name) => getChordByName(name)?.fileName || name));
   renderChordPickerGrid();
   els.chordPickerDialog.showModal();
 }
@@ -1523,7 +1660,7 @@ function openChordPicker(blockId) {
 function saveChordPickerSelection() {
   const block = getBlock(els.chordPickerBlockId.value);
   if (!block || block.kind !== "practice") return;
-  const dictionaryOrder = CHORD_DICTIONARY.map((chord) => chord.name);
+  const dictionaryOrder = CHORD_DICTIONARY.map((chord) => chord.fileName);
   block.chords = [...selectedChordNames].sort((a, b) => dictionaryOrder.indexOf(a) - dictionaryOrder.indexOf(b));
   block.updatedAt = nowIso();
   els.chordPickerDialog.close();
@@ -2176,7 +2313,14 @@ document.addEventListener("click", (event) => {
   const chordButton = event.target.closest("[data-view-chord]");
   if (chordButton) {
     event.preventDefault();
-    openChordViewer(chordButton.dataset.viewChord);
+    openChordViewer(chordButton.dataset.viewChord, chordButton.dataset.viewChordFile);
+    return;
+  }
+
+  const chordCategoryButton = event.target.closest("[data-chord-category]");
+  if (chordCategoryButton) {
+    activeChordCategory = chordCategoryButton.dataset.chordCategory;
+    renderChordDictionary();
     return;
   }
 
@@ -2532,7 +2676,7 @@ function openBlockDialog(blockId = "") {
   els.practiceTempo.value = practice.tempo || "";
   els.practiceKey.value = practice.key || "";
   els.practiceBeat.value = practice.beat || "";
-  els.practiceChords.value = normalizeChordNames(block?.chords || []).join(", ");
+  els.practiceChords.value = normalizeChordNames(block?.chords || []).map((name) => getChordByName(name)?.name || name).join(", ");
   els.practiceCategories.forEach((checkbox) => {
     checkbox.checked = practice.categories.includes(checkbox.value);
   });

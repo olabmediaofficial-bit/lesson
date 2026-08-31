@@ -1470,6 +1470,35 @@ textarea {
   overflow: hidden;
 }
 
+.chord-category-tabs {
+  width: calc(100% - 36px);
+  margin: 0 18px 2px;
+  padding: 6px;
+  border: 1px solid rgba(198, 170, 143, 0.72);
+  border-radius: 8px;
+  background: #fff8f0;
+  box-shadow:
+    inset 2px 2px 5px rgba(117, 82, 55, 0.1),
+    inset -2px -2px 6px rgba(255, 252, 247, 0.9);
+}
+
+.chord-category-tabs button {
+  gap: 5px;
+  color: #7b6d63;
+}
+
+.chord-category-tabs button.active {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.chord-category-tabs span {
+  font-size: 11px;
+  font-weight: 900;
+  opacity: 0.72;
+}
+
 .chord-grid,
 .used-chord-grid {
   display: grid;
@@ -1494,6 +1523,16 @@ textarea {
 .chord-card strong {
   color: var(--accent-strong);
   font-size: 14px;
+}
+
+.chord-category-badge {
+  justify-self: start;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #7b5136;
+  background: #f2dfca;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .chord-card img {
