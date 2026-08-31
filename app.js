@@ -703,23 +703,26 @@ function collectViewerImages(clickedButton) {
 
 function openImageViewer(clickedButton) {
   const gallery = collectViewerImages(clickedButton);
-  openImageViewerItems(gallery.items, gallery.index);
+  openImageViewerItems(gallery.items, gallery.index, { mode: "score" });
 }
 
-function openImageViewerItems(items, index = 0) {
+function openImageViewerItems(items, index = 0, options = {}) {
   imageViewer = {
     items,
     index,
     zoom: 1,
     src: "",
     gestureScale: 1,
+    mode: options.mode || "score",
   };
+  els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord");
   els.imageViewerDialog.showModal();
   updateImageViewer();
 }
 
 function closeImageViewer() {
   els.imageViewerDialog.close();
+  els.imageViewerDialog.classList.remove("chord-only");
   els.imageViewerImage.src = "";
 }
 
@@ -813,7 +816,7 @@ function openRandomPracticeScore() {
     return;
   }
   const index = Math.floor(Math.random() * items.length);
-  openImageViewerItems(items, index);
+  openImageViewerItems(items, index, { mode: "score" });
 }
 
 function openPracticeScoreByBlock(blockId) {
@@ -830,7 +833,7 @@ function openPracticeScoreByBlock(blockId) {
     showToast("이 실습곡에 볼 수 있는 이미지 악보가 없습니다.");
     return;
   }
-  openImageViewerItems(items, 0);
+  openImageViewerItems(items, 0, { mode: "score" });
 }
 
 function openChordViewer(chordName) {
@@ -839,7 +842,7 @@ function openChordViewer(chordName) {
     showToast("코드표를 찾을 수 없습니다.");
     return;
   }
-  openImageViewerItems([{ src: chord.src, title: `${chord.name} 코드`, chords: [] }], 0);
+  openImageViewerItems([{ src: chord.src, title: `${chord.name} 코드` }], 0, { mode: "chord" });
 }
 
 function switchView(view) {

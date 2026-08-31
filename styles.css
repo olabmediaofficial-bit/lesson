@@ -1,15 +1,15 @@
 :root {
-  --ink: #1d1e22;
-  --muted: #6b7280;
-  --line: #d9ddd5;
-  --paper: #f7f4ed;
-  --surface: #ffffff;
-  --accent: #2d6a4f;
-  --accent-strong: #1b4332;
-  --amber: #d08c36;
-  --rose: #b65b64;
-  --blue: #3b6c95;
-  --shadow: 0 18px 50px rgba(29, 30, 34, 0.1);
+  --ink: #201b18;
+  --muted: #7b6d63;
+  --line: #d5c2ad;
+  --paper: #f6eee4;
+  --surface: #fffaf4;
+  --accent: #b98255;
+  --accent-strong: #5a3927;
+  --amber: #d4a36e;
+  --rose: #b47761;
+  --blue: #6c8ca3;
+  --shadow: 0 18px 50px rgba(68, 43, 29, 0.12);
 }
 
 * {
@@ -21,7 +21,7 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background:
-    linear-gradient(120deg, rgba(45, 106, 79, 0.08), transparent 34%),
+    linear-gradient(120deg, rgba(185, 130, 85, 0.08), transparent 34%),
     linear-gradient(315deg, rgba(208, 140, 54, 0.09), transparent 38%),
     var(--paper);
   font-family:
@@ -108,6 +108,14 @@ button {
 
 .public-share .share-actions {
   display: none;
+}
+
+.public-share button,
+.public-share .resource-button,
+.public-share .resource-library-button,
+.public-share .chord-dictionary-link {
+  font-size: 13px;
+  line-height: 1;
 }
 
 .sidebar {
@@ -227,7 +235,7 @@ p {
 
 h1 {
   margin-bottom: 0;
-  font-size: clamp(30px, 5vw, 48px);
+  font-size: 44px;
   line-height: 1.05;
 }
 
@@ -285,8 +293,8 @@ menu {
 
 .secondary-button:hover,
 .chip-button:hover {
-  border-color: rgba(45, 106, 79, 0.35);
-  background: #f2f8f4;
+  border-color: rgba(185, 130, 85, 0.35);
+  background: #f4e5d5;
 }
 
 .icon-button {
@@ -317,7 +325,7 @@ menu {
   z-index: 5;
   display: grid;
   place-items: center;
-  border: 2px dashed rgba(45, 106, 79, 0.5);
+  border: 2px dashed rgba(185, 130, 85, 0.5);
   border-radius: 8px;
   color: var(--accent-strong);
   background: rgba(247, 244, 237, 0.88);
@@ -413,7 +421,7 @@ textarea {
   place-items: center;
   border-radius: 999px;
   color: var(--accent-strong);
-  background: #e6f1eb;
+  background: #ead4bd;
   font-weight: 800;
 }
 
@@ -569,7 +577,7 @@ textarea {
 }
 
 .block-card.theory {
-  border-color: rgba(45, 106, 79, 0.2);
+  border-color: rgba(185, 130, 85, 0.2);
   background: #f7fbf8;
 }
 
@@ -640,7 +648,7 @@ textarea {
 .collapse-indicator {
   min-height: 30px;
   padding: 0 9px;
-  border: 1px solid rgba(45, 106, 79, 0.22);
+  border: 1px solid rgba(185, 130, 85, 0.22);
   border-radius: 8px;
   color: var(--accent-strong);
   background: #eef7f1;
@@ -828,7 +836,7 @@ textarea {
   min-height: 36px;
   align-items: center;
   padding: 0 12px;
-  border: 1px solid rgba(45, 106, 79, 0.24);
+  border: 1px solid rgba(185, 130, 85, 0.24);
   border-radius: 8px;
   color: var(--accent-strong);
   background: #eef7f1;
@@ -888,8 +896,8 @@ textarea {
   z-index: 8;
   margin: 0 -18px 14px;
   padding: 8px 18px;
-  border-top: 1px solid rgba(45, 106, 79, 0.08);
-  border-bottom: 1px solid rgba(45, 106, 79, 0.12);
+  border-top: 1px solid rgba(185, 130, 85, 0.08);
+  border-bottom: 1px solid rgba(185, 130, 85, 0.12);
   background: rgba(251, 250, 247, 0.94);
   backdrop-filter: blur(10px);
 }
@@ -901,8 +909,8 @@ textarea {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  border-color: rgba(45, 106, 79, 0.16);
-  background: rgba(45, 106, 79, 0.08);
+  border-color: rgba(185, 130, 85, 0.16);
+  background: rgba(185, 130, 85, 0.08);
 }
 
 .metronome input[type="range"] {
@@ -952,9 +960,9 @@ textarea {
 }
 
 .beat-dots span.active {
-  border-color: #9bcfaf;
-  background: #bde8ca;
-  box-shadow: 0 0 0 4px rgba(45, 106, 79, 0.1);
+  border-color: #d7b184;
+  background: #ead4bd;
+  box-shadow: 0 0 0 4px rgba(185, 130, 85, 0.1);
 }
 
 .beat-dots span.muted {
@@ -1001,8 +1009,8 @@ textarea {
 
 .meter-tabs button.active {
   color: var(--accent-strong);
-  border-color: #9bcfaf;
-  background: #dff3e6;
+  border-color: #d7b184;
+  background: #f3dfc8;
 }
 
 [data-metronome-toggle] {
@@ -1208,8 +1216,8 @@ textarea {
 }
 
 .mini-kind.theory {
-  color: #2d6a4f;
-  background: #e9f5ee;
+  color: #5a3927;
+  background: #ead4bd;
 }
 
 .lesson-body {
@@ -1334,7 +1342,7 @@ textarea {
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid rgba(45, 106, 79, 0.18);
+  border: 1px solid rgba(185, 130, 85, 0.18);
   border-radius: 8px;
   background: #f7fbf8;
 }
@@ -1422,7 +1430,7 @@ textarea {
   z-index: 8;
   color: #fff;
   background:
-    linear-gradient(rgba(24, 57, 45, 0.82), rgba(24, 57, 45, 0.82)),
+    linear-gradient(rgba(90, 57, 39, 0.82), rgba(90, 57, 39, 0.82)),
     repeating-linear-gradient(90deg, #9f7142 0 10px, #c69c6d 10px 12px);
 }
 
@@ -1432,7 +1440,7 @@ textarea {
 
 .share-hero h2 {
   margin: 0;
-  font-size: clamp(28px, 5vw, 44px);
+  font-size: 40px;
 }
 
 .resource-library-button {
@@ -1503,8 +1511,8 @@ textarea {
 }
 
 .chord-card:hover {
-  border-color: rgba(45, 106, 79, 0.34);
-  box-shadow: 0 8px 18px rgba(45, 106, 79, 0.1);
+  border-color: rgba(185, 130, 85, 0.34);
+  box-shadow: 0 8px 18px rgba(185, 130, 85, 0.1);
 }
 
 .used-chord-panel {
@@ -1592,6 +1600,13 @@ dialog::backdrop {
   overflow: hidden;
 }
 
+.image-viewer-dialog.chord-only {
+  width: min(520px, calc(100vw - 28px));
+  height: auto;
+  max-height: calc(100dvh - 28px);
+  background: #fff8f0;
+}
+
 .image-viewer-dialog::backdrop {
   background: rgba(0, 0, 0, 0.82);
 }
@@ -1603,6 +1618,13 @@ dialog::backdrop {
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
+.image-viewer-dialog.chord-only .image-viewer {
+  height: auto;
+  max-height: calc(100dvh - 28px);
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #fff8f0;
+}
+
 .image-viewer-head {
   display: flex;
   align-items: center;
@@ -1611,6 +1633,36 @@ dialog::backdrop {
   padding: 10px 12px;
   color: #fff;
   background: #111;
+}
+
+.image-viewer-dialog.chord-only .image-viewer-head {
+  color: var(--ink);
+  background: #fff8f0;
+}
+
+.image-viewer-dialog.chord-only .image-viewer-head strong {
+  color: var(--ink);
+}
+
+.image-viewer-dialog.chord-only .viewer-metronome,
+.image-viewer-dialog.chord-only .viewer-random-button,
+.image-viewer-dialog.chord-only #imageViewerZoomOut,
+.image-viewer-dialog.chord-only #imageViewerZoomIn,
+.image-viewer-dialog.chord-only #imageViewerZoomLabel,
+.image-viewer-dialog.chord-only #imageViewerPrev,
+.image-viewer-dialog.chord-only #imageViewerNext,
+.image-viewer-dialog.chord-only .image-viewer-foot {
+  display: none;
+}
+
+.image-viewer-dialog.chord-only .image-viewer-actions {
+  margin-left: auto;
+}
+
+.image-viewer-dialog.chord-only .image-viewer-actions .icon-button {
+  color: var(--accent-strong);
+  border-color: rgba(185, 130, 85, 0.28);
+  background: #fff8f0;
 }
 
 .viewer-metronome {
@@ -1726,11 +1778,23 @@ dialog::backdrop {
   background: #171717;
 }
 
+.image-viewer-dialog.chord-only .image-viewer-stage {
+  background: #fff8f0;
+}
+
 .image-viewer-scroll {
   display: block;
   min-height: 0;
   overflow: auto;
   padding: 14px 58px;
+}
+
+.image-viewer-dialog.chord-only .image-viewer-scroll {
+  display: grid;
+  max-height: calc(100dvh - 98px);
+  place-items: center;
+  overflow: auto;
+  padding: 18px;
 }
 
 .image-viewer img {
@@ -1742,6 +1806,15 @@ dialog::backdrop {
   object-fit: contain;
   background: #fff;
   transition: width 0.12s ease;
+}
+
+.image-viewer-dialog.chord-only .image-viewer img {
+  width: min(380px, 82vw) !important;
+  max-width: 100%;
+  border-radius: 8px;
+  box-shadow:
+    8px 8px 18px rgba(68, 43, 29, 0.16),
+    -6px -6px 16px rgba(255, 252, 247, 0.9);
 }
 
 .image-viewer-nav {
@@ -1822,14 +1895,14 @@ dialog::backdrop {
   min-width: 0;
   margin: 0;
   padding: 10px;
-  border: 1px solid rgba(45, 106, 79, 0.16);
+  border: 1px solid rgba(185, 130, 85, 0.16);
   border-radius: 8px;
   background: #fff;
 }
 
 .practice-skill-fields legend {
   padding: 0 6px;
-  color: #174634;
+  color: #5a3927;
   font-size: 13px;
   font-weight: 900;
 }
@@ -1867,7 +1940,7 @@ dialog::backdrop {
   gap: 8px 14px;
   margin: 0;
   padding: 10px 12px;
-  border: 1px solid rgba(45, 106, 79, 0.16);
+  border: 1px solid rgba(185, 130, 85, 0.16);
   border-radius: 8px;
 }
 
@@ -1955,9 +2028,9 @@ dialog::backdrop {
 }
 
 .chord-card.picker-card.selected {
-  border-color: rgba(45, 106, 79, 0.64);
-  background: #eef8f1;
-  box-shadow: inset 0 0 0 1px rgba(45, 106, 79, 0.22);
+  border-color: rgba(185, 130, 85, 0.64);
+  background: #fff2e3;
+  box-shadow: inset 0 0 0 1px rgba(185, 130, 85, 0.22);
 }
 
 .chord-card.picker-card.selected span {
@@ -2028,8 +2101,8 @@ dialog::backdrop {
 
 .mastery-control .level-4.active,
 .mastery-badge.level-4 {
-  border-color: #98ceb0;
-  background: #cdf0da;
+  border-color: #d8b98f;
+  background: #f0d9bd;
 }
 
 .progress-dashboard {
@@ -2097,8 +2170,8 @@ dialog::backdrop {
 }
 
 .radar-shape {
-  fill: rgba(45, 106, 79, 0.22);
-  stroke: #2d6a4f;
+  fill: rgba(185, 130, 85, 0.22);
+  stroke: #b98255;
   stroke-width: 1.6;
 }
 
@@ -2304,7 +2377,7 @@ dialog::backdrop {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #2d6a4f, #7cb58f);
+  background: linear-gradient(90deg, #a66f49, #d3a875);
 }
 
 .progress-block-list h3 {
@@ -2368,11 +2441,12 @@ menu {
 /* Soft neumorphic refresh */
 body {
   background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.86), transparent 28%),
-    radial-gradient(circle at 88% 18%, rgba(246, 211, 179, 0.24), transparent 30%),
-    linear-gradient(145deg, #eef2ea 0%, #f7f3ea 100%);
+    radial-gradient(circle at 18% 12%, rgba(255, 250, 244, 0.9), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(197, 142, 95, 0.22), transparent 30%),
+    linear-gradient(145deg, #efe2d4 0%, #fbf3e9 100%);
   font-family:
-    "Gmarket Sans", "GmarketSansMedium", "GmarketSansTTF", "Gmarket Sans TTF",
+    "Gmarket Sans", "GmarketSans", "GmarketSansMedium", "GmarketSansTTF", "Gmarket Sans TTF",
+    "Gmarket Sans Medium", "Gmarket Sans TTF Medium",
     Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-weight: 500;
 }
@@ -2391,17 +2465,17 @@ body {
 .progress-block-list,
 .practice-song-row,
 .dialog-card {
-  border: 1px solid rgba(190, 199, 185, 0.78);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(242, 247, 239, 0.94));
+  border: 1px solid rgba(198, 170, 143, 0.78);
+  background: linear-gradient(145deg, rgba(255, 251, 246, 0.97), rgba(244, 232, 219, 0.95));
   box-shadow:
-    9px 9px 20px rgba(111, 119, 107, 0.16),
-    -7px -7px 18px rgba(255, 255, 255, 0.9),
+    9px 9px 20px rgba(117, 82, 55, 0.15),
+    -7px -7px 18px rgba(255, 252, 247, 0.92),
     inset 0 0 0 1px rgba(255, 255, 255, 0.66);
 }
 
 .sidebar {
-  background: linear-gradient(180deg, #174634 0%, #102e24 100%);
-  box-shadow: inset -10px 0 22px rgba(7, 26, 18, 0.22);
+  background: linear-gradient(180deg, #5a3927 0%, #352116 100%);
+  box-shadow: inset -10px 0 22px rgba(37, 21, 12, 0.28);
 }
 
 .brand-mark,
@@ -2424,11 +2498,11 @@ textarea,
 .chord-card,
 .score-preview,
 .metronome {
-  border: 1px solid rgba(190, 199, 185, 0.72);
-  background: #f8faf5;
+  border: 1px solid rgba(198, 170, 143, 0.72);
+  background: #fff8f0;
   box-shadow:
-    inset 2px 2px 5px rgba(103, 112, 99, 0.1),
-    inset -2px -2px 6px rgba(255, 255, 255, 0.88);
+    inset 2px 2px 5px rgba(117, 82, 55, 0.1),
+    inset -2px -2px 6px rgba(255, 252, 247, 0.9);
 }
 
 .primary-button,
@@ -2440,8 +2514,8 @@ textarea,
 .collapse-indicator,
 .mini-button {
   box-shadow:
-    4px 4px 10px rgba(103, 112, 99, 0.16),
-    -4px -4px 10px rgba(255, 255, 255, 0.86);
+    4px 4px 10px rgba(117, 82, 55, 0.15),
+    -4px -4px 10px rgba(255, 252, 247, 0.88);
   font-weight: 800;
 }
 
@@ -2452,8 +2526,8 @@ textarea,
 .segmented button:active {
   transform: translateY(1px);
   box-shadow:
-    inset 3px 3px 8px rgba(17, 46, 36, 0.18),
-    inset -3px -3px 8px rgba(255, 255, 255, 0.72);
+    inset 3px 3px 8px rgba(90, 57, 39, 0.18),
+    inset -3px -3px 8px rgba(255, 252, 247, 0.74);
 }
 
 .topbar h1,
@@ -2476,15 +2550,15 @@ textarea,
   align-items: center;
   gap: 14px;
   padding: 18px;
-  border: 1px solid rgba(185, 197, 181, 0.86);
+  border: 1px solid rgba(198, 170, 143, 0.86);
   border-radius: 8px;
   color: var(--ink);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(239, 246, 238, 0.92)),
-    #f7f9f4;
+    linear-gradient(135deg, rgba(255, 251, 246, 0.88), rgba(244, 232, 219, 0.94)),
+    #fff8f0;
   box-shadow:
-    10px 10px 26px rgba(103, 112, 99, 0.16),
-    -10px -10px 24px rgba(255, 255, 255, 0.88);
+    10px 10px 26px rgba(117, 82, 55, 0.15),
+    -10px -10px 24px rgba(255, 252, 247, 0.9);
 }
 
 .share-hero > div:first-child {
@@ -2506,8 +2580,8 @@ textarea,
 }
 
 .share-hero h2 {
-  color: #17201b;
-  font-size: clamp(25px, 4vw, 40px);
+  color: #2b211b;
+  font-size: 38px;
 }
 
 .share-actions {
@@ -2532,11 +2606,11 @@ textarea,
   margin-top: 0;
   padding: 0 14px;
   color: var(--accent-strong);
-  border-color: rgba(45, 106, 79, 0.2);
-  background: #f7f9f4;
+  border-color: rgba(185, 130, 85, 0.28);
+  background: #fff8f0;
   box-shadow:
-    5px 5px 12px rgba(103, 112, 99, 0.14),
-    -5px -5px 12px rgba(255, 255, 255, 0.82);
+    5px 5px 12px rgba(117, 82, 55, 0.13),
+    -5px -5px 12px rgba(255, 252, 247, 0.88);
 }
 
 .share-hero .compact-metronome {
@@ -2544,8 +2618,8 @@ textarea,
   justify-self: stretch;
   max-width: none;
   overflow: hidden;
-  border-color: rgba(45, 106, 79, 0.18);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(230, 242, 233, 0.72));
+  border-color: rgba(185, 130, 85, 0.24);
+  background: linear-gradient(145deg, rgba(255, 251, 246, 0.78), rgba(238, 219, 199, 0.76));
 }
 
 .share-hero .compact-metronome .metro-row {
