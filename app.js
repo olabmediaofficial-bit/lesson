@@ -30,6 +30,7 @@ const ADVANCED_METRONOME_PATTERN_4_4 = [
 ];
 const CHORD_IMAGE_FILES = [
   "A_add9.png",
+  "A_dominant7_sus4.png",
   "A_dominant7.png",
   "A_major.png",
   "A_major7.png",
@@ -48,6 +49,7 @@ const CHORD_IMAGE_FILES = [
   "D_major7.png",
   "D_minor.png",
   "D_minor7.png",
+  "D_minor9.png",
   "D_sus4.png",
   "E_add9.png",
   "E_dominant7.png",
@@ -226,7 +228,9 @@ function chordNameFromFile(fileName) {
     minor: "m",
     major7: "maj7",
     minor7: "m7",
+    minor9: "m9",
     dominant7: "7",
+    dominant7_sus4: "7sus4",
     sus4: "sus4",
     add9: "add9",
   };
@@ -296,7 +300,6 @@ const els = {
   imageViewerPrev: $("#imageViewerPrev"),
   imageViewerNext: $("#imageViewerNext"),
   imageViewerCounter: $("#imageViewerCounter"),
-  imageViewerChordStrip: $("#imageViewerChordStrip"),
   closeImageViewer: $("#closeImageViewer"),
   chordPickerDialog: $("#chordPickerDialog"),
   chordPickerBlockId: $("#chordPickerBlockId"),
@@ -595,7 +598,6 @@ function resourceType(resource) {
 function renderResources(block, mode = "compact") {
   const resources = normalizeResources(block);
   if (!resources.length) return "";
-  const chordNames = encodeURIComponent(JSON.stringify(normalizeChordNames(block.chords || [])));
 
   return `
     <div class="resource-list ${mode}">
@@ -608,7 +610,7 @@ function renderResources(block, mode = "compact") {
           if (type === "image") {
             return `
               <figure class="score-preview">
-                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" data-view-image-chords="${chordNames}" aria-label="${viewerTitle} 크게 보기">
+                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" aria-label="${viewerTitle} 크게 보기">
                   <img src="${href}" alt="${label}" loading="lazy" />
                 </button>
                 <figcaption>
@@ -683,28 +685,18 @@ function showToast(message, timeout = 2200) {
   showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), timeout);
 }
 
-function parseViewerChordData(value = "") {
-  if (!value) return [];
-  try {
-    return normalizeChordNames(JSON.parse(decodeURIComponent(value)));
-  } catch {
-    return [];
-  }
-}
-
 function collectViewerImages(clickedButton) {
   const activeView = clickedButton.closest(".view.active") || document;
   const buttons = [...activeView.querySelectorAll("[data-view-image]")];
   const items = buttons.map((button) => ({
     src: button.dataset.viewImage,
     title: button.dataset.viewImageTitle || "악보 이미지",
-    chords: parseViewerChordData(button.dataset.viewImageChords),
   }));
   const index = Math.max(0, buttons.indexOf(clickedButton));
   return {
     items: items.length
       ? items
-      : [{ src: clickedButton.dataset.viewImage, title: clickedButton.dataset.viewImageTitle || "악보 이미지", chords: parseViewerChordData(clickedButton.dataset.viewImageChords) }],
+      : [{ src: clickedButton.dataset.viewImage, title: clickedButton.dataset.viewImageTitle || "악보 이미지" }],
     index,
   };
 }
@@ -742,26 +734,11 @@ function updateImageViewer() {
   }
   els.imageViewerImage.alt = item.title;
   els.imageViewerTitle.textContent = item.title;
-  renderImageViewerChords(item.chords || []);
   fitImageViewerToScreen();
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
   els.imageViewerNext.disabled = imageViewer.items.length < 2;
-}
-
-function renderImageViewerChords(chordNames = []) {
-  if (!els.imageViewerChordStrip) return;
-  const foundChords = normalizeChordNames(chordNames).map(getChordByName).filter(Boolean);
-  els.imageViewerChordStrip.hidden = !foundChords.length;
-  els.imageViewerChordStrip.innerHTML = foundChords.length
-    ? `
-      <div class="viewer-chord-head">사용 코드</div>
-      <div class="viewer-chord-grid">
-        ${renderChordCards(foundChords, { compact: true })}
-      </div>
-    `
-    : "";
 }
 
 function fitImageViewerToScreen() {
@@ -815,7 +792,6 @@ function lessonRoomImageItems(student) {
             .map((resource) => ({
               src: resourceHref(resource),
               title: block.title || resourceLabel(resource),
-              chords: normalizeChordNames(block.chords || []),
               lessonDate: lesson.date,
               mastery: masteryLevel(student, block.id),
             }))
@@ -848,7 +824,6 @@ function openPracticeScoreByBlock(blockId) {
     .map((resource) => ({
       src: resourceHref(resource),
       title: block.title || resourceLabel(resource),
-      chords: normalizeChordNames(block.chords || []),
     }))
     .filter((item) => item.src);
   if (!items.length) {

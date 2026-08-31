@@ -1726,40 +1726,6 @@ dialog::backdrop {
   padding: 14px 58px;
 }
 
-.image-viewer-chord-strip {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  display: grid;
-  gap: 8px;
-  margin: 0 auto 12px;
-  padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 8px;
-  background: rgba(17, 17, 17, 0.82);
-  backdrop-filter: blur(10px);
-}
-
-.viewer-chord-head {
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.viewer-chord-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
-  gap: 8px;
-}
-
-.viewer-chord-grid .chord-card {
-  padding: 6px;
-}
-
-.viewer-chord-grid .chord-card img {
-  border-radius: 4px;
-}
-
 .image-viewer img {
   display: block;
   width: auto;
@@ -2389,6 +2355,181 @@ menu {
   text-align: center;
 }
 
+/* Soft neumorphic refresh */
+body {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.86), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(246, 211, 179, 0.24), transparent 30%),
+    linear-gradient(145deg, #eef2ea 0%, #f7f3ea 100%);
+  font-family:
+    "Gmarket Sans", "GmarketSansMedium", "GmarketSansTTF", "Gmarket Sans TTF",
+    Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
+}
+
+.panel,
+.login-card,
+.material-card,
+.lesson-card,
+.share-preview,
+.chord-dictionary-panel,
+.curriculum-map,
+.curriculum-area-card,
+.curriculum-skill-card,
+.curriculum-recommendations article,
+.skill-gauge-panel,
+.progress-block-list,
+.practice-song-row,
+.dialog-card {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(247, 249, 244, 0.92);
+  box-shadow:
+    12px 12px 28px rgba(103, 112, 99, 0.16),
+    -10px -10px 24px rgba(255, 255, 255, 0.88);
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #174634 0%, #102e24 100%);
+  box-shadow: inset -10px 0 22px rgba(7, 26, 18, 0.22);
+}
+
+.brand-mark,
+.nav-item.active,
+.nav-item:hover {
+  box-shadow:
+    inset 2px 2px 6px rgba(7, 26, 18, 0.28),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.08);
+}
+
+input,
+select,
+textarea,
+.search-box,
+.lesson-toggle,
+.library-resource-panel,
+.practice-fields,
+.practice-skill-fields fieldset,
+.used-chord-panel,
+.chord-card,
+.score-preview,
+.metronome {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: #f7f9f4;
+  box-shadow:
+    inset 3px 3px 8px rgba(103, 112, 99, 0.12),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.82);
+}
+
+.primary-button,
+.secondary-button,
+.icon-button,
+.chip-button,
+.segmented button,
+.resource-button,
+.collapse-indicator,
+.mini-button {
+  box-shadow:
+    5px 5px 12px rgba(103, 112, 99, 0.16),
+    -5px -5px 12px rgba(255, 255, 255, 0.86);
+  font-weight: 800;
+}
+
+.primary-button:active,
+.secondary-button:active,
+.icon-button:active,
+.chip-button:active,
+.segmented button:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 3px 3px 8px rgba(17, 46, 36, 0.18),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.72);
+}
+
+.topbar h1,
+.share-hero h2,
+.login-card h1,
+.panel-head h2,
+.student-header h2 {
+  letter-spacing: 0;
+  font-weight: 900;
+}
+
+.share-preview {
+  overflow: visible;
+  background: rgba(247, 249, 244, 0.95);
+}
+
+.share-hero {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(280px, 450px);
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 8px;
+  color: var(--ink);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(239, 246, 238, 0.92)),
+    #f7f9f4;
+  box-shadow:
+    10px 10px 26px rgba(103, 112, 99, 0.16),
+    -10px -10px 24px rgba(255, 255, 255, 0.88);
+}
+
+.share-hero > div:first-child {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-hero .eyebrow,
+.share-hero h2 {
+  flex: 0 0 100%;
+}
+
+.share-hero .eyebrow {
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.share-hero h2 {
+  color: #17201b;
+  font-size: clamp(25px, 4vw, 40px);
+}
+
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.share-actions:has([hidden]:first-child:last-child),
+.share-actions:empty {
+  display: none;
+}
+
+.resource-library-button,
+.chord-dictionary-link {
+  margin-top: 0;
+  color: var(--accent-strong);
+  border-color: rgba(45, 106, 79, 0.2);
+  background: #f7f9f4;
+  box-shadow:
+    5px 5px 12px rgba(103, 112, 99, 0.14),
+    -5px -5px 12px rgba(255, 255, 255, 0.82);
+}
+
+.share-hero .compact-metronome {
+  justify-self: end;
+}
+
+.share-section {
+  margin-top: 18px;
+}
+
 @media (max-width: 920px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -2418,6 +2559,16 @@ menu {
   .library-layout,
   .room-layout {
     grid-template-columns: 1fr;
+  }
+
+  .share-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .share-actions,
+  .share-hero .compact-metronome {
+    width: 100%;
+    justify-self: stretch;
   }
 
   .curriculum-summary,
@@ -2629,15 +2780,6 @@ menu {
 
   .image-viewer-scroll {
     padding: 8px 12px 56px;
-  }
-
-  .image-viewer-chord-strip {
-    margin-bottom: 8px;
-    padding: 8px;
-  }
-
-  .viewer-chord-grid {
-    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
   }
 
   .image-viewer img {
