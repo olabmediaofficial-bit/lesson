@@ -106,6 +106,10 @@ button {
   padding: 24px;
 }
 
+.public-share .share-actions {
+  display: none;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -915,10 +919,13 @@ textarea {
   gap: 12px;
   min-height: 30px;
   padding: 6px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(177, 190, 172, 0.7);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.14);
-  color: #fff;
+  background: #f7faf5;
+  color: var(--accent-strong);
+  box-shadow:
+    inset 2px 2px 5px rgba(103, 112, 99, 0.12),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.9);
 }
 
 .metronome-display strong {
@@ -936,7 +943,7 @@ textarea {
   height: 9px;
   border: 1px solid rgba(29, 30, 34, 0.16);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.48);
+  background: #e6ebe2;
 }
 
 .beat-dots span.downbeat {
@@ -945,9 +952,9 @@ textarea {
 }
 
 .beat-dots span.active {
-  border-color: #fff;
-  background: #fff;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
+  border-color: #9bcfaf;
+  background: #bde8ca;
+  box-shadow: 0 0 0 4px rgba(45, 106, 79, 0.1);
 }
 
 .beat-dots span.muted {
@@ -970,7 +977,7 @@ textarea {
 }
 
 .tempo-unit {
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--accent-strong);
   font-size: 12px;
   font-weight: 800;
 }
@@ -986,16 +993,16 @@ textarea {
   flex: 1;
   justify-content: center;
   padding: 0 8px;
-  color: rgba(255, 255, 255, 0.82);
-  border-color: rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.08);
+  color: #617066;
+  border-color: rgba(177, 190, 172, 0.7);
+  background: #f7faf5;
   font-size: 12px;
 }
 
 .meter-tabs button.active {
   color: var(--accent-strong);
-  border-color: #fff;
-  background: #fff;
+  border-color: #9bcfaf;
+  background: #dff3e6;
 }
 
 [data-metronome-toggle] {
@@ -1020,9 +1027,9 @@ textarea {
   gap: 5px;
   min-height: 34px;
   padding: 0 9px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(177, 190, 172, 0.7);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--accent-strong);
   font-size: 12px;
   font-weight: 900;
   white-space: nowrap;
@@ -1033,7 +1040,7 @@ textarea {
   height: 14px;
   min-height: auto;
   padding: 0;
-  accent-color: #fff;
+  accent-color: var(--accent);
 }
 
 .random-practice-button {
@@ -1976,15 +1983,18 @@ dialog::backdrop {
 
 .mastery-control {
   display: flex;
+  width: max-content;
+  max-width: 100%;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 5px;
   margin: 4px 0;
 }
 
 .mastery-control button,
 .mastery-badge {
-  min-height: 24px;
-  padding: 3px 8px;
+  flex: 0 0 auto;
+  min-height: 23px;
+  padding: 2px 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
@@ -1995,31 +2005,31 @@ dialog::backdrop {
 
 .mastery-control button.active,
 .mastery-badge {
-  color: #fff;
+  color: #26312b;
 }
 
 .mastery-control .level-1.active,
 .mastery-badge.level-1 {
-  border-color: #8aa5b7;
-  background: #6d8da3;
+  border-color: #a7c3d2;
+  background: #d8ecf4;
 }
 
 .mastery-control .level-2.active,
 .mastery-badge.level-2 {
-  border-color: #bf9850;
-  background: #b7791f;
+  border-color: #e2c88d;
+  background: #fff0bf;
 }
 
 .mastery-control .level-3.active,
 .mastery-badge.level-3 {
-  border-color: #6f6a35;
-  background: #8a7d28;
+  border-color: #cfc78f;
+  background: #eeebbd;
 }
 
 .mastery-control .level-4.active,
 .mastery-badge.level-4 {
-  border-color: #2d6a4f;
-  background: #2d6a4f;
+  border-color: #98ceb0;
+  background: #cdf0da;
 }
 
 .progress-dashboard {
@@ -2381,11 +2391,12 @@ body {
 .progress-block-list,
 .practice-song-row,
 .dialog-card {
-  border-color: rgba(255, 255, 255, 0.72);
-  background: rgba(247, 249, 244, 0.92);
+  border: 1px solid rgba(190, 199, 185, 0.78);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(242, 247, 239, 0.94));
   box-shadow:
-    12px 12px 28px rgba(103, 112, 99, 0.16),
-    -10px -10px 24px rgba(255, 255, 255, 0.88);
+    9px 9px 20px rgba(111, 119, 107, 0.16),
+    -7px -7px 18px rgba(255, 255, 255, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.66);
 }
 
 .sidebar {
@@ -2413,11 +2424,11 @@ textarea,
 .chord-card,
 .score-preview,
 .metronome {
-  border-color: rgba(255, 255, 255, 0.72);
-  background: #f7f9f4;
+  border: 1px solid rgba(190, 199, 185, 0.72);
+  background: #f8faf5;
   box-shadow:
-    inset 3px 3px 8px rgba(103, 112, 99, 0.12),
-    inset -3px -3px 8px rgba(255, 255, 255, 0.82);
+    inset 2px 2px 5px rgba(103, 112, 99, 0.1),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.88);
 }
 
 .primary-button,
@@ -2429,8 +2440,8 @@ textarea,
 .collapse-indicator,
 .mini-button {
   box-shadow:
-    5px 5px 12px rgba(103, 112, 99, 0.16),
-    -5px -5px 12px rgba(255, 255, 255, 0.86);
+    4px 4px 10px rgba(103, 112, 99, 0.16),
+    -4px -4px 10px rgba(255, 255, 255, 0.86);
   font-weight: 800;
 }
 
@@ -2461,11 +2472,11 @@ textarea,
 
 .share-hero {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto minmax(280px, 450px);
+  grid-template-columns: minmax(220px, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(185, 197, 181, 0.86);
   border-radius: 8px;
   color: var(--ink);
   background:
@@ -2513,7 +2524,13 @@ textarea,
 
 .resource-library-button,
 .chord-dictionary-link {
+  display: inline-flex;
+  width: max-content;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
   margin-top: 0;
+  padding: 0 14px;
   color: var(--accent-strong);
   border-color: rgba(45, 106, 79, 0.2);
   background: #f7f9f4;
@@ -2523,7 +2540,24 @@ textarea,
 }
 
 .share-hero .compact-metronome {
-  justify-self: end;
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  max-width: none;
+  overflow: hidden;
+  border-color: rgba(45, 106, 79, 0.18);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(230, 242, 233, 0.72));
+}
+
+.share-hero .compact-metronome .metro-row {
+  min-width: 0;
+}
+
+.share-hero .compact-metronome .metro-row:last-child {
+  flex-wrap: wrap;
+}
+
+.share-hero .compact-metronome [data-tempo-slider] {
+  min-width: 90px;
 }
 
 .share-section {
@@ -2702,13 +2736,18 @@ textarea,
   }
 
   .lesson-room-view-controls .segmented,
-  .practice-song-row .mastery-control,
   .practice-song-row .secondary-button {
     width: 100%;
   }
 
-  .practice-song-row .mastery-control button {
-    flex: 1;
+  .practice-song-row .mastery-control {
+    width: max-content;
+  }
+
+  .practice-song-row .mastery-control button,
+  .lesson-block .mastery-control button,
+  .progress-song-row .mastery-control button {
+    flex: 0 0 auto;
   }
 
   .image-viewer-dialog {
@@ -2820,10 +2859,11 @@ textarea,
   }
 
   .progress-song-row .mastery-control {
-    width: 100%;
+    width: max-content;
+    max-width: 100%;
   }
 
   .progress-song-row .mastery-control button {
-    flex: 1;
+    flex: 0 0 auto;
   }
 }
