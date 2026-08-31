@@ -326,25 +326,7 @@
             <label><input type="checkbox" name="practiceCategory" value="재즈" /> 재즈</label>
             <label><input type="checkbox" name="practiceCategory" value="그외" /> 그외</label>
           </fieldset>
-          <div class="practice-note-fields">
-            <div class="segmented practice-note-tabs" id="practiceNoteTabs">
-              <button class="active" data-practice-note-tab="leftHand" type="button">왼손(사운드)</button>
-              <button data-practice-note-tab="rightHand" type="button">오른손(리듬)</button>
-              <button data-practice-note-tab="technique" type="button">테크닉</button>
-            </div>
-            <label class="practice-note-panel active" data-practice-note-panel="leftHand">
-              왼손(사운드)
-              <textarea id="practiceLeftHand" rows="4" placeholder="왼손 운지, 코드 전환, 사운드 포인트"></textarea>
-            </label>
-            <label class="practice-note-panel" data-practice-note-panel="rightHand">
-              오른손(리듬)
-              <textarea id="practiceRightHand" rows="4" placeholder="오른손 리듬, 피킹, 스트로크 포인트"></textarea>
-            </label>
-            <label class="practice-note-panel" data-practice-note-panel="technique">
-              테크닉
-              <textarea id="practiceTechnique" rows="4" placeholder="벤딩, 뮤트, 슬라이드 같은 세부 연습"></textarea>
-            </label>
-          </div>
+          <div class="practice-skill-fields" id="practiceSkillFields"></div>
           <label>
             사용 코드
             <input id="practiceChords" type="text" placeholder="쉼표로 구분: A, E, F#m7, D" />
@@ -434,12 +416,32 @@
         <div class="image-viewer-stage">
           <button class="image-viewer-nav prev" id="imageViewerPrev" type="button" title="이전 악보">‹</button>
           <div class="image-viewer-scroll">
+            <div class="image-viewer-chord-strip" id="imageViewerChordStrip" hidden></div>
             <img id="imageViewerImage" src="" alt="" />
           </div>
           <button class="image-viewer-nav next" id="imageViewerNext" type="button" title="다음 악보">›</button>
         </div>
         <div class="image-viewer-foot" id="imageViewerCounter">1 / 1</div>
       </div>
+    </dialog>
+
+    <dialog id="chordPickerDialog">
+      <form class="dialog-card chord-picker-dialog" method="dialog">
+        <div class="dialog-head">
+          <div>
+            <strong>코드표 추가</strong>
+            <p>이 실습곡에서 쓰는 코드를 골라주세요.</p>
+          </div>
+          <button class="icon-button" value="cancel" type="submit">×</button>
+        </div>
+        <input id="chordPickerBlockId" type="hidden" />
+        <input id="chordPickerSearch" type="search" placeholder="코드 검색: A, F#m7, D..." />
+        <div class="chord-picker-grid" id="chordPickerGrid"></div>
+        <menu>
+          <button class="secondary-button" value="cancel" type="submit">취소</button>
+          <button class="primary-button" id="saveChordPicker" value="default" type="submit">저장</button>
+        </menu>
+      </form>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

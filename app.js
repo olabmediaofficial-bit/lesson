@@ -69,19 +69,19 @@ const CURRICULUM_AREAS = [
     key: "left",
     label: "왼손",
     description: "코드 사운드와 지판 운용",
-    skills: ["일반코드", "바코드", "파워코드", "오픈코드", "재즈코드", "코드이론", "다이어토닉", "스케일"],
+    skills: ["일반코드", "바코드", "파워코드", "오픈코드", "재즈코드", "분수코드", "코드이론", "다이어토닉", "스케일"],
   },
   {
     key: "right",
     label: "오른손",
     description: "리듬과 반주 주법",
-    skills: ["4비트", "8비트", "16비트", "6/8", "스트로크", "핑거링", "퍼커시브", "피킹"],
+    skills: ["4비트", "8비트", "16비트", "6/8", "스트로크", "핑거링", "피킹"],
   },
   {
     key: "technique",
     label: "테크닉",
     description: "뮤트와 표현 기법",
-    skills: ["왼손뮤트", "오른손뮤트", "팜뮤트", "해머링온", "풀링오프", "슬라이드", "하모닉스"],
+    skills: ["왼손뮤트", "오른손뮤트", "팜뮤트", "베이스라인", "해머링온", "풀링오프", "슬라이드", "하모닉스"],
   },
 ];
 
@@ -89,6 +89,8 @@ const CURRICULUM_SKILL_ALIASES = {
   왼손뮤트: ["왼손 뮤트"],
   오른손뮤트: ["오른손 뮤트"],
   팜뮤트: ["팜 뮤트"],
+  분수코드: ["슬래시코드", "슬래시 코드", "slash chord", "slash chords"],
+  베이스라인: ["베이스 라인", "bass line", "bassline"],
   해머링온: ["해머링", "hammering", "hammer-on"],
   풀링오프: ["풀링", "pulling", "pull-off"],
   "6/8": ["6/8리듬", "6/8 리듬"],
@@ -184,6 +186,7 @@ let practiceSortDirection = {
 };
 let selectedBlockIds = new Set();
 let selectedCurriculumSkills = new Set();
+let selectedChordNames = new Set();
 let pendingBlockIds = new Set();
 let expandedLessonIds = new Set();
 let expandedLibraryBlockIds = new Set();
@@ -293,7 +296,13 @@ const els = {
   imageViewerPrev: $("#imageViewerPrev"),
   imageViewerNext: $("#imageViewerNext"),
   imageViewerCounter: $("#imageViewerCounter"),
+  imageViewerChordStrip: $("#imageViewerChordStrip"),
   closeImageViewer: $("#closeImageViewer"),
+  chordPickerDialog: $("#chordPickerDialog"),
+  chordPickerBlockId: $("#chordPickerBlockId"),
+  chordPickerSearch: $("#chordPickerSearch"),
+  chordPickerGrid: $("#chordPickerGrid"),
+  saveChordPicker: $("#saveChordPicker"),
   blockDialogTitle: $("#blockDialogTitle"),
   editingBlockId: $("#editingBlockId"),
   newFiles: $("#newFiles"),
@@ -303,11 +312,8 @@ const els = {
   practiceKey: $("#practiceKey"),
   practiceBeat: $("#practiceBeat"),
   practiceChords: $("#practiceChords"),
+  practiceSkillFields: $("#practiceSkillFields"),
   practiceCategories: document.querySelectorAll('input[name="practiceCategory"]'),
-  practiceNoteTabs: $("#practiceNoteTabs"),
-  practiceRightHand: $("#practiceRightHand"),
-  practiceLeftHand: $("#practiceLeftHand"),
-  practiceTechnique: $("#practiceTechnique"),
   appShell: $(".app-shell"),
   adminLogin: $("#adminLogin"),
   adminLoginForm: $("#adminLoginForm"),
@@ -589,6 +595,7 @@ function resourceType(resource) {
 function renderResources(block, mode = "compact") {
   const resources = normalizeResources(block);
   if (!resources.length) return "";
+  const chordNames = encodeURIComponent(JSON.stringify(normalizeChordNames(block.chords || [])));
 
   return `
     <div class="resource-list ${mode}">
@@ -601,7 +608,7 @@ function renderResources(block, mode = "compact") {
           if (type === "image") {
             return `
               <figure class="score-preview">
-                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" aria-label="${viewerTitle} 크게 보기">
+                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" data-view-image-chords="${chordNames}" aria-label="${viewerTitle} 크게 보기">
                   <img src="${href}" alt="${label}" loading="lazy" />
                 </button>
                 <figcaption>
@@ -676,15 +683,30 @@ function showToast(message, timeout = 2200) {
   showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), timeout);
 }
 
+function parseViewerChordData(value = "") {
+  if (!value) return [];
+  try {
+    return normalizeChordNames(JSON.parse(decodeURIComponent(value)));
+  } catch {
+    return [];
+  }
+}
+
 function collectViewerImages(clickedButton) {
   const activeView = clickedButton.closest(".view.active") || document;
   const buttons = [...activeView.querySelectorAll("[data-view-image]")];
   const items = buttons.map((button) => ({
     src: button.dataset.viewImage,
     title: button.dataset.viewImageTitle || "악보 이미지",
+    chords: parseViewerChordData(button.dataset.viewImageChords),
   }));
   const index = Math.max(0, buttons.indexOf(clickedButton));
-  return { items: items.length ? items : [{ src: clickedButton.dataset.viewImage, title: clickedButton.dataset.viewImageTitle || "악보 이미지" }], index };
+  return {
+    items: items.length
+      ? items
+      : [{ src: clickedButton.dataset.viewImage, title: clickedButton.dataset.viewImageTitle || "악보 이미지", chords: parseViewerChordData(clickedButton.dataset.viewImageChords) }],
+    index,
+  };
 }
 
 function openImageViewer(clickedButton) {
@@ -720,11 +742,26 @@ function updateImageViewer() {
   }
   els.imageViewerImage.alt = item.title;
   els.imageViewerTitle.textContent = item.title;
+  renderImageViewerChords(item.chords || []);
   fitImageViewerToScreen();
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
   els.imageViewerNext.disabled = imageViewer.items.length < 2;
+}
+
+function renderImageViewerChords(chordNames = []) {
+  if (!els.imageViewerChordStrip) return;
+  const foundChords = normalizeChordNames(chordNames).map(getChordByName).filter(Boolean);
+  els.imageViewerChordStrip.hidden = !foundChords.length;
+  els.imageViewerChordStrip.innerHTML = foundChords.length
+    ? `
+      <div class="viewer-chord-head">사용 코드</div>
+      <div class="viewer-chord-grid">
+        ${renderChordCards(foundChords, { compact: true })}
+      </div>
+    `
+    : "";
 }
 
 function fitImageViewerToScreen() {
@@ -778,6 +815,7 @@ function lessonRoomImageItems(student) {
             .map((resource) => ({
               src: resourceHref(resource),
               title: block.title || resourceLabel(resource),
+              chords: normalizeChordNames(block.chords || []),
               lessonDate: lesson.date,
               mastery: masteryLevel(student, block.id),
             }))
@@ -810,6 +848,7 @@ function openPracticeScoreByBlock(blockId) {
     .map((resource) => ({
       src: resourceHref(resource),
       title: block.title || resourceLabel(resource),
+      chords: normalizeChordNames(block.chords || []),
     }))
     .filter((item) => item.src);
   if (!items.length) {
@@ -817,6 +856,15 @@ function openPracticeScoreByBlock(blockId) {
     return;
   }
   openImageViewerItems(items, 0);
+}
+
+function openChordViewer(chordName) {
+  const chord = getChordByName(chordName);
+  if (!chord) {
+    showToast("코드표를 찾을 수 없습니다.");
+    return;
+  }
+  openImageViewerItems([{ src: chord.src, title: `${chord.name} 코드`, chords: [] }], 0);
 }
 
 function switchView(view) {
@@ -1040,6 +1088,51 @@ function normalizeChordNames(value) {
 function getChordByName(name) {
   const normalized = normalizeChordSearch(name);
   return CHORD_DICTIONARY.find((chord) => normalizeChordSearch(chord.name) === normalized);
+}
+
+function allCurriculumSkillLabels() {
+  return CURRICULUM_AREAS.flatMap((area) => area.skills);
+}
+
+function isCurriculumSkillTag(tag) {
+  const normalizedTag = normalizeSkillText(tag);
+  return allCurriculumSkillLabels().some((skill) => [skill, ...(CURRICULUM_SKILL_ALIASES[skill] || [])].map(normalizeSkillText).includes(normalizedTag));
+}
+
+function nonCurriculumTags(tags = []) {
+  return tags.filter((tag) => !isCurriculumSkillTag(tag));
+}
+
+function selectedPracticeSkillTags() {
+  return [...els.practiceSkillFields.querySelectorAll("[data-practice-skill]:checked")].map((checkbox) => checkbox.value);
+}
+
+function renderPracticeSkillFields(block = null) {
+  if (!els.practiceSkillFields) return;
+  const currentTags = new Set((block?.tags || []).filter(isCurriculumSkillTag).map((tag) => {
+    const normalizedTag = normalizeSkillText(tag);
+    return allCurriculumSkillLabels().find((skill) => [skill, ...(CURRICULUM_SKILL_ALIASES[skill] || [])].map(normalizeSkillText).includes(normalizedTag)) || tag;
+  }));
+
+  els.practiceSkillFields.innerHTML = CURRICULUM_AREAS.map(
+    (area) => `
+      <fieldset>
+        <legend>${escapeHTML(area.label)}</legend>
+        <div class="practice-skill-options">
+          ${area.skills
+            .map(
+              (skill) => `
+                <label>
+                  <input type="checkbox" data-practice-skill value="${escapeHTML(skill)}" ${currentTags.has(skill) ? "checked" : ""} />
+                  ${escapeHTML(skill)}
+                </label>
+              `,
+            )
+            .join("")}
+        </div>
+      </fieldset>
+    `,
+  ).join("");
 }
 
 function filteredBlocks() {
@@ -1384,31 +1477,80 @@ function renderChordCards(chords, { compact = false } = {}) {
   return chords
     .map(
       (chord) => `
-        <article class="chord-card ${compact ? "compact" : ""}">
+        <button class="chord-card ${compact ? "compact" : ""}" type="button" data-view-chord="${escapeHTML(chord.name)}">
           <strong>${escapeHTML(chord.name)}</strong>
           <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
-        </article>
+        </button>
       `,
     )
     .join("");
 }
 
-function renderBlockChordDictionary(block) {
+function renderBlockChordDictionary(block, { editable = false } = {}) {
   if (block.kind !== "practice") return "";
   const chordNames = normalizeChordNames(block.chords || []);
-  if (!chordNames.length) return "";
+  if (!chordNames.length && !editable) return "";
 
   const foundChords = chordNames.map(getChordByName).filter(Boolean);
   const missingChords = chordNames.filter((name) => !getChordByName(name));
   return `
     <details class="used-chord-panel">
-      <summary>사용 코드 ${chordNames.length}개</summary>
+      <summary>
+        <span>사용 코드 ${chordNames.length}개</span>
+        ${editable ? `<button class="secondary-button mini-button" type="button" data-open-chord-picker="${block.id}">코드표 추가</button>` : ""}
+      </summary>
       <div class="used-chord-grid">
+        ${chordNames.length ? "" : `<span class="empty-inline">아직 연결된 코드표가 없습니다.</span>`}
         ${foundChords.length ? renderChordCards(foundChords, { compact: true }) : ""}
         ${missingChords.map((name) => `<span class="missing-chord">${escapeHTML(name)}</span>`).join("")}
       </div>
     </details>
   `;
+}
+
+function filteredPickerChords() {
+  const query = normalizeChordSearch(els.chordPickerSearch?.value || "");
+  if (!query) return CHORD_DICTIONARY;
+  return CHORD_DICTIONARY.filter((chord) => normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query));
+}
+
+function renderChordPickerGrid() {
+  if (!els.chordPickerGrid) return;
+  const chords = filteredPickerChords();
+  els.chordPickerGrid.innerHTML = chords.length
+    ? chords
+        .map(
+          (chord) => `
+            <button class="chord-card picker-card ${selectedChordNames.has(chord.name) ? "selected" : ""}" type="button" data-picker-chord="${escapeHTML(chord.name)}">
+              <strong>${escapeHTML(chord.name)}</strong>
+              <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
+              <span>${selectedChordNames.has(chord.name) ? "선택됨" : "선택"}</span>
+            </button>
+          `,
+        )
+        .join("")
+    : `<div class="empty">찾는 코드가 없습니다.</div>`;
+}
+
+function openChordPicker(blockId) {
+  const block = getBlock(blockId);
+  if (!block || block.kind !== "practice") return;
+  els.chordPickerBlockId.value = blockId;
+  els.chordPickerSearch.value = "";
+  selectedChordNames = new Set(normalizeChordNames(block.chords || []));
+  renderChordPickerGrid();
+  els.chordPickerDialog.showModal();
+}
+
+function saveChordPickerSelection() {
+  const block = getBlock(els.chordPickerBlockId.value);
+  if (!block || block.kind !== "practice") return;
+  const dictionaryOrder = CHORD_DICTIONARY.map((chord) => chord.name);
+  block.chords = [...selectedChordNames].sort((a, b) => dictionaryOrder.indexOf(a) - dictionaryOrder.indexOf(b));
+  block.updatedAt = nowIso();
+  els.chordPickerDialog.close();
+  render();
+  saveStateInBackground({}, "코드표를 연결했습니다.");
 }
 
 function renderKindGroups(blocks) {
@@ -1477,7 +1619,7 @@ function renderBlockCard(block) {
         <p>${escapeHTML(block.summary)}</p>
         ${renderPracticeDetails(block)}
         <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
-        ${renderBlockChordDictionary(block)}
+        ${renderBlockChordDictionary(block, { editable: true })}
         ${renderResources(block, "compact")}
       </div>
     </article>
@@ -1815,7 +1957,7 @@ function renderLessonBlock(block, options = {}) {
       ${renderPracticeMeta(block)}
       <p>${escapeHTML(block.summary)}</p>
       ${renderPracticeDetails(block)}
-      ${renderBlockChordDictionary(block)}
+      ${renderBlockChordDictionary(block, { editable: controls })}
       ${block.audioLink ? `<p class="audio-link">노래 듣기 : <a href="${escapeHTML(block.audioLink)}" target="_blank" rel="noreferrer">${escapeHTML(block.audioLink)}</a></p>` : ""}
       ${renderResources(block, "expanded")}
     </div>
@@ -1862,12 +2004,8 @@ function renderPracticeMeta(block) {
 
 function renderPracticeDetails(block) {
   if (block.kind !== "practice") return "";
-  const practice = normalizePractice(block.practice);
-  const items = [
-    ["왼손(사운드)", practice.leftHand],
-    ["오른손(리듬)", practice.rightHand],
-    ["테크닉", practice.technique],
-  ].filter(([, value]) => value);
+  const skillSet = blockSkillSet(block);
+  const items = CURRICULUM_AREAS.map((area) => [area.label, area.skills.filter((skill) => skillSet.has(skill)).join(" · ")]).filter(([, value]) => value);
   if (!items.length) return "";
   return `
     <div class="practice-detail-list">
@@ -2052,7 +2190,34 @@ document.addEventListener("click", (event) => {
   if (deleteBlock) deleteBlockById(deleteBlock.dataset.deleteBlock);
 
   const imageButton = event.target.closest("[data-view-image]");
-  if (imageButton) openImageViewer(imageButton);
+  if (imageButton) {
+    openImageViewer(imageButton);
+    return;
+  }
+
+  const chordButton = event.target.closest("[data-view-chord]");
+  if (chordButton) {
+    event.preventDefault();
+    openChordViewer(chordButton.dataset.viewChord);
+    return;
+  }
+
+  const chordPickerButton = event.target.closest("[data-open-chord-picker]");
+  if (chordPickerButton) {
+    event.preventDefault();
+    openChordPicker(chordPickerButton.dataset.openChordPicker);
+    return;
+  }
+
+  const pickerChord = event.target.closest("[data-picker-chord]");
+  if (pickerChord) {
+    event.preventDefault();
+    const chordName = pickerChord.dataset.pickerChord;
+    if (selectedChordNames.has(chordName)) selectedChordNames.delete(chordName);
+    else selectedChordNames.add(chordName);
+    renderChordPickerGrid();
+    return;
+  }
 
   const collapseBlockGroup = event.target.closest("[data-collapse-block-group]");
   if (collapseBlockGroup) {
@@ -2130,6 +2295,16 @@ document.addEventListener("change", (event) => {
       node.textContent = selectedCurriculumSkills.size;
     });
   }
+});
+
+els.chordPickerSearch.addEventListener("input", renderChordPickerGrid);
+els.chordPickerDialog.addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") {
+    selectedChordNames.clear();
+    return;
+  }
+  event.preventDefault();
+  saveChordPickerSelection();
 });
 
 document.addEventListener("dragstart", (event) => {
@@ -2358,11 +2533,6 @@ els.adminLoginForm.addEventListener("submit", async (event) => {
   }
 });
 $("#newType").addEventListener("change", updatePracticeFieldsVisibility);
-els.practiceNoteTabs.addEventListener("click", (event) => {
-  const tab = event.target.closest("[data-practice-note-tab]");
-  if (tab) activatePracticeNoteTab(tab.dataset.practiceNoteTab);
-});
-
 $("#assignSelected").addEventListener("click", () => {
   const student = getActiveStudent();
   if (student) assignSelectedToStudent(student.id);
@@ -2378,7 +2548,7 @@ function openBlockDialog(blockId = "") {
   $("#newTitle").value = block?.title || "";
   $("#newType").value = block?.kind || "theory";
   $("#newSummary").value = block?.summary || "";
-  $("#newTags").value = block?.tags?.join(", ") || "";
+  $("#newTags").value = nonCurriculumTags(block?.tags || []).join(", ");
   $("#newResources").value = block ? normalizeResources(block).filter((resource) => typeof resource === "string").join("\n") : "";
   els.newAudioLink.value = block?.audioLink || "";
   els.practiceTempo.value = practice.tempo || "";
@@ -2388,26 +2558,14 @@ function openBlockDialog(blockId = "") {
   els.practiceCategories.forEach((checkbox) => {
     checkbox.checked = practice.categories.includes(checkbox.value);
   });
-  els.practiceRightHand.value = practice.rightHand || "";
-  els.practiceLeftHand.value = practice.leftHand || "";
-  els.practiceTechnique.value = practice.technique || "";
+  renderPracticeSkillFields(block);
   els.newFiles.value = "";
-  activatePracticeNoteTab("leftHand");
   updatePracticeFieldsVisibility();
   els.materialDialog.showModal();
 }
 
 function updatePracticeFieldsVisibility() {
   els.practiceFields.hidden = $("#newType").value !== "practice";
-}
-
-function activatePracticeNoteTab(activeTab) {
-  els.practiceNoteTabs.querySelectorAll("[data-practice-note-tab]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.practiceNoteTab === activeTab);
-  });
-  document.querySelectorAll("[data-practice-note-panel]").forEach((panel) => {
-    panel.classList.toggle("active", panel.dataset.practiceNotePanel === activeTab);
-  });
 }
 
 function readFileAsResource(file) {
@@ -2555,23 +2713,25 @@ $("#materialForm").addEventListener("submit", async (event) => {
     const linkResources = $("#newResources").value.split("\n").map((item) => item.trim()).filter(Boolean);
     const keptFileResources = existing ? normalizeResources(existing).filter((resource) => typeof resource === "object") : [];
     const fileResources = await Promise.all([...els.newFiles.files].map(readFileAsUploadedResource));
+    const kind = $("#newType").value;
+    const tags = kind === "practice" ? [...new Set([...parseTags($("#newTags").value), ...selectedPracticeSkillTags()])] : parseTags($("#newTags").value);
     const block = {
       id: editingId || uid("blk"),
       title: $("#newTitle").value.trim() || "제목 없는 블럭",
-      kind: $("#newType").value,
+      kind,
       summary: $("#newSummary").value.trim(),
-      tags: parseTags($("#newTags").value),
+      tags,
       audioLink: els.newAudioLink.value.trim(),
-      chords: $("#newType").value === "practice" ? normalizeChordNames(els.practiceChords.value) : [],
+      chords: kind === "practice" ? normalizeChordNames(els.practiceChords.value) : [],
       updatedAt: nowIso(),
       practice: {
         tempo: els.practiceTempo.value.trim(),
         key: els.practiceKey.value,
         beat: els.practiceBeat.value,
         categories: [...els.practiceCategories].filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value),
-        rightHand: els.practiceRightHand.value.trim(),
-        leftHand: els.practiceLeftHand.value.trim(),
-        technique: els.practiceTechnique.value.trim(),
+        rightHand: existing?.practice?.rightHand || "",
+        leftHand: existing?.practice?.leftHand || "",
+        technique: existing?.practice?.technique || "",
       },
       resources: [...linkResources, ...keptFileResources, ...fileResources],
     };
