@@ -481,7 +481,7 @@ function migrateState(data) {
     practice: normalizePractice(block.practice),
     updatedAt: block.updatedAt || "",
   }));
-  const shouldUpgradePracticeProgress = data.practiceProgressScale !== "four-step";
+  const shouldUpgradePracticeProgress = data.practiceProgressScale === "three-step";
   data.students = data.students.map((student) => {
     const practiceProgress = { ...(student.practiceProgress || {}) };
     if (shouldUpgradePracticeProgress) {

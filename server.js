@@ -488,6 +488,7 @@ async function handlePublicRoom(request, response) {
     JSON.stringify({
       blocks,
       students: [student],
+      practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
     }),
     "application/json; charset=utf-8",

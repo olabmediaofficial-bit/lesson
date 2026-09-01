@@ -96,6 +96,7 @@ async function handleRoom(request, env) {
     return json({
       blocks,
       students: [student],
+      practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
     });
   } catch (error) {
