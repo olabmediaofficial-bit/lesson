@@ -438,6 +438,8 @@ const els = {
   imageViewerTitle: $("#imageViewerTitle"),
   imageViewerMastery: $("#imageViewerMastery"),
   imageViewerAudio: $("#imageViewerAudio"),
+  imageViewerChords: $("#imageViewerChords"),
+  imageViewerRhythm: $("#imageViewerRhythm"),
   imageViewerImage: $("#imageViewerImage"),
   imageViewerZoomOut: $("#imageViewerZoomOut"),
   imageViewerZoomIn: $("#imageViewerZoomIn"),
@@ -896,6 +898,7 @@ function updateImageViewer() {
   els.imageViewerTitle.textContent = item.title;
   renderImageViewerMastery();
   renderImageViewerAudio();
+  renderImageViewerResourceButtons();
   fitImageViewerToScreen();
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
@@ -903,10 +906,15 @@ function updateImageViewer() {
   els.imageViewerNext.disabled = imageViewer.items.length < 2;
 }
 
+function currentImageViewerBlock() {
+  const item = imageViewer.items[imageViewer.index];
+  return item?.blockId ? getBlock(item.blockId) : null;
+}
+
 function renderImageViewerAudio() {
   if (!els.imageViewerAudio) return;
   const item = imageViewer.items[imageViewer.index];
-  const audioLink = item?.audioLink || (item?.blockId ? getBlock(item.blockId)?.audioLink : "");
+  const audioLink = item?.audioLink || currentImageViewerBlock()?.audioLink || "";
   if (imageViewer.mode !== "score" || !audioLink) {
     els.imageViewerAudio.hidden = true;
     els.imageViewerAudio.removeAttribute("href");
@@ -916,9 +924,63 @@ function renderImageViewerAudio() {
   els.imageViewerAudio.href = audioLink;
 }
 
+function renderImageViewerResourceButtons() {
+  const block = currentImageViewerBlock();
+  const hasScoreContext = imageViewer.mode === "score" && block?.kind === "practice";
+  const hasChords = hasScoreContext && normalizeChordNames(block.chords || []).some((name) => getChordByName(name));
+  const hasRhythm = hasScoreContext && rhythmViewerItems(block).length > 0;
+  if (els.imageViewerChords) els.imageViewerChords.hidden = !hasChords;
+  if (els.imageViewerRhythm) els.imageViewerRhythm.hidden = !hasRhythm;
+}
+
+function openImageViewerChords() {
+  const block = currentImageViewerBlock();
+  if (!block) return;
+  const items = normalizeChordNames(block.chords || [])
+    .map(getChordByName)
+    .filter(Boolean)
+    .map((chord) => ({
+      src: chord.src,
+      title: `${chord.name} 코드`,
+    }));
+  if (!items.length) return;
+  openImageViewerItems(items, 0, { mode: "chord" });
+}
+
+function rhythmViewerItems(block) {
+  if (!block) return [];
+  const rhythmPattern = /리듬|rhythm|beat|스트로크|strum|패턴|pattern/i;
+  return normalizeResources(block)
+    .filter((resource) => rhythmPattern.test(`${resourceLabel(resource)} ${resourceHref(resource)}`))
+    .map((resource) => ({
+      resource,
+      href: resourceHref(resource),
+      label: resourceLabel(resource),
+      type: resourceType(resource),
+    }))
+    .filter((item) => item.href);
+}
+
+function openImageViewerRhythm() {
+  const block = currentImageViewerBlock();
+  const resources = rhythmViewerItems(block);
+  if (!resources.length) return;
+  const images = resources
+    .filter((item) => item.type === "image")
+    .map((item) => ({
+      src: item.href,
+      title: item.label || "리듬표",
+    }));
+  if (images.length) {
+    openImageViewerItems(images, 0, { mode: "chord" });
+    return;
+  }
+  window.open(resources[0].href, "_blank", "noreferrer");
+}
+
 function imageViewerPracticeContext() {
   const item = imageViewer.items[imageViewer.index];
-  const block = item?.blockId ? getBlock(item.blockId) : null;
+  const block = currentImageViewerBlock();
   const student = item?.studentId ? state.students.find((entry) => entry.id === item.studentId) : currentPracticeStudent();
   if (!item || imageViewer.mode !== "score" || publicShareMode || block?.kind !== "practice" || !student) return null;
   return { item, block, student };
@@ -2007,7 +2069,7 @@ function renderLessonRoomControls() {
     <div class="lesson-room-view-controls">
       <div class="segmented small-segmented">
         <button class="${lessonRoomMode === "weekly" ? "active" : ""}" data-lesson-room-mode="weekly" type="button">주차별 보기</button>
-        <button class="${lessonRoomMode === "practice" ? "active" : ""}" data-lesson-room-mode="practice" type="button">실습 블럭 보기</button>
+        <button class="${lessonRoomMode === "practice" ? "active" : ""}" data-lesson-room-mode="practice" type="button">실습곡 보기</button>
       </div>
       ${
         lessonRoomMode === "practice"
@@ -2080,12 +2142,12 @@ function renderPracticeSongMode(student, { admin = false } = {}) {
   if (!items.length) return `<div class="empty">아직 실습곡이 없습니다.</div>`;
   const groupedItems = practiceRoomSort === "level" ? groupPracticeSongsByMastery(student, items) : [{ title: "", items }];
   return `
-    <div class="practice-block-list">
+    <div class="practice-song-list">
       ${groupedItems
         .map(
           (group) => `
             ${group.title ? `<h4 class="practice-song-group-title">${group.title}</h4>` : ""}
-            ${group.items.map(({ block, date }) => renderPracticeBlockCard(student, block, date, admin)).join("")}
+            ${group.items.map(({ block, date }) => renderPracticeSongRow(student, block, date, admin)).join("")}
           `,
         )
         .join("")}
@@ -2093,29 +2155,16 @@ function renderPracticeSongMode(student, { admin = false } = {}) {
   `;
 }
 
-function renderPracticeBlockCard(student, block, date, admin = false) {
-  const resourceCount = normalizeResources(block).length;
-  const chordCount = normalizeChordNames(block.chords || []).length;
+function renderPracticeSongRow(student, block, date, admin = false) {
   return `
-    <article class="practice-block-card">
-      <div class="practice-block-card-head">
-        <div class="practice-song-main">
+    <article class="practice-song-row">
+      <div class="practice-song-main">
         <button class="practice-song-title-button" type="button" data-open-practice-score="${block.id}">
           ${escapeHTML(block.title)}
         </button>
-          <span>${formatDate(date)} · ${renderPracticeMetaText(block)}</span>
-        </div>
-        ${renderMasteryControl(student, block, admin)}
+        <span>${formatDate(date)} · ${renderPracticeMetaText(block)}</span>
       </div>
-      <div class="practice-block-card-tools">
-        ${block.audioLink ? renderAudioButton(block.audioLink) : ""}
-        <span>${resourceCount ? `악보 ${resourceCount}개` : "악보 없음"}</span>
-        <span>${chordCount ? `코드표 ${chordCount}개` : "코드표 없음"}</span>
-      </div>
-      ${block.summary ? `<p>${escapeHTML(block.summary)}</p>` : ""}
-      ${renderPracticeDetails(block)}
-      ${renderBlockChordDictionary(block, { editable: admin })}
-      ${renderResources(block, "compact")}
+      ${renderMasteryControl(student, block, admin)}
     </article>
   `;
 }
@@ -2307,7 +2356,7 @@ function renderShare() {
 
   els.shareContent.innerHTML = `
     <section class="share-section">
-      <h3>${lessonRoomMode === "practice" ? "실습 블럭 보기" : "날짜별 수업 내용"}</h3>
+      <h3>${lessonRoomMode === "practice" ? "실습곡 보기" : "날짜별 수업 내용"}</h3>
       ${renderLessonRoomContent(student, { admin: false })}
     </section>
   `;
@@ -2713,6 +2762,8 @@ els.imageViewerZoomOut.addEventListener("click", () => changeImageViewerZoom(-0.
 els.imageViewerZoomIn.addEventListener("click", () => changeImageViewerZoom(0.1));
 els.imageViewerPrev.addEventListener("click", () => moveImageViewer(-1));
 els.imageViewerNext.addEventListener("click", () => moveImageViewer(1));
+els.imageViewerChords.addEventListener("click", openImageViewerChords);
+els.imageViewerRhythm.addEventListener("click", openImageViewerRhythm);
 els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
 els.imageViewerDialog.addEventListener(
   "wheel",

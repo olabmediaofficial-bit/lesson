@@ -1748,11 +1748,10 @@ dialog::backdrop {
 .image-viewer-dialog.chord-only .viewer-random-button,
 .image-viewer-dialog.chord-only .image-viewer-mastery,
 .image-viewer-dialog.chord-only .viewer-audio-button,
+.image-viewer-dialog.chord-only .viewer-resource-button,
 .image-viewer-dialog.chord-only #imageViewerZoomOut,
 .image-viewer-dialog.chord-only #imageViewerZoomIn,
 .image-viewer-dialog.chord-only #imageViewerZoomLabel,
-.image-viewer-dialog.chord-only #imageViewerPrev,
-.image-viewer-dialog.chord-only #imageViewerNext,
 .image-viewer-dialog.chord-only .image-viewer-foot {
   display: none;
 }
@@ -1869,7 +1868,8 @@ dialog::backdrop {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.viewer-audio-button {
+.viewer-audio-button,
+.viewer-resource-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1886,11 +1886,18 @@ dialog::backdrop {
   white-space: nowrap;
 }
 
-.viewer-audio-button[hidden] {
+.viewer-resource-button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.viewer-audio-button[hidden],
+.viewer-resource-button[hidden] {
   display: none;
 }
 
-.viewer-audio-button:hover {
+.viewer-audio-button:hover,
+.viewer-resource-button:hover {
   background: rgba(255, 255, 255, 0.16);
 }
 
@@ -2068,6 +2075,22 @@ dialog::backdrop {
 
 .image-viewer-nav:disabled {
   opacity: 0.32;
+}
+
+.image-viewer-dialog.chord-only .image-viewer-nav {
+  width: 34px;
+  height: 46px;
+  border-color: rgba(185, 130, 85, 0.22);
+  color: var(--accent-strong);
+  background: rgba(255, 248, 240, 0.86);
+  box-shadow:
+    5px 5px 14px rgba(91, 62, 43, 0.1),
+    -5px -5px 14px rgba(255, 255, 255, 0.88);
+  font-size: 26px;
+}
+
+.image-viewer-dialog.chord-only .image-viewer-nav:disabled {
+  display: none;
 }
 
 .image-viewer-foot {
