@@ -1739,15 +1739,28 @@ dialog::backdrop {
 }
 
 .viewer-metronome .beat-dots span {
+  display: block;
+  flex: 0 0 5px;
   width: 5px;
+  min-width: 5px;
+  max-width: 5px;
   height: 5px;
+  min-height: 5px;
+  max-height: 5px;
+  padding: 0;
   border-width: 0;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.38);
 }
 
 .viewer-metronome .beat-dots span.downbeat {
+  flex-basis: 5px;
   width: 5px;
+  min-width: 5px;
+  max-width: 5px;
   height: 5px;
+  min-height: 5px;
+  max-height: 5px;
 }
 
 .viewer-metronome .beat-dots span.active {
@@ -1912,6 +1925,13 @@ dialog::backdrop {
   font-size: 12px;
   font-weight: 900;
   text-align: center;
+}
+
+.image-viewer-actions .viewer-metronome .beat-dots span {
+  flex: 0 0 5px;
+  width: 5px;
+  min-width: 5px;
+  max-width: 5px;
 }
 
 .image-viewer-stage {
