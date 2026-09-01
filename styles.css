@@ -432,13 +432,64 @@ textarea {
   padding: 18px;
 }
 
+.library-tool-panel {
+  border-top: 1px solid var(--line);
+  background: #fffdf9;
+}
+
+.library-tool-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 18px;
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-weight: 900;
+  list-style: none;
+}
+
+.library-tool-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.library-tool-panel summary::after {
+  content: "+";
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(166, 125, 92, 0.2);
+  border-radius: 999px;
+  background: #fbf0e4;
+  color: var(--accent-strong);
+}
+
+.library-tool-panel[open] summary::after {
+  content: "−";
+}
+
+.library-tool-panel summary strong,
+.library-tool-panel summary span {
+  display: block;
+}
+
+.library-tool-panel summary span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
 .library-resource-panel {
   display: grid;
-  grid-template-columns: minmax(140px, 0.5fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   padding: 12px 18px;
-  border-top: 1px solid var(--line);
   background: #fbfaf7;
 }
 
@@ -460,7 +511,6 @@ textarea {
   display: grid;
   gap: 12px;
   padding: 14px 18px 16px;
-  border-top: 1px solid var(--line);
   background: #fffdf9;
 }
 
@@ -2014,23 +2064,26 @@ dialog::backdrop {
 }
 
 .viewer-mastery-buttons .level-1.active {
-  border-color: #ead9c7;
-  background: #fbf0e4;
+  border-color: #eed7bd;
+  background: #fff1df;
+  color: #5e412c;
 }
 
 .viewer-mastery-buttons .level-2.active {
-  border-color: #dfc2a4;
-  background: #f4dfc8;
+  border-color: #e6b985;
+  background: #f4cf9f;
+  color: #4f321e;
 }
 
 .viewer-mastery-buttons .level-3.active {
-  border-color: #cda27d;
-  background: #e5c09d;
+  border-color: #c9854f;
+  background: #d99b61;
+  color: #fffaf4;
 }
 
 .viewer-mastery-buttons .level-4.active {
-  border-color: #aa7651;
-  background: #c89168;
+  border-color: #744226;
+  background: #8b4f2d;
   color: #fffaf4;
 }
 
@@ -2476,26 +2529,29 @@ dialog::backdrop {
 
 .mastery-control .level-1.active,
 .mastery-badge.level-1 {
-  border-color: #ead9c7;
-  background: #fbf0e4;
+  border-color: #eed7bd;
+  background: #fff1df;
+  color: #5e412c;
 }
 
 .mastery-control .level-2.active,
 .mastery-badge.level-2 {
-  border-color: #dfc2a4;
-  background: #f4dfc8;
+  border-color: #e6b985;
+  background: #f4cf9f;
+  color: #4f321e;
 }
 
 .mastery-control .level-3.active,
 .mastery-badge.level-3 {
-  border-color: #cda27d;
-  background: #e5c09d;
+  border-color: #c9854f;
+  background: #d99b61;
+  color: #fffaf4;
 }
 
 .mastery-control .level-4.active,
 .mastery-badge.level-4 {
-  border-color: #aa7651;
-  background: #c89168;
+  border-color: #744226;
+  background: #8b4f2d;
   color: #fffaf4;
 }
 
@@ -3131,6 +3187,17 @@ textarea,
 
   .library-resource-panel {
     grid-template-columns: 1fr;
+  }
+
+  .library-tool-panel summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .library-tool-panel summary span {
+    flex-basis: calc(100% - 40px);
+    margin-left: 0;
+    text-align: left;
   }
 
   .chord-grid {

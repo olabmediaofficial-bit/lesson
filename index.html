@@ -96,17 +96,31 @@
                 </div>
                 <span class="count-pill" id="materialCount">0</span>
               </div>
-              <div class="library-resource-panel">
-                <div>
+              <details class="library-tool-panel">
+                <summary>
                   <strong>자료실</strong>
                   <span>학생 공유 화면에 레슨 자료실 버튼으로 표시됩니다.</span>
+                </summary>
+                <div class="library-resource-panel">
+                  <input id="resourceLibraryUrl" type="url" placeholder="자료실 링크를 붙여넣기" />
+                  <button class="secondary-button" id="saveResourceLibrary" type="button">저장</button>
+                  <button class="secondary-button" id="migrateStorageFiles" type="button">기존 악보 옮기기</button>
                 </div>
-                <input id="resourceLibraryUrl" type="url" placeholder="자료실 링크를 붙여넣기" />
-                <button class="secondary-button" id="saveResourceLibrary" type="button">저장</button>
-                <button class="secondary-button" id="migrateStorageFiles" type="button">기존 악보 옮기기</button>
-              </div>
-              <div id="bulkCurriculumPanel" class="bulk-curriculum-panel"></div>
-              <div id="libraryInsight" class="curriculum-map"></div>
+              </details>
+              <details class="library-tool-panel">
+                <summary>
+                  <strong>일괄분류</strong>
+                  <span>여러 실습곡의 커리큘럼 태그를 한 번에 정리합니다.</span>
+                </summary>
+                <div id="bulkCurriculumPanel" class="bulk-curriculum-panel"></div>
+              </details>
+              <details class="library-tool-panel">
+                <summary>
+                  <strong>자료진단</strong>
+                  <span>보유 실습곡이 커리큘럼 영역별로 얼마나 채워졌는지 봅니다.</span>
+                </summary>
+                <div id="libraryInsight" class="curriculum-map"></div>
+              </details>
               <div class="material-grid" id="materialGrid"></div>
             </section>
 
