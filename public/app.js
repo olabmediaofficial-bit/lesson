@@ -2007,7 +2007,7 @@ function renderLessonRoomControls() {
     <div class="lesson-room-view-controls">
       <div class="segmented small-segmented">
         <button class="${lessonRoomMode === "weekly" ? "active" : ""}" data-lesson-room-mode="weekly" type="button">주차별 보기</button>
-        <button class="${lessonRoomMode === "practice" ? "active" : ""}" data-lesson-room-mode="practice" type="button">실습곡 보기</button>
+        <button class="${lessonRoomMode === "practice" ? "active" : ""}" data-lesson-room-mode="practice" type="button">실습 블럭 보기</button>
       </div>
       ${
         lessonRoomMode === "practice"
@@ -2080,12 +2080,12 @@ function renderPracticeSongMode(student, { admin = false } = {}) {
   if (!items.length) return `<div class="empty">아직 실습곡이 없습니다.</div>`;
   const groupedItems = practiceRoomSort === "level" ? groupPracticeSongsByMastery(student, items) : [{ title: "", items }];
   return `
-    <div class="practice-song-list">
+    <div class="practice-block-list">
       ${groupedItems
         .map(
           (group) => `
             ${group.title ? `<h4 class="practice-song-group-title">${group.title}</h4>` : ""}
-            ${group.items.map(({ block, date }) => renderPracticeSongRow(student, block, date, admin)).join("")}
+            ${group.items.map(({ block, date }) => renderPracticeBlockCard(student, block, date, admin)).join("")}
           `,
         )
         .join("")}
@@ -2093,16 +2093,29 @@ function renderPracticeSongMode(student, { admin = false } = {}) {
   `;
 }
 
-function renderPracticeSongRow(student, block, date, admin = false) {
+function renderPracticeBlockCard(student, block, date, admin = false) {
+  const resourceCount = normalizeResources(block).length;
+  const chordCount = normalizeChordNames(block.chords || []).length;
   return `
-    <article class="practice-song-row">
-      <div class="practice-song-main">
+    <article class="practice-block-card">
+      <div class="practice-block-card-head">
+        <div class="practice-song-main">
         <button class="practice-song-title-button" type="button" data-open-practice-score="${block.id}">
           ${escapeHTML(block.title)}
         </button>
-        <span>${formatDate(date)} · ${renderPracticeMetaText(block)}</span>
+          <span>${formatDate(date)} · ${renderPracticeMetaText(block)}</span>
+        </div>
+        ${renderMasteryControl(student, block, admin)}
       </div>
-      ${renderMasteryControl(student, block, admin)}
+      <div class="practice-block-card-tools">
+        ${block.audioLink ? renderAudioButton(block.audioLink) : ""}
+        <span>${resourceCount ? `악보 ${resourceCount}개` : "악보 없음"}</span>
+        <span>${chordCount ? `코드표 ${chordCount}개` : "코드표 없음"}</span>
+      </div>
+      ${block.summary ? `<p>${escapeHTML(block.summary)}</p>` : ""}
+      ${renderPracticeDetails(block)}
+      ${renderBlockChordDictionary(block, { editable: admin })}
+      ${renderResources(block, "compact")}
     </article>
   `;
 }
@@ -2195,7 +2208,7 @@ function renderLessonBlock(block, options = {}) {
       <p>${escapeHTML(block.summary)}</p>
       ${renderPracticeDetails(block)}
       ${renderBlockChordDictionary(block, { editable: controls })}
-      ${block.audioLink ? `<p class="audio-link">노래 듣기 : <a href="${escapeHTML(block.audioLink)}" target="_blank" rel="noreferrer">${escapeHTML(block.audioLink)}</a></p>` : ""}
+      ${block.audioLink ? renderAudioButton(block.audioLink) : ""}
       ${renderResources(block, "expanded")}
     </div>
   `;
@@ -2224,6 +2237,11 @@ function renderMasteryBadge(student, block, size = "") {
   if (block.kind !== "practice" || !student) return "";
   const level = masteryLevel(student, block.id);
   return `<span class="mastery-badge ${size} level-${level}">${masteryLabel(level)}</span>`;
+}
+
+function renderAudioButton(audioLink) {
+  if (!audioLink) return "";
+  return `<a class="audio-button" href="${escapeHTML(audioLink)}" target="_blank" rel="noreferrer">음원</a>`;
 }
 
 function renderPracticeMeta(block) {
@@ -2289,7 +2307,7 @@ function renderShare() {
 
   els.shareContent.innerHTML = `
     <section class="share-section">
-      <h3>${lessonRoomMode === "practice" ? "실습곡 보기" : "날짜별 수업 내용"}</h3>
+      <h3>${lessonRoomMode === "practice" ? "실습 블럭 보기" : "날짜별 수업 내용"}</h3>
       ${renderLessonRoomContent(student, { admin: false })}
     </section>
   `;

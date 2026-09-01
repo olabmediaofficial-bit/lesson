@@ -1249,9 +1249,10 @@ textarea {
   margin-bottom: 12px;
 }
 
-.practice-song-list {
+.practice-song-list,
+.practice-block-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .practice-song-group-title {
@@ -1270,6 +1271,66 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fffafb;
+}
+
+.practice-block-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(186, 142, 106, 0.26);
+  border-left: 4px solid var(--rose);
+  border-radius: 12px;
+  background: #fffaf6;
+  box-shadow:
+    5px 5px 14px rgba(91, 62, 43, 0.08),
+    -5px -5px 14px rgba(255, 255, 255, 0.86);
+}
+
+.practice-block-card-head {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.practice-block-card-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.practice-block-card-tools span,
+.audio-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid rgba(166, 125, 92, 0.2);
+  border-radius: 999px;
+  background: #fbf0e4;
+  color: #6b442b;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.audio-button {
+  color: #fffaf4;
+  border-color: #9f6846;
+  background: #9f6846;
+}
+
+.audio-button:hover {
+  background: #87563a;
+}
+
+.practice-block-card p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
 
 .practice-song-main {
@@ -3013,16 +3074,22 @@ textarea,
     grid-template-columns: 1fr;
   }
 
+  .practice-block-card-head {
+    grid-template-columns: 1fr;
+  }
+
   .lesson-room-view-controls .segmented,
   .practice-song-row .secondary-button {
     width: 100%;
   }
 
-  .practice-song-row .mastery-control {
+  .practice-song-row .mastery-control,
+  .practice-block-card .mastery-control {
     width: max-content;
   }
 
   .practice-song-row .mastery-control button,
+  .practice-block-card .mastery-control button,
   .lesson-block .mastery-control button,
   .progress-song-row .mastery-control button {
     flex: 0 0 auto;
