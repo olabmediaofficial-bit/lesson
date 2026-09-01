@@ -912,7 +912,6 @@ function renderImageViewerMastery() {
   const level = masteryLevel(context.student, context.block.id);
   els.imageViewerMastery.hidden = false;
   els.imageViewerMastery.innerHTML = `
-    <span>연습 정도</span>
     <div class="viewer-mastery-buttons">
       ${[1, 2, 3, 4]
         .map(
