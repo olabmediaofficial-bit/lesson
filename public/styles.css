@@ -1707,10 +1707,10 @@ dialog::backdrop {
 }
 
 .viewer-metronome {
-  width: min(620px, 58vw);
-  grid-template-columns: minmax(62px, auto) auto minmax(150px, 1fr);
+  width: min(520px, 50vw);
+  grid-template-columns: minmax(48px, auto) auto minmax(135px, 1fr);
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   padding: 4px 6px;
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.07);
@@ -1718,8 +1718,8 @@ dialog::backdrop {
 
 .viewer-metronome .metronome-display {
   min-height: 26px;
-  padding: 3px 5px;
-  gap: 5px;
+  padding: 3px 4px;
+  gap: 4px;
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
 }
@@ -1731,17 +1731,17 @@ dialog::backdrop {
 
 .viewer-metronome .beat-dots {
   flex: 0 0 auto;
-  gap: 2px;
+  gap: 1px;
 }
 
 .viewer-metronome .beat-dots span {
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
 }
 
 .viewer-metronome .beat-dots span.downbeat {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 .viewer-metronome [data-tempo-input] {
@@ -1752,7 +1752,7 @@ dialog::backdrop {
 }
 
 .viewer-metronome .tempo-unit {
-  font-size: 11px;
+  display: none;
 }
 
 .viewer-metronome .metro-row {
@@ -3046,7 +3046,7 @@ textarea,
   .viewer-metronome {
     order: 4;
     width: 100%;
-    grid-template-columns: minmax(70px, auto) minmax(70px, auto) minmax(120px, 1fr);
+    grid-template-columns: minmax(48px, auto) minmax(48px, auto) minmax(116px, 1fr);
     gap: 4px;
     padding: 4px;
   }
@@ -3056,11 +3056,11 @@ textarea,
   }
 
   .viewer-metronome .beat-dots {
-    gap: 2px;
+    gap: 1px;
   }
 
   .viewer-metronome [data-tempo-input] {
-    width: 44px;
+    width: 40px;
   }
 
   .viewer-metronome .meter-tabs {
