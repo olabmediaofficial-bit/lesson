@@ -413,6 +413,7 @@ const els = {
   studentDialog: $("#studentDialog"),
   imageViewerDialog: $("#imageViewerDialog"),
   imageViewerTitle: $("#imageViewerTitle"),
+  imageViewerMastery: $("#imageViewerMastery"),
   imageViewerImage: $("#imageViewerImage"),
   imageViewerZoomOut: $("#imageViewerZoomOut"),
   imageViewerZoomIn: $("#imageViewerZoomIn"),
@@ -731,7 +732,7 @@ function renderResources(block, mode = "compact") {
           if (type === "image") {
             return `
               <figure class="score-preview">
-                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" aria-label="${viewerTitle} 크게 보기">
+                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" data-view-image-block-id="${escapeHTML(block.id)}" aria-label="${viewerTitle} 크게 보기">
                   <img src="${href}" alt="${label}" loading="lazy" />
                 </button>
                 <figcaption>
@@ -812,12 +813,21 @@ function collectViewerImages(clickedButton) {
   const items = buttons.map((button) => ({
     src: button.dataset.viewImage,
     title: button.dataset.viewImageTitle || "악보 이미지",
+    blockId: button.dataset.viewImageBlockId || "",
+    studentId: currentPracticeStudent()?.id || "",
   }));
   const index = Math.max(0, buttons.indexOf(clickedButton));
   return {
     items: items.length
       ? items
-      : [{ src: clickedButton.dataset.viewImage, title: clickedButton.dataset.viewImageTitle || "악보 이미지" }],
+      : [
+          {
+            src: clickedButton.dataset.viewImage,
+            title: clickedButton.dataset.viewImageTitle || "악보 이미지",
+            blockId: clickedButton.dataset.viewImageBlockId || "",
+            studentId: currentPracticeStudent()?.id || "",
+          },
+        ],
     index,
   };
 }
@@ -858,11 +868,46 @@ function updateImageViewer() {
   }
   els.imageViewerImage.alt = item.title;
   els.imageViewerTitle.textContent = item.title;
+  renderImageViewerMastery();
   fitImageViewerToScreen();
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
   els.imageViewerNext.disabled = imageViewer.items.length < 2;
+}
+
+function imageViewerPracticeContext() {
+  const item = imageViewer.items[imageViewer.index];
+  const block = item?.blockId ? getBlock(item.blockId) : null;
+  const student = item?.studentId ? state.students.find((entry) => entry.id === item.studentId) : currentPracticeStudent();
+  if (!item || imageViewer.mode !== "score" || publicShareMode || block?.kind !== "practice" || !student) return null;
+  return { item, block, student };
+}
+
+function renderImageViewerMastery() {
+  if (!els.imageViewerMastery) return;
+  const context = imageViewerPracticeContext();
+  if (!context) {
+    els.imageViewerMastery.innerHTML = "";
+    els.imageViewerMastery.hidden = true;
+    return;
+  }
+  const level = masteryLevel(context.student, context.block.id);
+  els.imageViewerMastery.hidden = false;
+  els.imageViewerMastery.innerHTML = `
+    <span>연습 정도</span>
+    <div class="viewer-mastery-buttons">
+      ${[1, 2, 3, 4]
+        .map(
+          (item) => `
+            <button class="${item === level ? "active" : ""} level-${item}" type="button" data-viewer-mastery-level="${item}">
+              ${masteryLabel(item)}
+            </button>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
 }
 
 function fitImageViewerToScreen() {
@@ -916,6 +961,8 @@ function lessonRoomImageItems(student) {
             .map((resource) => ({
               src: resourceHref(resource),
               title: block.title || resourceLabel(resource),
+              blockId: block.id,
+              studentId: student.id,
               lessonDate: lesson.date,
               mastery: masteryLevel(student, block.id),
             }))
@@ -948,6 +995,8 @@ function openPracticeScoreByBlock(blockId) {
     .map((resource) => ({
       src: resourceHref(resource),
       title: block.title || resourceLabel(resource),
+      blockId: block.id,
+      studentId: currentPracticeStudent()?.id || "",
     }))
     .filter((item) => item.src);
   if (!items.length) {
@@ -2429,6 +2478,13 @@ document.addEventListener("click", (event) => {
   const masteryButton = event.target.closest("[data-mastery-block]");
   if (masteryButton) updateMastery(masteryButton.dataset.masteryBlock, masteryButton.dataset.masteryLevel);
 
+  const viewerMasteryButton = event.target.closest("[data-viewer-mastery-level]");
+  if (viewerMasteryButton) {
+    event.preventDefault();
+    updateImageViewerMastery(viewerMasteryButton.dataset.viewerMasteryLevel);
+    return;
+  }
+
   const openPracticeScore = event.target.closest("[data-open-practice-score]");
   if (openPracticeScore) openPracticeScoreByBlock(openPracticeScore.dataset.openPracticeScore);
 
@@ -2688,7 +2744,10 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
-  if (event.target.closest("[data-random-practice]")) openRandomPracticeScore();
+  if (event.target.closest("[data-random-practice]")) {
+    openRandomPracticeScore();
+    return;
+  }
 
   if (event.target.closest("[data-select-visible-practice-blocks]")) {
     selectVisiblePracticeBlocks();
@@ -3092,6 +3151,17 @@ function updateMastery(blockId, level) {
   if (!student) return;
   setMasteryLevel(student, blockId, level);
   student.updatedAt = nowIso();
+  render();
+  saveStateInBackground({}, "연습 정도를 저장했습니다.");
+}
+
+function updateImageViewerMastery(level) {
+  const context = imageViewerPracticeContext();
+  if (!context) return;
+  setMasteryLevel(context.student, context.block.id, level);
+  context.student.updatedAt = nowIso();
+  context.item.mastery = masteryLevel(context.student, context.block.id);
+  renderImageViewerMastery();
   render();
   saveStateInBackground({}, "연습 정도를 저장했습니다.");
 }

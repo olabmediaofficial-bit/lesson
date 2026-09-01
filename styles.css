@@ -1685,6 +1685,7 @@ dialog::backdrop {
 
 .image-viewer-dialog.chord-only .viewer-metronome,
 .image-viewer-dialog.chord-only .viewer-random-button,
+.image-viewer-dialog.chord-only .image-viewer-mastery,
 .image-viewer-dialog.chord-only #imageViewerZoomOut,
 .image-viewer-dialog.chord-only #imageViewerZoomIn,
 .image-viewer-dialog.chord-only #imageViewerZoomLabel,
@@ -1787,6 +1788,72 @@ dialog::backdrop {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.image-viewer-mastery {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.image-viewer-mastery[hidden] {
+  display: none;
+}
+
+.image-viewer-mastery > span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.viewer-mastery-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.viewer-mastery-buttons button {
+  width: auto;
+  min-height: 24px;
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.viewer-mastery-buttons button.active {
+  color: #2c2018;
+}
+
+.viewer-mastery-buttons .level-1.active {
+  border-color: #ead9c7;
+  background: #fbf0e4;
+}
+
+.viewer-mastery-buttons .level-2.active {
+  border-color: #dfc2a4;
+  background: #f4dfc8;
+}
+
+.viewer-mastery-buttons .level-3.active {
+  border-color: #cda27d;
+  background: #e5c09d;
+}
+
+.viewer-mastery-buttons .level-4.active {
+  border-color: #aa7651;
+  background: #c89168;
+  color: #fffaf4;
 }
 
 .image-viewer-actions {
@@ -2938,8 +3005,20 @@ textarea,
     min-width: 40px;
   }
 
+  .image-viewer-mastery {
+    order: 2;
+    width: 100%;
+    justify-content: space-between;
+    overflow-x: auto;
+    border-radius: 12px;
+  }
+
+  .viewer-mastery-buttons {
+    flex: 0 0 auto;
+  }
+
   .viewer-metronome {
-    order: 3;
+    order: 4;
     width: 100%;
     grid-template-columns: minmax(70px, auto) minmax(70px, auto) minmax(120px, 1fr);
     gap: 4px;
@@ -2968,7 +3047,7 @@ textarea,
   }
 
   .viewer-random-button {
-    order: 2;
+    order: 3;
   }
 
   .image-viewer-scroll {
