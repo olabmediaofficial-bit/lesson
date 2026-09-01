@@ -414,6 +414,7 @@ const els = {
   imageViewerDialog: $("#imageViewerDialog"),
   imageViewerTitle: $("#imageViewerTitle"),
   imageViewerMastery: $("#imageViewerMastery"),
+  imageViewerAudio: $("#imageViewerAudio"),
   imageViewerImage: $("#imageViewerImage"),
   imageViewerZoomOut: $("#imageViewerZoomOut"),
   imageViewerZoomIn: $("#imageViewerZoomIn"),
@@ -815,6 +816,7 @@ function collectViewerImages(clickedButton) {
     title: button.dataset.viewImageTitle || "악보 이미지",
     blockId: button.dataset.viewImageBlockId || "",
     studentId: currentPracticeStudent()?.id || "",
+    audioLink: getBlock(button.dataset.viewImageBlockId || "")?.audioLink || "",
   }));
   const index = Math.max(0, buttons.indexOf(clickedButton));
   return {
@@ -826,6 +828,7 @@ function collectViewerImages(clickedButton) {
             title: clickedButton.dataset.viewImageTitle || "악보 이미지",
             blockId: clickedButton.dataset.viewImageBlockId || "",
             studentId: currentPracticeStudent()?.id || "",
+            audioLink: getBlock(clickedButton.dataset.viewImageBlockId || "")?.audioLink || "",
           },
         ],
     index,
@@ -869,11 +872,25 @@ function updateImageViewer() {
   els.imageViewerImage.alt = item.title;
   els.imageViewerTitle.textContent = item.title;
   renderImageViewerMastery();
+  renderImageViewerAudio();
   fitImageViewerToScreen();
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
   els.imageViewerNext.disabled = imageViewer.items.length < 2;
+}
+
+function renderImageViewerAudio() {
+  if (!els.imageViewerAudio) return;
+  const item = imageViewer.items[imageViewer.index];
+  const audioLink = item?.audioLink || (item?.blockId ? getBlock(item.blockId)?.audioLink : "");
+  if (imageViewer.mode !== "score" || !audioLink) {
+    els.imageViewerAudio.hidden = true;
+    els.imageViewerAudio.removeAttribute("href");
+    return;
+  }
+  els.imageViewerAudio.hidden = false;
+  els.imageViewerAudio.href = audioLink;
 }
 
 function imageViewerPracticeContext() {
@@ -963,6 +980,7 @@ function lessonRoomImageItems(student) {
               title: block.title || resourceLabel(resource),
               blockId: block.id,
               studentId: student.id,
+              audioLink: block.audioLink || "",
               lessonDate: lesson.date,
               mastery: masteryLevel(student, block.id),
             }))
@@ -997,6 +1015,7 @@ function openPracticeScoreByBlock(blockId) {
       title: block.title || resourceLabel(resource),
       blockId: block.id,
       studentId: currentPracticeStudent()?.id || "",
+      audioLink: block.audioLink || "",
     }))
     .filter((item) => item.src);
   if (!items.length) {
