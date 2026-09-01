@@ -380,6 +380,7 @@
     <dialog id="imageViewerDialog" class="image-viewer-dialog">
       <div class="image-viewer">
         <div class="image-viewer-head">
+          <button class="viewer-back-button" id="imageViewerBack" type="button" hidden>← 악보로</button>
           <strong id="imageViewerTitle">악보 보기</strong>
           <div class="image-viewer-mastery" id="imageViewerMastery"></div>
           <div class="image-viewer-actions">
@@ -416,6 +417,7 @@
         </div>
         <div class="image-viewer-stage">
           <button class="image-viewer-nav prev" id="imageViewerPrev" type="button" title="이전 악보">‹</button>
+          <div class="image-viewer-chord-grid" id="imageViewerChordGrid" hidden></div>
           <div class="image-viewer-scroll">
             <img id="imageViewerImage" src="" alt="" />
           </div>

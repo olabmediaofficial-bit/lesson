@@ -1616,28 +1616,46 @@ textarea {
 }
 
 .used-chord-panel {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fffdf9;
+  min-width: 0;
+  border: 0;
+  background: transparent;
 }
 
 .used-chord-panel summary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 8px;
-  min-height: 34px;
-  padding: 8px 10px;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid rgba(166, 125, 92, 0.2);
+  border-radius: 999px;
+  background: #fbf0e4;
   color: var(--accent-strong);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
+  list-style: none;
+}
+
+.used-chord-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.used-chord-panel summary .mini-button {
+  min-height: 22px;
+  padding: 0 7px;
+  font-size: 11px;
 }
 
 .used-chord-grid {
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 8px;
-  padding: 0 10px 10px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid rgba(198, 170, 143, 0.48);
+  border-radius: 8px;
+  background: #fffdf9;
 }
 
 .missing-chord {
@@ -1707,6 +1725,10 @@ dialog::backdrop {
   background: #fff8f0;
 }
 
+.image-viewer-dialog.chord-grid-mode {
+  width: min(900px, calc(100vw - 28px));
+}
+
 .image-viewer-dialog::backdrop {
   background: rgba(0, 0, 0, 0.82);
 }
@@ -1764,6 +1786,28 @@ dialog::backdrop {
   color: var(--accent-strong);
   border-color: rgba(185, 130, 85, 0.28);
   background: #fff8f0;
+}
+
+.viewer-back-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid rgba(185, 130, 85, 0.26);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: #fff8f0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.viewer-back-button[hidden] {
+  display: none;
 }
 
 .viewer-metronome {
@@ -1901,6 +1945,22 @@ dialog::backdrop {
   background: rgba(255, 255, 255, 0.16);
 }
 
+.lesson-resource-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.lesson-resource-chips .audio-button,
+.lesson-resource-chips .used-chord-panel {
+  flex: 0 0 auto;
+}
+
+.lesson-resource-chips .used-chord-panel[open] {
+  flex-basis: 100%;
+}
+
 .image-viewer-head strong {
   min-width: 0;
   overflow: hidden;
@@ -2026,6 +2086,52 @@ dialog::backdrop {
   place-items: center;
   overflow: auto;
   padding: 18px;
+}
+
+.image-viewer-chord-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-height: calc(100dvh - 98px);
+  overflow: auto;
+  padding: 18px;
+  background: #fff8f0;
+}
+
+.image-viewer-chord-grid[hidden] {
+  display: none;
+}
+
+.image-viewer-chord-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(198, 170, 143, 0.72);
+  border-radius: 8px;
+  background: #fffaf4;
+  color: var(--ink);
+  cursor: zoom-in;
+  font-family: inherit;
+  text-align: left;
+  box-shadow:
+    5px 5px 14px rgba(91, 62, 43, 0.08),
+    -5px -5px 14px rgba(255, 255, 255, 0.86);
+}
+
+.image-viewer-chord-card strong {
+  overflow: hidden;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-viewer-chord-card img {
+  width: 100%;
+  border-radius: 6px;
+  background: #fff;
 }
 
 .image-viewer img {
@@ -3030,6 +3136,12 @@ textarea,
   .chord-grid {
     grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
     padding: 14px;
+  }
+
+  .image-viewer-chord-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    padding: 12px;
   }
 
   .used-chord-grid {

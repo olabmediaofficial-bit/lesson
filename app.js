@@ -29,137 +29,146 @@ const ADVANCED_METRONOME_PATTERN_4_4 = [
   [false, false, false, false],
 ];
 const CHORD_IMAGE_FILES = [
-  "A R6 (bar).png",
-  "A_add9.png",
-  "A_dominant7_sus4.png",
-  "A_dominant7.png",
-  "A_major.png",
-  "A_major7.png",
-  "A_minor.png",
-  "A_minor7.png",
-  "A_sus4.png",
-  "A7 R6 (bar).png",
-  "A7sus4 R6 (bar).png",
-  "Ab R6 (bar).png",
-  "Ab7 R6 (bar).png",
-  "Ab7sus4 R6 (bar).png",
-  "Abm R6 (bar).png",
-  "Abmaj7 R6 (bar).png",
-  "Absus4 R6 (bar).png",
-  "Am R6 (bar).png",
-  "Am7 (Worship).png",
-  "Amaj7 R6 (bar).png",
-  "Asus2 (Worship).png",
-  "Asus4 R6 (bar).png",
-  "B R5 (bar).png",
-  "B_dominant7.png",
-  "B7 R5 (bar).png",
-  "B7sus4 R5 (bar).png",
-  "Bb R5 (bar).png",
-  "Bb7 R5 (bar).png",
-  "Bb7sus4 R5 (bar).png",
-  "Bbm R5 (bar).png",
-  "Bbmaj7 R5 (bar).png",
-  "Bbsus4 R5 (bar).png",
-  "Bm R5 (bar).png",
-  "Bm7 (Worship).png",
-  "Bm7(b5).png",
-  "Bmaj7 R5 (bar).png",
-  "Bsus4 (Worship).png",
-  "Bsus4 R5 (bar).png",
-  "C (Worship).png",
-  "C R5 (bar).png",
-  "C_add9.png",
-  "C_dominant7.png",
-  "C_major.png",
-  "C_major7.png",
-  "C_sus4.png",
-  "C# R5 (bar).png",
-  "C#7 R5 (bar).png",
-  "C#7sus4 R5 (bar).png",
-  "C#m R5 (bar).png",
-  "C#m7 (Worship).png",
-  "C#m7(b5).png",
-  "C#maj7 R5 (bar).png",
-  "C#sus4 R5 (bar).png",
-  "C7 R5 (bar).png",
-  "C7sus4 R5 (bar).png",
-  "Cadd9 (Worship).png",
-  "Cm R5 (bar).png",
-  "Cmaj7 (Worship).png",
-  "Cmaj7 R5 (bar).png",
-  "Csus4 R5 (bar).png",
-  "D R5 (bar).png",
-  "D_add9.png",
-  "D_dominant7.png",
-  "D_major.png",
-  "D_major7.png",
-  "D_minor.png",
-  "D_minor7.png",
-  "D_minor9 (jazz).png",
-  "D_sus4.png",
-  "D#m7(b5).png",
-  "D7 R5 (bar).png",
-  "D7sus4 R5 (bar).png",
-  "Dm (Worship).png",
-  "Dm R5 (bar).png",
-  "Dmaj7 R5 (bar).png",
-  "Dsus2 (Worship).png",
-  "Dsus4 (Worship).png",
-  "Dsus4 R5 (bar).png",
-  "E R5 (bar).png",
-  "E_add9.png",
-  "E_dominant7.png",
-  "E_major.png",
-  "E_major7.png",
-  "E_minor.png",
-  "E_minor7.png",
-  "E_sus4.png",
-  "E7 R5 (bar).png",
-  "E7sus4 R5 (bar).png",
-  "Eb R5 (bar).png",
-  "Eb7 R5 (bar).png",
-  "Eb7sus4 R5 (bar).png",
-  "Ebm R5 (bar).png",
-  "Ebmaj7 R5 (bar).png",
-  "Ebsus4 R5 (bar).png",
-  "Em R5 (bar).png",
-  "Em7 (Worship).png",
-  "Emaj7 R5 (bar).png",
-  "Esus4 R5 (bar).png",
-  "F R6 (bar).png",
-  "F_major7.png",
-  "F_sharp_minor7.png",
-  "F# R6 (bar).png",
-  "F#7 R6 (bar).png",
-  "F#7sus4 R6 (bar).png",
-  "F#m R6 (bar).png",
-  "F#m7(b5).png",
-  "F#m11 (Worship).png",
-  "F#m11_C# (Worship).png",
-  "F#maj7 R6 (bar).png",
-  "F#sus4 R6 (bar).png",
-  "F7 R6 (bar).png",
-  "F7sus4 R6 (bar).png",
-  "Fadd9 (Worship).png",
-  "Fm R6 (bar).png",
-  "Fmaj7 R6 (bar).png",
-  "Fsus4 R6 (bar).png",
-  "G (Worship).png",
-  "G R6 (bar).png",
-  "G_add9.png",
-  "G_dominant7.png",
-  "G_major.png",
-  "G_major7.png",
-  "G_sus4.png",
-  "G#m7(b5).png",
-  "G#m13 or E2_G# (Worship).png",
-  "G#m13_D# (Worship).png",
-  "G7 R6 (bar).png",
-  "G7sus4 R6 (bar).png",
-  "Gm R6 (bar).png",
-  "Gmaj7 R6 (bar).png",
-  "Gsus4 R6 (bar).png",
+  "바레/A R6 (bar).png",
+  "바레/A7 R6 (bar).png",
+  "바레/A7sus4 R6 (bar).png",
+  "바레/Ab R6 (bar).png",
+  "바레/Ab7 R6 (bar).png",
+  "바레/Ab7sus4 R6 (bar).png",
+  "바레/Abm R6 (bar).png",
+  "바레/Abmaj7 R6 (bar).png",
+  "바레/Absus4 R6 (bar).png",
+  "바레/Am R6 (bar).png",
+  "바레/Amaj7 R6 (bar).png",
+  "바레/Asus4 R6 (bar).png",
+  "바레/B R5 (bar).png",
+  "바레/B7 R5 (bar).png",
+  "바레/B7sus4 R5 (bar).png",
+  "바레/Bb R5 (bar).png",
+  "바레/Bb7 R5 (bar).png",
+  "바레/Bb7sus4 R5 (bar).png",
+  "바레/Bbm R5 (bar).png",
+  "바레/Bbmaj7 R5 (bar).png",
+  "바레/Bbsus4 R5 (bar).png",
+  "바레/Bm R5 (bar).png",
+  "바레/Bmaj7 R5 (bar).png",
+  "바레/Bsus4 R5 (bar).png",
+  "바레/C R5 (bar).png",
+  "바레/C# R5 (bar).png",
+  "바레/C#7 R5 (bar).png",
+  "바레/C#7sus4 R5 (bar).png",
+  "바레/C#m R5 (bar).png",
+  "바레/C#maj7 R5 (bar).png",
+  "바레/C#sus4 R5 (bar).png",
+  "바레/C7 R5 (bar).png",
+  "바레/C7sus4 R5 (bar).png",
+  "바레/Cm R5 (bar).png",
+  "바레/Cmaj7 R5 (bar).png",
+  "바레/Csus4 R5 (bar).png",
+  "바레/D R5 (bar).png",
+  "바레/D7 R5 (bar).png",
+  "바레/D7sus4 R5 (bar).png",
+  "바레/Dm R5 (bar).png",
+  "바레/Dmaj7 R5 (bar).png",
+  "바레/Dsus4 R5 (bar).png",
+  "바레/E R5 (bar).png",
+  "바레/E7 R5 (bar).png",
+  "바레/E7sus4 R5 (bar).png",
+  "바레/Eb R5 (bar).png",
+  "바레/Eb7 R5 (bar).png",
+  "바레/Eb7sus4 R5 (bar).png",
+  "바레/Ebm R5 (bar).png",
+  "바레/Ebmaj7 R5 (bar).png",
+  "바레/Ebsus4 R5 (bar).png",
+  "바레/Em R5 (bar).png",
+  "바레/Emaj7 R5 (bar).png",
+  "바레/Esus4 R5 (bar).png",
+  "바레/F R6 (bar).png",
+  "바레/F# R6 (bar).png",
+  "바레/F#7 R6 (bar).png",
+  "바레/F#7sus4 R6 (bar).png",
+  "바레/F#m R6 (bar).png",
+  "바레/F#maj7 R6 (bar).png",
+  "바레/F#sus4 R6 (bar).png",
+  "바레/F7 R6 (bar).png",
+  "바레/F7sus4 R6 (bar).png",
+  "바레/Fm R6 (bar).png",
+  "바레/Fmaj7 R6 (bar).png",
+  "바레/Fsus4 R6 (bar).png",
+  "바레/G R6 (bar).png",
+  "바레/G7 R6 (bar).png",
+  "바레/G7sus4 R6 (bar).png",
+  "바레/Gm R6 (bar).png",
+  "바레/Gmaj7 R6 (bar).png",
+  "바레/Gsus4 R6 (bar).png",
+  "워십/Am7 (Worship).png",
+  "워십/Amaj7 (Worship).png",
+  "워십/Asus2 (Worship).png",
+  "워십/B7 (Worship).png",
+  "워십/Bm (Worship).png",
+  "워십/Bm7 (Worship).png",
+  "워십/Bsus4 (Worship).png",
+  "워십/C (Worship).png",
+  "워십/C#m (Worship).png",
+  "워십/C#m7 (Worship).png",
+  "워십/Cadd9 (Worship).png",
+  "워십/Cmaj7 (Worship).png",
+  "워십/D (Worship).png",
+  "워십/Dm (Worship).png",
+  "워십/Dsus2 (Worship).png",
+  "워십/Dsus4 (Worship).png",
+  "워십/E (Worship).png",
+  "워십/Em7 (Worship).png",
+  "워십/F#m11 (Worship).png",
+  "워십/F#m11_C# (Worship).png",
+  "워십/Fadd9 (Worship).png",
+  "워십/Fmaj7 (Worship).png",
+  "워십/G (Worship).png",
+  "워십/G#m13 or E2_G# (Worship).png",
+  "워십/G#m13_D# (Worship).png",
+  "워십/Gmaj7 (Worship).png",
+  "워십/Gsus4 (Worship).png",
+  "일반/A_add9.png",
+  "일반/A_dominant7_sus4.png",
+  "일반/A_dominant7.png",
+  "일반/A_major.png",
+  "일반/A_major7.png",
+  "일반/A_minor.png",
+  "일반/A_minor7.png",
+  "일반/A_sus4.png",
+  "일반/B_dominant7.png",
+  "일반/C_add9.png",
+  "일반/C_dominant7.png",
+  "일반/C_major.png",
+  "일반/C_major7.png",
+  "일반/C_sus4.png",
+  "일반/D_add9.png",
+  "일반/D_dominant7.png",
+  "일반/D_major.png",
+  "일반/D_major7.png",
+  "일반/D_minor.png",
+  "일반/D_minor7.png",
+  "일반/D_sus4.png",
+  "일반/E_add9.png",
+  "일반/E_dominant7.png",
+  "일반/E_major.png",
+  "일반/E_major7.png",
+  "일반/E_minor.png",
+  "일반/E_minor7.png",
+  "일반/E_sus4.png",
+  "일반/F_major7.png",
+  "일반/F_sharp_minor7.png",
+  "일반/G_add9.png",
+  "일반/G_dominant7.png",
+  "일반/G_major.png",
+  "일반/G_major7.png",
+  "일반/G_sus4.png",
+  "재즈/Bm7(b5).png",
+  "재즈/C#m7(b5).png",
+  "재즈/D_minor9 (jazz).png",
+  "재즈/D#m7(b5).png",
+  "재즈/F#m7(b5).png",
+  "재즈/G#m7(b5).png",
 ];
 const CHORD_CATEGORY_TABS = [
   { key: "all", label: "전체" },
@@ -309,7 +318,10 @@ let imageViewer = {
   zoom: 1,
   src: "",
   gestureScale: 1,
+  mode: "score",
+  title: "",
 };
+let imageViewerStack = [];
 let metronome = {
   audioContext: null,
   timer: null,
@@ -440,6 +452,8 @@ const els = {
   imageViewerAudio: $("#imageViewerAudio"),
   imageViewerChords: $("#imageViewerChords"),
   imageViewerRhythm: $("#imageViewerRhythm"),
+  imageViewerBack: $("#imageViewerBack"),
+  imageViewerChordGrid: $("#imageViewerChordGrid"),
   imageViewerImage: $("#imageViewerImage"),
   imageViewerZoomOut: $("#imageViewerZoomOut"),
   imageViewerZoomIn: $("#imageViewerZoomIn"),
@@ -862,10 +876,15 @@ function collectViewerImages(clickedButton) {
 
 function openImageViewer(clickedButton) {
   const gallery = collectViewerImages(clickedButton);
+  imageViewerStack = [];
   openImageViewerItems(gallery.items, gallery.index, { mode: "score" });
 }
 
 function openImageViewerItems(items, index = 0, options = {}) {
+  if (!options.pushCurrent && !options.keepStack) imageViewerStack = [];
+  if (options.pushCurrent && els.imageViewerDialog.open) {
+    imageViewerStack.push({ ...imageViewer, items: [...imageViewer.items] });
+  }
   imageViewer = {
     items,
     index,
@@ -873,8 +892,10 @@ function openImageViewerItems(items, index = 0, options = {}) {
     src: "",
     gestureScale: 1,
     mode: options.mode || "score",
+    title: options.title || "",
   };
-  els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord");
+  els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || imageViewer.mode === "chord-grid");
+  els.imageViewerDialog.classList.toggle("chord-grid-mode", imageViewer.mode === "chord-grid");
   els.imageViewerDialog.showModal();
   updateImageViewer();
 }
@@ -882,12 +903,43 @@ function openImageViewerItems(items, index = 0, options = {}) {
 function closeImageViewer() {
   els.imageViewerDialog.close();
   els.imageViewerDialog.classList.remove("chord-only");
+  els.imageViewerDialog.classList.remove("chord-grid-mode");
+  imageViewerStack = [];
   els.imageViewerImage.src = "";
 }
 
 function updateImageViewer() {
   const item = imageViewer.items[imageViewer.index];
   if (!item) return;
+
+  const isChordGrid = imageViewer.mode === "chord-grid";
+  if (els.imageViewerBack) {
+    const previous = imageViewerStack[imageViewerStack.length - 1];
+    els.imageViewerBack.hidden = !imageViewerStack.length;
+    els.imageViewerBack.textContent = previous?.mode === "chord-grid" ? "← 코드 목록" : "← 악보로";
+  }
+  if (els.imageViewerChordGrid) {
+    els.imageViewerChordGrid.hidden = !isChordGrid;
+    els.imageViewerChordGrid.innerHTML = isChordGrid ? renderImageViewerChordGrid() : "";
+  }
+  const imageScroll = els.imageViewerImage.closest(".image-viewer-scroll");
+  if (imageScroll) imageScroll.hidden = isChordGrid;
+  els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || isChordGrid);
+  els.imageViewerDialog.classList.toggle("chord-grid-mode", isChordGrid);
+
+  if (isChordGrid) {
+    els.imageViewerImage.removeAttribute("src");
+    imageViewer.src = "";
+    els.imageViewerTitle.textContent = imageViewer.title || "사용 코드";
+    renderImageViewerMastery();
+    renderImageViewerAudio();
+    renderImageViewerResourceButtons();
+    els.imageViewerZoomLabel.textContent = "";
+    els.imageViewerCounter.textContent = `${imageViewer.items.length}개 코드`;
+    els.imageViewerPrev.disabled = true;
+    els.imageViewerNext.disabled = true;
+    return;
+  }
 
   if (imageViewer.src !== item.src) {
     imageViewer.src = item.src;
@@ -904,6 +956,26 @@ function updateImageViewer() {
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
   els.imageViewerNext.disabled = imageViewer.items.length < 2;
+}
+
+function renderImageViewerChordGrid() {
+  return imageViewer.items
+    .map(
+      (item, index) => `
+        <button class="image-viewer-chord-card" type="button" data-viewer-chord-index="${index}">
+          <strong>${escapeHTML(item.chordName || item.title || "코드")}</strong>
+          <img src="${item.src}" alt="${escapeHTML(item.title || "코드표")}" loading="lazy" />
+        </button>
+      `,
+    )
+    .join("");
+}
+
+function restorePreviousImageViewer() {
+  const previous = imageViewerStack.pop();
+  if (!previous) return;
+  imageViewer = previous;
+  updateImageViewer();
 }
 
 function currentImageViewerBlock() {
@@ -942,9 +1014,10 @@ function openImageViewerChords() {
     .map((chord) => ({
       src: chord.src,
       title: `${chord.name} 코드`,
+      chordName: chord.name,
     }));
   if (!items.length) return;
-  openImageViewerItems(items, 0, { mode: "chord" });
+  openImageViewerItems(items, 0, { mode: "chord-grid", title: `${block.title} 사용 코드`, pushCurrent: true });
 }
 
 function rhythmViewerItems(block) {
@@ -972,7 +1045,7 @@ function openImageViewerRhythm() {
       title: item.label || "리듬표",
     }));
   if (images.length) {
-    openImageViewerItems(images, 0, { mode: "chord" });
+    openImageViewerItems(images, 0, { mode: "chord", pushCurrent: true });
     return;
   }
   window.open(resources[0].href, "_blank", "noreferrer");
@@ -1115,6 +1188,7 @@ function openChordViewer(chordName, fileName = "") {
     showToast("코드표를 찾을 수 없습니다.");
     return;
   }
+  imageViewerStack = [];
   openImageViewerItems([{ src: chord.src, title: `${chord.name} 코드` }], 0, { mode: "chord" });
 }
 
@@ -2252,15 +2326,21 @@ function renderLessonBlock(block, options = {}) {
         }
       </div>
       <strong>${escapeHTML(block.title)}</strong>
+      ${renderLessonResourceChips(block, { editable: controls })}
       ${showMastery ? renderMasteryControl(student, block, masteryEditable) : ""}
       ${renderPracticeMeta(block)}
       <p>${escapeHTML(block.summary)}</p>
       ${renderPracticeDetails(block)}
-      ${renderBlockChordDictionary(block, { editable: controls })}
-      ${block.audioLink ? renderAudioButton(block.audioLink) : ""}
       ${renderResources(block, "expanded")}
     </div>
   `;
+}
+
+function renderLessonResourceChips(block, { editable = false } = {}) {
+  const audio = block.audioLink ? renderAudioButton(block.audioLink) : "";
+  const chords = renderBlockChordDictionary(block, { editable });
+  if (!audio && !chords) return "";
+  return `<div class="lesson-resource-chips">${audio}${chords}</div>`;
 }
 
 function renderMasteryControl(student, block, editable = false) {
@@ -2496,6 +2576,15 @@ document.addEventListener("click", (event) => {
   const imageButton = event.target.closest("[data-view-image]");
   if (imageButton) {
     openImageViewer(imageButton);
+    return;
+  }
+
+  const viewerChordCard = event.target.closest("[data-viewer-chord-index]");
+  if (viewerChordCard) {
+    event.preventDefault();
+    const item = imageViewer.items[Number(viewerChordCard.dataset.viewerChordIndex)];
+    if (!item) return;
+    openImageViewerItems([item], 0, { mode: "chord", pushCurrent: true });
     return;
   }
 
@@ -2762,6 +2851,7 @@ els.imageViewerZoomOut.addEventListener("click", () => changeImageViewerZoom(-0.
 els.imageViewerZoomIn.addEventListener("click", () => changeImageViewerZoom(0.1));
 els.imageViewerPrev.addEventListener("click", () => moveImageViewer(-1));
 els.imageViewerNext.addEventListener("click", () => moveImageViewer(1));
+els.imageViewerBack.addEventListener("click", restorePreviousImageViewer);
 els.imageViewerChords.addEventListener("click", openImageViewerChords);
 els.imageViewerRhythm.addEventListener("click", openImageViewerRhythm);
 els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
