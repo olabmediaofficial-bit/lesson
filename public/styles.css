@@ -1707,8 +1707,8 @@ dialog::backdrop {
 }
 
 .viewer-metronome {
-  width: min(440px, 46vw);
-  grid-template-columns: auto auto minmax(135px, 1fr);
+  width: min(390px, 42vw);
+  grid-template-columns: auto auto minmax(132px, 1fr);
   align-items: center;
   gap: 5px;
   padding: 4px 6px;
@@ -1718,13 +1718,14 @@ dialog::backdrop {
 
 .viewer-metronome .metronome-display {
   width: auto;
-  min-width: 24px;
-  min-height: 26px;
+  min-width: 26px;
+  min-height: 18px;
   justify-content: center;
-  padding: 3px 5px;
+  padding: 0;
   gap: 0;
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .viewer-metronome .metronome-display strong {
@@ -1734,23 +1735,23 @@ dialog::backdrop {
 .viewer-metronome .beat-dots {
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 3px;
+  gap: 4px;
 }
 
 .viewer-metronome .beat-dots span {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-width: 0;
   background: rgba(255, 255, 255, 0.38);
 }
 
 .viewer-metronome .beat-dots span.downbeat {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 
 .viewer-metronome .beat-dots span.active {
-  background: #ead4bd;
+  background: #f7d6ad;
   box-shadow: none;
 }
 
@@ -3056,17 +3057,18 @@ textarea,
   .viewer-metronome {
     order: 4;
     width: 100%;
-    grid-template-columns: auto minmax(42px, auto) minmax(116px, 1fr);
+    grid-template-columns: minmax(26px, auto) minmax(42px, auto) minmax(116px, 1fr);
     gap: 4px;
     padding: 4px;
   }
 
   .viewer-metronome .metronome-display {
-    padding: 3px 5px;
+    min-width: 26px;
+    padding: 0;
   }
 
   .viewer-metronome .beat-dots {
-    gap: 3px;
+    gap: 4px;
   }
 
   .viewer-metronome [data-tempo-input] {
