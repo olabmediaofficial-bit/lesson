@@ -355,6 +355,21 @@
           자료 링크
           <textarea id="newResources" rows="3" placeholder="한 줄에 하나씩 입력: PDF, 영상 링크, 이미지 URL, 파일명"></textarea>
         </label>
+        <section class="score-field-panel">
+          <div class="field-head">
+            <strong>악보</strong>
+            <span>여기에 넣은 이미지는 악보 크게 보기로 열립니다.</span>
+          </div>
+          <label>
+            악보 이미지 링크
+            <textarea id="newScores" rows="3" placeholder="한 줄에 하나씩 입력: 이미지 URL 또는 파일명"></textarea>
+          </label>
+          <div class="existing-score-list" id="existingScoreList"></div>
+          <label>
+            악보 파일 추가
+            <input id="newScoreFiles" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" multiple />
+          </label>
+        </section>
         <label>
           음원 링크
           <input id="newAudioLink" type="url" placeholder="유튜브 링크 또는 음원 링크" />

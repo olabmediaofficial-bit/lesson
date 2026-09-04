@@ -492,6 +492,9 @@ const els = {
   saveChordPicker: $("#saveChordPicker"),
   blockDialogTitle: $("#blockDialogTitle"),
   editingBlockId: $("#editingBlockId"),
+  existingScoreList: $("#existingScoreList"),
+  newScores: $("#newScores"),
+  newScoreFiles: $("#newScoreFiles"),
   newFiles: $("#newFiles"),
   newAudioLink: $("#newAudioLink"),
   practiceFields: $("#practiceFields"),
@@ -513,6 +516,7 @@ function migrateState(data) {
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
   data.blocks = data.blocks.map((block) => ({
     ...block,
+    scores: normalizeScores(block),
     resources: normalizeResources(block),
     audioLink: block.audioLink || "",
     chords: normalizeChordNames(block.chords || []),
@@ -757,6 +761,19 @@ function normalizeResources(block) {
   return block.resource ? [block.resource] : [];
 }
 
+function normalizeScores(block) {
+  if (Array.isArray(block?.scores)) return block.scores.filter(Boolean);
+  return normalizeResources(block || {}).filter((resource) => resourceType(resource) === "image");
+}
+
+function sameResource(left, right) {
+  return resourceHref(left) === resourceHref(right) && resourceLabel(left) === resourceLabel(right);
+}
+
+function isScoreResource(block, resource) {
+  return normalizeScores(block).some((score) => sameResource(score, resource));
+}
+
 function resourceLabel(resource) {
   if (typeof resource === "object") return resource.name || "첨부 파일";
   return resource.split("/").pop() || resource;
@@ -780,7 +797,7 @@ function resourceType(resource) {
 }
 
 function renderResources(block, mode = "compact") {
-  const resources = normalizeResources(block);
+  const resources = normalizeResources(block).filter((resource) => !isScoreResource(block, resource));
   if (!resources.length) return "";
 
   return `
@@ -811,6 +828,40 @@ function renderResources(block, mode = "compact") {
         })
         .join("")}
     </div>
+  `;
+}
+
+function renderScoreResources(block, mode = "compact") {
+  const scores = normalizeScores(block);
+  if (!scores.length) return "";
+
+  return `
+    <section class="score-resource-panel">
+      <div class="field-head">
+        <strong>악보</strong>
+        <span>${scores.length}장</span>
+      </div>
+      <div class="resource-list score-list ${mode}">
+        ${scores
+          .map((score, index) => {
+            const href = escapeHTML(resourceHref(score));
+            const label = escapeHTML(resourceLabel(score));
+            const viewerTitle = escapeHTML(block.title || resourceLabel(score));
+            return `
+              <figure class="score-preview">
+                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" data-view-image-block-id="${escapeHTML(block.id)}" data-view-image-score-index="${index}" aria-label="${viewerTitle} 크게 보기">
+                  <img src="${href}" alt="${label}" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span>${label}</span>
+                  <a class="resource-button image-download" href="${href}" download="${label}">다운로드</a>
+                </figcaption>
+              </figure>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -1152,8 +1203,7 @@ function lessonRoomImageItems(student) {
         .map(getBlock)
         .filter((block) => block?.kind === "practice" && masteryLevel(student, block.id) < 4)
         .flatMap((block) =>
-          normalizeResources(block)
-            .filter((resource) => resourceType(resource) === "image")
+          normalizeScores(block)
             .map((resource) => ({
               src: resourceHref(resource),
               title: block.title || resourceLabel(resource),
@@ -1187,8 +1237,7 @@ function openRandomPracticeScore() {
 function openPracticeScoreByBlock(blockId) {
   const block = getBlock(blockId);
   if (!block) return;
-  const items = normalizeResources(block)
-    .filter((resource) => resourceType(resource) === "image")
+  const items = normalizeScores(block)
     .map((resource) => ({
       src: resourceHref(resource),
       title: block.title || resourceLabel(resource),
@@ -1494,6 +1543,7 @@ function filteredBlocks() {
       practice.leftHand,
       practice.technique,
       practice.categories.join(" "),
+      normalizeScores(block).map(resourceLabel).join(" "),
       normalizeResources(block).map(resourceLabel).join(" "),
       blockKindLabel(block.kind),
       ...block.tags,
@@ -2015,6 +2065,7 @@ function renderBlockCard(block) {
         ${renderPracticeDetails(block)}
         <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
         ${renderBlockChordDictionary(block, { editable: true })}
+        ${renderScoreResources(block, "compact")}
         ${renderResources(block, "compact")}
       </div>
     </article>
@@ -2353,6 +2404,7 @@ function renderLessonBlock(block, options = {}) {
       ${renderPracticeMeta(block)}
       <p>${escapeHTML(block.summary)}</p>
       ${renderPracticeDetails(block)}
+      ${renderScoreResources(block, "expanded")}
       ${renderResources(block, "expanded")}
     </div>
   `;
@@ -3026,7 +3078,9 @@ function openBlockDialog(blockId = "") {
   $("#newType").value = block?.kind || "theory";
   $("#newSummary").value = block?.summary || "";
   $("#newTags").value = nonCurriculumTags(block?.tags || []).join(", ");
-  $("#newResources").value = block ? normalizeResources(block).filter((resource) => typeof resource === "string").join("\n") : "";
+  $("#newResources").value = block ? normalizeResources(block).filter((resource) => typeof resource === "string" && !isScoreResource(block, resource)).join("\n") : "";
+  els.newScores.value = block ? normalizeScores(block).filter((score) => typeof score === "string").join("\n") : "";
+  renderExistingScoreList(block);
   els.newAudioLink.value = block?.audioLink || "";
   els.practiceTempo.value = practice.tempo || "";
   els.practiceKey.value = practice.key || "";
@@ -3037,8 +3091,33 @@ function openBlockDialog(blockId = "") {
   });
   renderPracticeSkillFields(block);
   els.newFiles.value = "";
+  els.newScoreFiles.value = "";
   updatePracticeFieldsVisibility();
   els.materialDialog.showModal();
+}
+
+function renderExistingScoreList(block) {
+  const scores = block ? normalizeScores(block).filter((score) => typeof score === "object") : [];
+  els.existingScoreList.innerHTML = scores.length
+    ? `
+      <div class="field-head compact">
+        <strong>기존 악보</strong>
+        <span>체크를 끄면 저장할 때 제거됩니다.</span>
+      </div>
+      <div class="existing-score-items">
+        ${scores
+          .map(
+            (score, index) => `
+              <label>
+                <input type="checkbox" data-keep-score-index="${index}" checked />
+                <span>${escapeHTML(resourceLabel(score))}</span>
+              </label>
+            `,
+          )
+          .join("")}
+      </div>
+    `
+    : "";
 }
 
 function updatePracticeFieldsVisibility() {
@@ -3085,11 +3164,15 @@ function isStorageMigrationResource(resource) {
 }
 
 async function migrateEmbeddedFilesToStorage() {
-  const resourcesToMove = state.blocks.flatMap((block) =>
-    normalizeResources(block)
+  const resourcesToMove = state.blocks.flatMap((block) => [
+    ...normalizeScores(block)
       .filter(isStorageMigrationResource)
-      .map((resource) => ({ block, resource })),
-  );
+      .map((resource) => ({ block, resource, field: "scores" })),
+    ...normalizeResources(block)
+      .filter((resource) => !isScoreResource(block, resource))
+      .filter(isStorageMigrationResource)
+      .map((resource) => ({ block, resource, field: "resources" })),
+  ]);
   if (!resourcesToMove.length) {
     showToast("옮길 기존 악보가 없습니다.");
     return;
@@ -3101,9 +3184,9 @@ async function migrateEmbeddedFilesToStorage() {
 
   try {
     for (let index = 0; index < resourcesToMove.length; index += 1) {
-      const { block, resource } = resourcesToMove[index];
+      const { block, resource, field } = resourcesToMove[index];
       const uploaded = await uploadResource(resource);
-      block.resources = normalizeResources(block).map((item) => (item === resource ? uploaded : item));
+      block[field] = (field === "scores" ? normalizeScores(block) : normalizeResources(block)).map((item) => (item === resource ? uploaded : item));
       block.updatedAt = nowIso();
       if ((index + 1) % 3 === 0) showToast(`${index + 1}/${resourcesToMove.length}개 옮기는 중...`);
     }
@@ -3159,7 +3242,8 @@ async function createBlocksFromDroppedFiles(files) {
       audioLink: "",
       chords: [],
       practice: normalizePractice(),
-      resources: [resource],
+      scores: kind === "practice" && resourceType(resource) === "image" ? [resource] : [],
+      resources: kind === "practice" && resourceType(resource) === "image" ? [] : [resource],
       updatedAt: nowIso(),
     }));
     state.blocks = [...blocks, ...state.blocks];
@@ -3188,7 +3272,11 @@ $("#materialForm").addEventListener("submit", async (event) => {
     const editingId = els.editingBlockId.value;
     const existing = editingId ? getBlock(editingId) : null;
     const linkResources = $("#newResources").value.split("\n").map((item) => item.trim()).filter(Boolean);
-    const keptFileResources = existing ? normalizeResources(existing).filter((resource) => typeof resource === "object") : [];
+    const scoreLinkResources = els.newScores.value.split("\n").map((item) => item.trim()).filter(Boolean);
+    const existingScoreObjects = existing ? normalizeScores(existing).filter((score) => typeof score === "object") : [];
+    const keptScoreResources = existingScoreObjects.filter((_, index) => document.querySelector(`[data-keep-score-index="${index}"]`)?.checked);
+    const keptFileResources = existing ? normalizeResources(existing).filter((resource) => typeof resource === "object" && !isScoreResource(existing, resource)) : [];
+    const scoreFileResources = await Promise.all([...els.newScoreFiles.files].map(readFileAsUploadedResource));
     const fileResources = await Promise.all([...els.newFiles.files].map(readFileAsUploadedResource));
     const kind = $("#newType").value;
     const tags = kind === "practice" ? [...new Set([...parseTags($("#newTags").value), ...selectedPracticeSkillTags()])] : parseTags($("#newTags").value);
@@ -3210,6 +3298,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
         leftHand: existing?.practice?.leftHand || "",
         technique: existing?.practice?.technique || "",
       },
+      scores: [...scoreLinkResources, ...keptScoreResources, ...scoreFileResources],
       resources: [...linkResources, ...keptFileResources, ...fileResources],
     };
 
