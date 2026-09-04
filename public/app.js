@@ -29,77 +29,101 @@ const ADVANCED_METRONOME_PATTERN_4_4 = [
   [false, false, false, false],
 ];
 const CHORD_IMAGE_FILES = [
+  "바레/A R5 (bar).png",
   "바레/A R6 (bar).png",
+  "바레/A7 R5 (bar).png",
   "바레/A7 R6 (bar).png",
-  "바레/A7sus4 R6 (bar).png",
+  "바레/Ab R5 (bar).png",
   "바레/Ab R6 (bar).png",
+  "바레/Ab7 R5 (bar).png",
   "바레/Ab7 R6 (bar).png",
-  "바레/Ab7sus4 R6 (bar).png",
+  "바레/Abm R5 (bar).png",
   "바레/Abm R6 (bar).png",
-  "바레/Abmaj7 R6 (bar).png",
+  "바레/Absus4 R5 (bar).png",
   "바레/Absus4 R6 (bar).png",
+  "바레/Am R5 (bar).png",
   "바레/Am R6 (bar).png",
-  "바레/Amaj7 R6 (bar).png",
+  "바레/Asus4 R5 (bar).png",
   "바레/Asus4 R6 (bar).png",
   "바레/B R5 (bar).png",
+  "바레/B R6 (bar).png",
   "바레/B7 R5 (bar).png",
-  "바레/B7sus4 R5 (bar).png",
+  "바레/B7 R6 (bar).png",
   "바레/Bb R5 (bar).png",
+  "바레/Bb R6 (bar).png",
   "바레/Bb7 R5 (bar).png",
-  "바레/Bb7sus4 R5 (bar).png",
+  "바레/Bb7 R6 (bar).png",
   "바레/Bbm R5 (bar).png",
-  "바레/Bbmaj7 R5 (bar).png",
+  "바레/Bbm R6 (bar).png",
   "바레/Bbsus4 R5 (bar).png",
+  "바레/Bbsus4 R6 (bar).png",
   "바레/Bm R5 (bar).png",
-  "바레/Bmaj7 R5 (bar).png",
+  "바레/Bm R6 (bar).png",
   "바레/Bsus4 R5 (bar).png",
+  "바레/Bsus4 R6 (bar).png",
   "바레/C R5 (bar).png",
+  "바레/C R6 (bar).png",
   "바레/C# R5 (bar).png",
+  "바레/C# R6 (bar).png",
   "바레/C#7 R5 (bar).png",
-  "바레/C#7sus4 R5 (bar).png",
+  "바레/C#7 R6 (bar).png",
   "바레/C#m R5 (bar).png",
-  "바레/C#maj7 R5 (bar).png",
+  "바레/C#m R6 (bar).png",
   "바레/C#sus4 R5 (bar).png",
+  "바레/C#sus4 R6 (bar).png",
   "바레/C7 R5 (bar).png",
-  "바레/C7sus4 R5 (bar).png",
+  "바레/C7 R6 (bar).png",
   "바레/Cm R5 (bar).png",
-  "바레/Cmaj7 R5 (bar).png",
+  "바레/Cm R6 (bar).png",
   "바레/Csus4 R5 (bar).png",
+  "바레/Csus4 R6 (bar).png",
   "바레/D R5 (bar).png",
+  "바레/D R6 (bar).png",
   "바레/D7 R5 (bar).png",
-  "바레/D7sus4 R5 (bar).png",
+  "바레/D7 R6 (bar).png",
   "바레/Dm R5 (bar).png",
-  "바레/Dmaj7 R5 (bar).png",
+  "바레/Dm R6 (bar).png",
   "바레/Dsus4 R5 (bar).png",
+  "바레/Dsus4 R6 (bar).png",
   "바레/E R5 (bar).png",
+  "바레/E R6 (bar).png",
   "바레/E7 R5 (bar).png",
-  "바레/E7sus4 R5 (bar).png",
+  "바레/E7 R6 (bar).png",
   "바레/Eb R5 (bar).png",
+  "바레/Eb R6 (bar).png",
   "바레/Eb7 R5 (bar).png",
-  "바레/Eb7sus4 R5 (bar).png",
+  "바레/Eb7 R6 (bar).png",
   "바레/Ebm R5 (bar).png",
-  "바레/Ebmaj7 R5 (bar).png",
+  "바레/Ebm R6 (bar).png",
   "바레/Ebsus4 R5 (bar).png",
+  "바레/Ebsus4 R6 (bar).png",
   "바레/Em R5 (bar).png",
-  "바레/Emaj7 R5 (bar).png",
+  "바레/Em R6 (bar).png",
   "바레/Esus4 R5 (bar).png",
+  "바레/Esus4 R6 (bar).png",
+  "바레/F R5 (bar).png",
   "바레/F R6 (bar).png",
+  "바레/F# R5 (bar).png",
   "바레/F# R6 (bar).png",
+  "바레/F#7 R5 (bar).png",
   "바레/F#7 R6 (bar).png",
-  "바레/F#7sus4 R6 (bar).png",
+  "바레/F#m R5 (bar).png",
   "바레/F#m R6 (bar).png",
-  "바레/F#maj7 R6 (bar).png",
+  "바레/F#sus4 R5 (bar).png",
   "바레/F#sus4 R6 (bar).png",
+  "바레/F7 R5 (bar).png",
   "바레/F7 R6 (bar).png",
-  "바레/F7sus4 R6 (bar).png",
+  "바레/Fm R5 (bar).png",
   "바레/Fm R6 (bar).png",
-  "바레/Fmaj7 R6 (bar).png",
+  "바레/Fsus4 R5 (bar).png",
   "바레/Fsus4 R6 (bar).png",
+  "바레/G R5 (bar).png",
   "바레/G R6 (bar).png",
+  "바레/G7 R5 (bar).png",
   "바레/G7 R6 (bar).png",
-  "바레/G7sus4 R6 (bar).png",
+  "바레/Gm R5 (bar).png",
   "바레/Gm R6 (bar).png",
-  "바레/Gmaj7 R6 (bar).png",
+  "바레/Gsus4 R5 (bar).png",
   "바레/Gsus4 R6 (bar).png",
   "분수/F#m11_C# (Worship).png",
   "분수/G#m13 or E2_G# (Worship).png",
@@ -165,7 +189,8 @@ const CHORD_IMAGE_FILES = [
 const CHORD_CATEGORY_TABS = [
   { key: "all", label: "전체" },
   { key: "general", label: "일반" },
-  { key: "bar", label: "바레" },
+  { key: "bar-r5", label: "바레 R5" },
+  { key: "bar-r6", label: "바레 R6" },
   { key: "worship", label: "워십" },
   { key: "jazz", label: "재즈" },
   { key: "slash", label: "분수" },
@@ -332,9 +357,11 @@ function chordNameFromFile(fileName) {
   const baseName = fileName.split("/").pop() || fileName;
   const base = baseName
     .replace(/\.png$/i, "")
-    .replace(/\s*\([^)]*\)\s*$/g, "")
+    .replace(/\s*\((bar|barre|worship|jazz|slash|fraction|bass|other|etc)\)\s*$/gi, "")
     .replace(/\s+R[0-9]+\s*$/i, "")
     .trim();
+  const slashMatch = base.match(/^(.+)_([A-G](?:#|b)?)$/);
+  if (slashMatch) return `${slashMatch[1]}/${slashMatch[2]}`;
   if (!base.includes("_")) return base;
   const [root, ...qualityParts] = base.split("_");
   const note = root === "F" && qualityParts[0] === "sharp" ? "F#" : root;
@@ -356,12 +383,15 @@ function chordNameFromFile(fileName) {
 function chordCategoryFromFile(fileName) {
   const lower = fileName.toLowerCase();
   const pathParts = lower.split("/");
-  if (pathParts.some((part) => part.includes("바레") || part.includes("bar"))) return "bar";
-  if (pathParts.some((part) => part.includes("워십") || part.includes("worship"))) return "worship";
-  if (pathParts.some((part) => part.includes("재즈") || part.includes("jazz"))) return "jazz";
+  if (pathParts.some((part) => part.includes("바레") || part.includes("bar")) || /\((bar|barre)\)/i.test(fileName)) {
+    if (/\bR5\b/i.test(fileName)) return "bar-r5";
+    if (/\bR6\b/i.test(fileName)) return "bar-r6";
+    return "bar-r5";
+  }
   if (pathParts.some((part) => part.includes("분수") || part.includes("slash"))) return "slash";
+  if (pathParts.some((part) => part.includes("재즈") || part.includes("jazz"))) return "jazz";
+  if (pathParts.some((part) => part.includes("워십") || part.includes("worship"))) return "worship";
   if (pathParts.some((part) => part.includes("그외") || part.includes("other"))) return "other";
-  if (/\((bar|barre)\)/i.test(fileName)) return "bar";
   if (/\((worship)\)/i.test(fileName)) return "worship";
   if (/\((jazz)\)/i.test(fileName)) return "jazz";
   if (/\((slash|fraction|bass)\)/i.test(fileName)) return "slash";
