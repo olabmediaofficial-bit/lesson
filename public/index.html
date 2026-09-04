@@ -458,16 +458,21 @@
 
     <dialog id="chordPickerDialog">
       <form class="dialog-card chord-picker-dialog" method="dialog">
-        <div class="dialog-head">
-          <div>
-            <strong>코드표 추가</strong>
-            <p>이 실습곡에서 쓰는 코드를 골라주세요.</p>
+        <div class="chord-picker-sticky">
+          <div class="dialog-head">
+            <div>
+              <strong>코드표 추가</strong>
+              <p>이 실습곡에서 쓰는 코드를 골라주세요.</p>
+            </div>
+            <button class="icon-button" value="cancel" type="submit">×</button>
           </div>
-          <button class="icon-button" value="cancel" type="submit">×</button>
+          <input id="chordPickerBlockId" type="hidden" />
+          <label class="chord-picker-search">
+            <span aria-hidden="true">⌕</span>
+            <input id="chordPickerSearch" type="search" placeholder="코드 검색: A, F#m7, D..." />
+          </label>
+          <div class="selected-chord-order" id="selectedChordOrder" aria-label="선택한 코드 순서"></div>
         </div>
-        <input id="chordPickerBlockId" type="hidden" />
-        <input id="chordPickerSearch" type="search" placeholder="코드 검색: A, F#m7, D..." />
-        <div class="selected-chord-order" id="selectedChordOrder" aria-label="선택한 코드 순서"></div>
         <div class="chord-picker-grid" id="chordPickerGrid"></div>
         <menu>
           <button class="secondary-button" value="cancel" type="submit">취소</button>
