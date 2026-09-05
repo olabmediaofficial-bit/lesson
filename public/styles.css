@@ -2483,9 +2483,11 @@ dialog::backdrop {
 .chord-picker-dialog {
   overflow: hidden;
   width: min(920px, calc(100vw - 28px));
+  max-width: calc(100vw - 28px);
   max-height: min(86vh, 820px);
   grid-template-rows: auto minmax(0, 1fr) auto;
   padding: 0;
+  min-width: 0;
 }
 
 .chord-picker-sticky {
@@ -2494,6 +2496,7 @@ dialog::backdrop {
   z-index: 2;
   display: grid;
   gap: 12px;
+  min-width: 0;
   padding: 18px 18px 12px;
   border-bottom: 1px solid rgba(166, 125, 92, 0.2);
   background: rgba(255, 250, 244, 0.96);
@@ -2508,9 +2511,14 @@ dialog::backdrop {
   font-weight: 700;
 }
 
+.chord-picker-dialog .dialog-head > div {
+  min-width: 0;
+}
+
 .chord-picker-search {
   position: relative;
   display: block;
+  min-width: 0;
 }
 
 .chord-picker-search span {
@@ -2523,6 +2531,7 @@ dialog::backdrop {
 }
 
 .chord-picker-search input {
+  box-sizing: border-box;
   width: 100%;
   min-height: 44px;
   padding-left: 36px;
@@ -2533,11 +2542,15 @@ dialog::backdrop {
 
 .chord-picker-grid {
   display: grid;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   min-height: 0;
   max-height: none;
-  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
   gap: 12px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 16px 18px;
 }
 
@@ -2557,6 +2570,7 @@ dialog::backdrop {
   display: flex;
   max-height: 92px;
   min-height: 42px;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
@@ -2564,15 +2578,18 @@ dialog::backdrop {
   border: 1px solid rgba(166, 125, 92, 0.24);
   border-radius: 12px;
   background: #fbf6ef;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .selected-chord-pill {
+  flex: 0 1 auto;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
-  max-width: 180px;
+  max-width: min(180px, 100%);
   padding: 5px 6px 5px 8px;
   border: 1px solid rgba(166, 125, 92, 0.26);
   border-radius: 999px;
@@ -3355,7 +3372,8 @@ textarea,
   }
 
   .chord-picker-grid {
-    grid-template-columns: repeat(auto-fill, minmax(94px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    padding: 12px;
   }
 
   .bulk-curriculum-head,
