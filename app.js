@@ -315,6 +315,7 @@ let activeChordCategory = "all";
 let lessonRoomMode = "weekly";
 let scheduleViewMode = "weekly";
 let scheduleMonthDate = new Date();
+let scheduleResizeState = null;
 let practiceRoomSort = "date";
 let practiceSortDirection = {
   date: "desc",
@@ -362,8 +363,11 @@ const SCHEDULE_DAYS = [
   { key: "sat", label: "토" },
   { key: "sun", label: "일" },
 ];
-const SCHEDULE_TIMES = Array.from({ length: 13 }, (_, index) => {
-  const totalMinutes = 14 * 60 + index * 30;
+const SCHEDULE_START_MINUTES = 14 * 60;
+const SCHEDULE_END_MINUTES = 20 * 60;
+const SCHEDULE_SNAP_MINUTES = 5;
+const SCHEDULE_TIMES = Array.from({ length: 7 }, (_, index) => {
+  const totalMinutes = SCHEDULE_START_MINUTES + index * 60;
   return {
     key: String(totalMinutes),
     hour: Math.floor(totalMinutes / 60),
@@ -484,6 +488,7 @@ const els = {
   scheduleStudent: $("#scheduleStudent"),
   scheduleDay: $("#scheduleDay"),
   scheduleHour: $("#scheduleHour"),
+  scheduleDuration: $("#scheduleDuration"),
   scheduleRecurrence: $("#scheduleRecurrence"),
   scheduleStartDate: $("#scheduleStartDate"),
   scheduleNote: $("#scheduleNote"),
@@ -2239,11 +2244,47 @@ function scheduleTimeMinutes(slot) {
   return Number(slot.hour || 0) * 60 + Number(slot.minute || 0);
 }
 
+function scheduleDurationMinutes(slot) {
+  const duration = Number(slot.duration || 30);
+  if (Number.isNaN(duration)) return 30;
+  return Math.min(360, Math.max(10, duration));
+}
+
+function scheduleEndMinutes(slot) {
+  return scheduleTimeMinutes(slot) + scheduleDurationMinutes(slot);
+}
+
 function scheduleTimeLabel(value) {
   const totalMinutes = Number(value);
   const hour = Math.floor(totalMinutes / 60);
   const minute = totalMinutes % 60;
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function scheduleTimeInputValue(value) {
+  return scheduleTimeLabel(value || SCHEDULE_START_MINUTES);
+}
+
+function scheduleTimeRangeLabel(slot) {
+  return `${scheduleTimeLabel(scheduleTimeMinutes(slot))}-${scheduleTimeLabel(scheduleEndMinutes(slot))}`;
+}
+
+function parseScheduleTimeInput(value) {
+  if (typeof value !== "string") return NaN;
+  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return NaN;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (Number.isNaN(hour) || Number.isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return NaN;
+  return hour * 60 + minute;
+}
+
+function roundToScheduleSnap(minutes) {
+  return Math.round(minutes / SCHEDULE_SNAP_MINUTES) * SCHEDULE_SNAP_MINUTES;
+}
+
+function clampScheduleStart(minutes, duration = 30) {
+  return Math.min(SCHEDULE_END_MINUTES - duration, Math.max(SCHEDULE_START_MINUTES, roundToScheduleSnap(minutes)));
 }
 
 function scheduleRecurrenceLabel(slot) {
@@ -2291,13 +2332,16 @@ function renderSchedule() {
 
 function renderScheduleEditor() {
   if (!els.scheduleStudent) return;
+  const currentTime = els.scheduleHour.value || "15:30";
+  const currentDuration = els.scheduleDuration?.value || "30";
   const people = schedulePeople();
   els.scheduleStudent.innerHTML = people.length
     ? people.map((person) => `<option value="${person.id}">[${person.type === "piano" ? "피아노" : "기타"}] ${escapeHTML(person.name)}</option>`).join("")
     : `<option value="">학생 없음</option>`;
   els.scheduleStudent.disabled = !people.length;
   els.scheduleDay.innerHTML = SCHEDULE_DAYS.map((day) => `<option value="${day.key}">${day.label}요일</option>`).join("");
-  els.scheduleHour.innerHTML = SCHEDULE_TIMES.map((time) => `<option value="${time.key}">${scheduleTimeLabel(time.key)}</option>`).join("");
+  els.scheduleHour.value = currentTime;
+  if (els.scheduleDuration) els.scheduleDuration.value = currentDuration;
   if (els.scheduleStartDate && !els.scheduleStartDate.value) els.scheduleStartDate.value = today();
   renderPianoScheduleStudentList();
 }
@@ -2320,6 +2364,7 @@ function renderPianoScheduleStudentList() {
 }
 
 function renderScheduleTable({ admin = false, studentId = "" } = {}) {
+  if (admin) return renderScheduleTimeline();
   const slots = sortedScheduleSlots();
   return `
     <table class="schedule-table">
@@ -2365,6 +2410,57 @@ function renderScheduleCell(slots, { admin = false, studentId = "" } = {}) {
   `;
 }
 
+function renderScheduleTimeline() {
+  const slots = sortedScheduleSlots();
+  const totalRange = SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES;
+  return `
+    <div class="schedule-timeline" style="--schedule-hours:${SCHEDULE_TIMES.length - 1}">
+      <div class="schedule-timeline-head">
+        <span></span>
+        ${SCHEDULE_DAYS.map((day) => `<b>${day.label}</b>`).join("")}
+      </div>
+      <div class="schedule-timeline-body">
+        <div class="schedule-time-rail">
+          ${SCHEDULE_TIMES.map((time) => {
+            const top = ((Number(time.key) - SCHEDULE_START_MINUTES) / totalRange) * 100;
+            return `<span style="top:${top}%">${scheduleTimeLabel(time.key)}</span>`;
+          }).join("")}
+        </div>
+        ${SCHEDULE_DAYS.map((day) => {
+          const daySlots = slots.filter((slot) => slot.day === day.key);
+          return `
+            <div class="schedule-day-column" data-schedule-drop-day="${day.key}">
+              ${SCHEDULE_TIMES.slice(0, -1)
+                .map((time) => {
+                  const top = ((Number(time.key) - SCHEDULE_START_MINUTES) / totalRange) * 100;
+                  return `<i class="schedule-hour-line" style="top:${top}%"></i>`;
+                })
+                .join("")}
+              ${daySlots.map(renderScheduleTimelineSlot).join("")}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderScheduleTimelineSlot(slot) {
+  const totalRange = SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES;
+  const top = ((scheduleTimeMinutes(slot) - SCHEDULE_START_MINUTES) / totalRange) * 100;
+  const height = Math.max(8, (scheduleDurationMinutes(slot) / totalRange) * 100);
+  return `
+    <article class="schedule-timeline-slot" draggable="true" data-schedule-drag-slot="${slot.id}" style="top:${top}%;height:${height}%">
+      <div>
+        <strong>${escapeHTML(scheduleStudentName(slot.studentId))}</strong>
+        <small>${scheduleTimeRangeLabel(slot)} · ${scheduleStudentTypeLabel(slot.studentId)} · ${scheduleRecurrenceLabel(slot)}${slot.note ? ` · ${escapeHTML(slot.note)}` : ""}</small>
+      </div>
+      <button class="icon-button tiny-button danger" type="button" data-delete-schedule-slot="${slot.id}" title="시간 삭제">×</button>
+      <span class="schedule-resize-handle" data-schedule-resize-slot="${slot.id}" title="길이 조절"></span>
+    </article>
+  `;
+}
+
 function renderScheduleCalendar({ admin = false, studentId = "" } = {}) {
   const first = monthStartDate();
   const year = first.getFullYear();
@@ -2402,7 +2498,7 @@ function renderScheduleCalendarItem(slot, { admin = false, studentId = "" } = {}
   const label = admin ? scheduleStudentName(slot.studentId) : isMine ? "내 레슨" : "레슨 예약됨";
   return `
     <span class="schedule-calendar-item ${isMine ? "mine" : ""}">
-      <b>${scheduleTimeLabel(scheduleTimeMinutes(slot))}</b>
+      <b>${scheduleTimeRangeLabel(slot)}</b>
       ${escapeHTML(label)}
       <small>${admin ? `${scheduleStudentTypeLabel(slot.studentId)} · ${scheduleRecurrenceLabel(slot)}` : scheduleRecurrenceLabel(slot)}</small>
     </span>
@@ -2412,15 +2508,20 @@ function renderScheduleCalendarItem(slot, { admin = false, studentId = "" } = {}
 function addScheduleSlot() {
   const studentId = els.scheduleStudent.value;
   const day = els.scheduleDay.value;
-  const time = Number(els.scheduleHour.value);
+  const time = parseScheduleTimeInput(els.scheduleHour.value);
+  const duration = Number(els.scheduleDuration?.value || 30);
   const recurrence = els.scheduleRecurrence.value || "weekly";
   const startDate = els.scheduleStartDate.value || today();
   const note = els.scheduleNote.value.trim();
-  if (!studentId || !day || Number.isNaN(time)) {
+  if (!studentId || !day || Number.isNaN(time) || Number.isNaN(duration)) {
     showToast("학생, 요일, 시간을 선택해주세요.");
     return;
   }
-  const nextSlot = { id: uid("sch"), studentId, day, time, recurrence, startDate, note, updatedAt: nowIso() };
+  if (time < SCHEDULE_START_MINUTES || time >= SCHEDULE_END_MINUTES || time + duration > SCHEDULE_END_MINUTES) {
+    showToast("레슨 시간은 오후 2시부터 8시 사이로 넣어주세요.");
+    return;
+  }
+  const nextSlot = { id: uid("sch"), studentId, day, time, duration, recurrence, startDate, note, updatedAt: nowIso() };
   const conflicts = (state.schedule || []).filter((slot) => scheduleSlotsOverlap(slot, nextSlot));
   if (conflicts.length && !confirm("이미 겹치는 레슨이 있는 시간입니다. 기존 시간을 바꾸고 새로 넣을까요?")) return;
   state.schedule = (state.schedule || []).filter((slot) => !scheduleSlotsOverlap(slot, nextSlot));
@@ -2431,7 +2532,13 @@ function addScheduleSlot() {
 }
 
 function scheduleSlotsOverlap(left, right) {
-  if (left.day !== right.day || scheduleTimeMinutes(left) !== scheduleTimeMinutes(right)) return false;
+  if (left.id && right.id && left.id === right.id) return false;
+  if (left.day !== right.day) return false;
+  const leftStart = scheduleTimeMinutes(left);
+  const leftEnd = scheduleEndMinutes(left);
+  const rightStart = scheduleTimeMinutes(right);
+  const rightEnd = scheduleEndMinutes(right);
+  if (leftStart >= rightEnd || rightStart >= leftEnd) return false;
   const leftRecurrence = left.recurrence || "weekly";
   const rightRecurrence = right.recurrence || "weekly";
   if (leftRecurrence === "weekly" || rightRecurrence === "weekly") return true;
@@ -2440,6 +2547,43 @@ function scheduleSlotsOverlap(left, right) {
   if (Number.isNaN(leftBase.getTime()) || Number.isNaN(rightBase.getTime())) return true;
   const diffWeeks = Math.round((rightBase - leftBase) / 604800000);
   return Math.abs(diffWeeks) % 2 === 0;
+}
+
+function moveScheduleSlot(slotId, day, minutes) {
+  const slot = (state.schedule || []).find((item) => item.id === slotId);
+  if (!slot) return;
+  const duration = scheduleDurationMinutes(slot);
+  const nextSlot = { ...slot, day, time: clampScheduleStart(minutes, duration), duration, updatedAt: nowIso() };
+  if ((state.schedule || []).some((item) => scheduleSlotsOverlap(item, nextSlot))) {
+    showToast("겹치는 레슨 시간이 있어서 이동하지 않았습니다.");
+    renderSchedule();
+    return;
+  }
+  Object.assign(slot, nextSlot);
+  render();
+  saveStateInBackground({}, "레슨 시간을 옮겼습니다.");
+}
+
+function resizeScheduleSlot(slotId, duration) {
+  const slot = (state.schedule || []).find((item) => item.id === slotId);
+  if (!slot) return;
+  const maxDuration = SCHEDULE_END_MINUTES - scheduleTimeMinutes(slot);
+  const nextDuration = Math.min(maxDuration, Math.max(10, roundToScheduleSnap(duration)));
+  const nextSlot = { ...slot, duration: nextDuration, updatedAt: nowIso() };
+  if ((state.schedule || []).some((item) => scheduleSlotsOverlap(item, nextSlot))) {
+    showToast("겹치는 레슨 시간이 있어서 길이를 바꾸지 않았습니다.");
+    renderSchedule();
+    return;
+  }
+  Object.assign(slot, nextSlot);
+  render();
+  saveStateInBackground({}, "레슨 길이를 바꿨습니다.");
+}
+
+function scheduleMinutesFromPointer(event, column) {
+  const rect = column.getBoundingClientRect();
+  const ratio = (event.clientY - rect.top) / rect.height;
+  return SCHEDULE_START_MINUTES + ratio * (SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES);
 }
 
 function deleteScheduleSlot(slotId) {
@@ -2809,28 +2953,6 @@ function renderShare() {
       <h3>${lessonRoomMode === "practice" ? "실습곡 보기" : "날짜별 수업 내용"}</h3>
       ${renderLessonRoomContent(student, { admin: false })}
     </section>
-    <section class="share-section" id="shareScheduleSection">
-      <h3>레슨 시간표</h3>
-      <p class="share-section-note">내 시간은 표시되고, 다른 레슨 시간은 이름 없이 예약된 시간으로만 보입니다.</p>
-      <div class="schedule-view-toolbar compact">
-        <div class="segmented small-segmented">
-          <button class="${scheduleViewMode === "weekly" ? "active" : ""}" data-schedule-view-mode="weekly" type="button">위클리</button>
-          <button class="${scheduleViewMode === "calendar" ? "active" : ""}" data-schedule-view-mode="calendar" type="button">달력</button>
-        </div>
-        ${
-          scheduleViewMode === "calendar"
-            ? `<div class="schedule-month-controls">
-                <button class="secondary-button mini-button" data-schedule-month="-1" type="button">이전 달</button>
-                <strong>${new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(monthStartDate())}</strong>
-                <button class="secondary-button mini-button" data-schedule-month="1" type="button">다음 달</button>
-              </div>`
-            : ""
-        }
-      </div>
-      <div class="schedule-table-wrap compact">
-        ${scheduleViewMode === "calendar" ? renderScheduleCalendar({ admin: false, studentId: student.id }) : renderScheduleTable({ admin: false, studentId: student.id })}
-      </div>
-    </section>
   `;
 }
 
@@ -3141,6 +3263,20 @@ els.chordPickerDialog.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("dragstart", (event) => {
+  const scheduleSlot = event.target.closest("[data-schedule-drag-slot]");
+  if (scheduleSlot) {
+    scheduleSlot.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(
+      "text/plain",
+      JSON.stringify({
+        type: "schedule-slot",
+        slotId: scheduleSlot.dataset.scheduleDragSlot,
+      }),
+    );
+    return;
+  }
+
   const selectedChord = event.target.closest("[data-selected-chord]");
   if (selectedChord) {
     selectedChord.classList.add("dragging");
@@ -3169,6 +3305,13 @@ document.addEventListener("dragstart", (event) => {
 });
 
 document.addEventListener("dragover", (event) => {
+  const scheduleColumn = event.target.closest("[data-schedule-drop-day]");
+  if (scheduleColumn) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    return;
+  }
+
   const chordOrder = event.target.closest("[data-selected-chord], #selectedChordOrder");
   if (chordOrder && els.chordPickerDialog.open) {
     event.preventDefault();
@@ -3187,6 +3330,15 @@ document.addEventListener("dragover", (event) => {
 });
 
 document.addEventListener("drop", async (event) => {
+  const scheduleColumn = event.target.closest("[data-schedule-drop-day]");
+  if (scheduleColumn) {
+    event.preventDefault();
+    const payload = safeJsonParse(event.dataTransfer.getData("text/plain"));
+    if (payload?.type !== "schedule-slot") return;
+    moveScheduleSlot(payload.slotId, scheduleColumn.dataset.scheduleDropDay, scheduleMinutesFromPointer(event, scheduleColumn));
+    return;
+  }
+
   const chordOrder = event.target.closest("[data-selected-chord], #selectedChordOrder");
   if (chordOrder && els.chordPickerDialog.open) {
     event.preventDefault();
@@ -3210,6 +3362,46 @@ document.addEventListener("drop", async (event) => {
 document.addEventListener("dragend", () => {
   document.querySelectorAll(".lesson-block.dragging").forEach((node) => node.classList.remove("dragging"));
   document.querySelectorAll(".selected-chord-pill.dragging").forEach((node) => node.classList.remove("dragging"));
+  document.querySelectorAll(".schedule-timeline-slot.dragging").forEach((node) => node.classList.remove("dragging"));
+});
+
+document.addEventListener("pointerdown", (event) => {
+  const handle = event.target.closest("[data-schedule-resize-slot]");
+  if (!handle) return;
+  const card = handle.closest("[data-schedule-drag-slot]");
+  const column = handle.closest("[data-schedule-drop-day]");
+  const slot = (state.schedule || []).find((item) => item.id === handle.dataset.scheduleResizeSlot);
+  if (!card || !column || !slot) return;
+  event.preventDefault();
+  scheduleResizeState = {
+    slotId: slot.id,
+    startY: event.clientY,
+    startDuration: scheduleDurationMinutes(slot),
+    columnHeight: column.getBoundingClientRect().height,
+    card,
+  };
+  card.classList.add("resizing");
+});
+
+document.addEventListener("pointermove", (event) => {
+  if (!scheduleResizeState) return;
+  event.preventDefault();
+  const totalRange = SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES;
+  const deltaMinutes = ((event.clientY - scheduleResizeState.startY) / scheduleResizeState.columnHeight) * totalRange;
+  const nextDuration = Math.max(10, roundToScheduleSnap(scheduleResizeState.startDuration + deltaMinutes));
+  scheduleResizeState.card.style.height = `${Math.max(8, (nextDuration / totalRange) * 100)}%`;
+});
+
+document.addEventListener("pointerup", (event) => {
+  if (!scheduleResizeState) return;
+  event.preventDefault();
+  const totalRange = SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES;
+  const deltaMinutes = ((event.clientY - scheduleResizeState.startY) / scheduleResizeState.columnHeight) * totalRange;
+  const nextDuration = scheduleResizeState.startDuration + deltaMinutes;
+  const slotId = scheduleResizeState.slotId;
+  scheduleResizeState.card.classList.remove("resizing");
+  scheduleResizeState = null;
+  resizeScheduleSlot(slotId, nextDuration);
 });
 
 els.views.library.addEventListener("dragenter", (event) => {
@@ -3326,7 +3518,7 @@ els.shareStudentPicker.addEventListener("change", () => {
   activeShareStudentId = els.shareStudentPicker.value;
   renderShare();
 });
-els.shareScheduleLink.addEventListener("click", () => {
+els.shareScheduleLink?.addEventListener("click", () => {
   document.querySelector("#shareScheduleSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 document.addEventListener("input", (event) => {

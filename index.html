@@ -224,7 +224,7 @@
               <div>
                 <p class="eyebrow">Weekly timetable</p>
                 <h2>레슨 시간표</h2>
-                <p>오후 2시부터 8시까지의 레슨 시간을 30분 단위로 정리합니다.</p>
+                <p>오후 2시부터 8시까지의 레슨 시간을 직접 입력하거나 드래그해서 정리합니다.</p>
               </div>
             </div>
             <div class="schedule-view-toolbar">
@@ -246,7 +246,8 @@
             <div class="schedule-editor">
               <select id="scheduleStudent" aria-label="학생 선택"></select>
               <select id="scheduleDay" aria-label="요일 선택"></select>
-              <select id="scheduleHour" aria-label="시간 선택"></select>
+              <input id="scheduleHour" type="time" min="14:00" max="20:00" step="60" value="15:30" aria-label="레슨 시작 시간" />
+              <input id="scheduleDuration" type="number" min="10" max="360" step="5" value="30" aria-label="레슨 길이 분" />
               <select id="scheduleRecurrence" aria-label="반복 주기">
                 <option value="weekly">매주</option>
                 <option value="biweekly">격주</option>
@@ -289,7 +290,6 @@
                   <h2 id="shareStudentName">학생 레슨룸</h2>
                   <a class="resource-library-button" id="shareResourceLibrary" href="#" target="_blank" rel="noreferrer" hidden>레슨 자료실</a>
                   <button class="secondary-button chord-dictionary-link" data-view="chords" type="button">코드사전</button>
-                  <button class="secondary-button schedule-link" id="shareScheduleLink" type="button">레슨 시간표</button>
                 </div>
                 <div class="share-actions">
                   <select id="shareStudentPicker" aria-label="공유 학생 선택"></select>
