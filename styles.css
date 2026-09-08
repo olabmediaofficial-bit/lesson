@@ -97,6 +97,7 @@ button {
 .public-share .topbar,
 .public-share #libraryView,
 .public-share #roomsView,
+.public-share #scheduleView,
 .public-share #progressView {
   display: none;
 }
@@ -1391,6 +1392,134 @@ textarea {
   color: var(--accent);
   font-size: 13px;
   font-weight: 900;
+}
+
+.schedule-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.schedule-editor {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) minmax(96px, 0.7fr) minmax(104px, 0.8fr) minmax(160px, 1.4fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.schedule-table-wrap {
+  max-width: 100%;
+  overflow: auto;
+  padding: 2px 2px 10px;
+}
+
+.schedule-table-wrap.compact {
+  padding-bottom: 4px;
+}
+
+.schedule-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 8px;
+}
+
+.schedule-table th {
+  min-width: 86px;
+  padding: 9px 10px;
+  color: #5a3927;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.schedule-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border: 1px solid rgba(166, 125, 92, 0.22);
+  border-radius: 12px;
+  background: #f4eadf;
+}
+
+.schedule-table tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  border: 1px solid rgba(166, 125, 92, 0.18);
+  border-radius: 12px;
+  background: #fffaf4;
+  box-shadow: 5px 5px 12px rgba(91, 62, 43, 0.06);
+}
+
+.schedule-table td {
+  height: 58px;
+  min-width: 96px;
+  padding: 0;
+  vertical-align: stretch;
+}
+
+.schedule-table td > div,
+.schedule-empty span {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(166, 125, 92, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 250, 244, 0.74);
+  text-align: center;
+}
+
+.schedule-empty span {
+  color: #b6a89b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.schedule-booked > div {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  padding: 8px 28px 8px 10px;
+  border-color: rgba(120, 83, 54, 0.28);
+  background: #ead7c4;
+  color: #3e2a1d;
+  box-shadow:
+    inset 2px 2px 5px rgba(91, 62, 43, 0.08),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.68);
+}
+
+.schedule-booked.mine > div {
+  border-color: rgba(42, 104, 76, 0.3);
+  background: #dce9dd;
+  color: #244737;
+}
+
+.schedule-booked strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.schedule-booked small {
+  overflow: hidden;
+  color: rgba(62, 42, 29, 0.72);
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-booked .tiny-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.share-section-note {
+  margin: -2px 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .practice-song-row {
@@ -3271,7 +3400,8 @@ textarea,
   }
 
   .library-layout,
-  .room-layout {
+  .room-layout,
+  .schedule-editor {
     grid-template-columns: 1fr;
   }
 

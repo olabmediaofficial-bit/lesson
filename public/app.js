@@ -230,6 +230,7 @@ const CURRICULUM_SKILL_ALIASES = {
 const starterData = {
   practiceProgressScale: "four-step",
   resourceLibraryUrl: "",
+  schedule: [],
   blocks: [
     {
       id: "blk-1",
@@ -349,6 +350,17 @@ let metronome = {
   visibleBeat: 0,
 };
 
+const SCHEDULE_DAYS = [
+  { key: "mon", label: "월" },
+  { key: "tue", label: "화" },
+  { key: "wed", label: "수" },
+  { key: "thu", label: "목" },
+  { key: "fri", label: "금" },
+  { key: "sat", label: "토" },
+  { key: "sun", label: "일" },
+];
+const SCHEDULE_HOURS = Array.from({ length: 14 }, (_, index) => 9 + index);
+
 const $ = (selector) => document.querySelector(selector);
 
 function chordNameFromFile(fileName) {
@@ -425,6 +437,7 @@ const els = {
     library: $("#libraryView"),
     rooms: $("#roomsView"),
     progress: $("#progressView"),
+    schedule: $("#scheduleView"),
     chords: $("#chordsView"),
     share: $("#shareView"),
   },
@@ -458,10 +471,17 @@ const els = {
   lessonList: $("#lessonList"),
   progressStudentName: $("#progressStudentName"),
   progressContent: $("#progressContent"),
+  scheduleStudent: $("#scheduleStudent"),
+  scheduleDay: $("#scheduleDay"),
+  scheduleHour: $("#scheduleHour"),
+  scheduleNote: $("#scheduleNote"),
+  addScheduleSlot: $("#addScheduleSlot"),
+  adminScheduleTable: $("#adminScheduleTable"),
   shareStudentPicker: $("#shareStudentPicker"),
   copyPreviewShareLink: $("#copyPreviewShareLink"),
   shareStudentName: $("#shareStudentName"),
   shareResourceLibrary: $("#shareResourceLibrary"),
+  shareScheduleLink: $("#shareScheduleLink"),
   shareContent: $("#shareContent"),
   toast: $("#toast"),
   materialDialog: $("#materialDialog"),
@@ -512,6 +532,7 @@ const els = {
 function migrateState(data) {
   if (!data.blocks) return structuredClone(starterData);
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
+  data.schedule = Array.isArray(data.schedule) ? data.schedule : [];
   data.blocks = data.blocks.map((block) => ({
     ...block,
     scores: normalizeScores(block),
@@ -1270,6 +1291,7 @@ function switchView(view) {
     library: "블럭 보관소",
     rooms: "레슨룸",
     progress: "진도표",
+    schedule: "레슨 시간표",
     chords: "코드사전",
     share: "공유 화면",
   };
@@ -1290,6 +1312,7 @@ function render() {
   renderRoomChoices();
   renderRooms();
   renderProgress();
+  renderSchedule();
   renderChordDictionary();
   renderShare();
 }
@@ -2175,6 +2198,109 @@ function renderProgress() {
   `;
 }
 
+function scheduleStudentName(studentId) {
+  return state.students.find((student) => student.id === studentId)?.name || "학생";
+}
+
+function scheduleHourLabel(hour) {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
+function sortedScheduleSlots() {
+  const dayOrder = new Map(SCHEDULE_DAYS.map((day, index) => [day.key, index]));
+  return [...(state.schedule || [])].sort((a, b) => {
+    const dayDiff = (dayOrder.get(a.day) ?? 0) - (dayOrder.get(b.day) ?? 0);
+    return dayDiff || Number(a.hour) - Number(b.hour) || scheduleStudentName(a.studentId).localeCompare(scheduleStudentName(b.studentId), "ko");
+  });
+}
+
+function scheduleSlotAt(dayKey, hour) {
+  return sortedScheduleSlots().find((slot) => slot.day === dayKey && Number(slot.hour) === Number(hour));
+}
+
+function renderSchedule() {
+  if (!els.adminScheduleTable) return;
+  renderScheduleEditor();
+  els.adminScheduleTable.innerHTML = renderScheduleTable({ admin: true });
+}
+
+function renderScheduleEditor() {
+  if (!els.scheduleStudent) return;
+  els.scheduleStudent.innerHTML = state.students.length
+    ? state.students.map((student) => `<option value="${student.id}">${escapeHTML(student.name)}</option>`).join("")
+    : `<option value="">학생 없음</option>`;
+  els.scheduleStudent.disabled = !state.students.length;
+  els.scheduleDay.innerHTML = SCHEDULE_DAYS.map((day) => `<option value="${day.key}">${day.label}요일</option>`).join("");
+  els.scheduleHour.innerHTML = SCHEDULE_HOURS.map((hour) => `<option value="${hour}">${scheduleHourLabel(hour)}</option>`).join("");
+}
+
+function renderScheduleTable({ admin = false, studentId = "" } = {}) {
+  const slots = sortedScheduleSlots();
+  return `
+    <table class="schedule-table">
+      <thead>
+        <tr>
+          <th>시간</th>
+          ${SCHEDULE_DAYS.map((day) => `<th>${day.label}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>
+        ${SCHEDULE_HOURS.map(
+          (hour) => `
+            <tr>
+              <th>${scheduleHourLabel(hour)}</th>
+              ${SCHEDULE_DAYS.map((day) => renderScheduleCell(slots.find((slot) => slot.day === day.key && Number(slot.hour) === hour), { admin, studentId })).join("")}
+            </tr>
+          `,
+        ).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderScheduleCell(slot, { admin = false, studentId = "" } = {}) {
+  if (!slot) return `<td class="schedule-empty"><span>비어있음</span></td>`;
+  const isMine = studentId && slot.studentId === studentId;
+  const label = admin ? scheduleStudentName(slot.studentId) : isMine ? "내 레슨" : "레슨 예약됨";
+  const note = admin && slot.note ? `<small>${escapeHTML(slot.note)}</small>` : "";
+  return `
+    <td class="schedule-booked ${isMine ? "mine" : ""}">
+      <div>
+        <strong>${escapeHTML(label)}</strong>
+        ${note}
+        ${admin ? `<button class="icon-button tiny-button danger" type="button" data-delete-schedule-slot="${slot.id}" title="시간 삭제">×</button>` : ""}
+      </div>
+    </td>
+  `;
+}
+
+function addScheduleSlot() {
+  const studentId = els.scheduleStudent.value;
+  const day = els.scheduleDay.value;
+  const hour = Number(els.scheduleHour.value);
+  const note = els.scheduleNote.value.trim();
+  if (!studentId || !day || !hour) {
+    showToast("학생, 요일, 시간을 선택해주세요.");
+    return;
+  }
+  const existing = (state.schedule || []).find((slot) => slot.day === day && Number(slot.hour) === hour);
+  if (existing && !confirm("이미 레슨이 있는 시간입니다. 이 시간으로 바꿀까요?")) return;
+  state.schedule = (state.schedule || []).filter((slot) => !(slot.day === day && Number(slot.hour) === hour));
+  state.schedule.push({ id: uid("sch"), studentId, day, hour, note, updatedAt: nowIso() });
+  els.scheduleNote.value = "";
+  render();
+  saveStateInBackground({}, "레슨 시간을 저장했습니다.");
+}
+
+function deleteScheduleSlot(slotId) {
+  const slot = (state.schedule || []).find((item) => item.id === slotId);
+  if (!slot) return;
+  if (!confirm(`${scheduleStudentName(slot.studentId)}의 ${scheduleHourLabel(slot.hour)} 시간을 삭제할까요?`)) return;
+  state.schedule = (state.schedule || []).filter((item) => item.id !== slotId);
+  render();
+  saveStateInBackground({}, "레슨 시간을 삭제했습니다.");
+}
+
 function renderLessonPicker() {
   renderKindPicker(els.lessonTheoryPicker, "theory");
   renderKindPicker(els.lessonPracticePicker, "practice");
@@ -2511,6 +2637,13 @@ function renderShare() {
       <h3>${lessonRoomMode === "practice" ? "실습곡 보기" : "날짜별 수업 내용"}</h3>
       ${renderLessonRoomContent(student, { admin: false })}
     </section>
+    <section class="share-section" id="shareScheduleSection">
+      <h3>레슨 시간표</h3>
+      <p class="share-section-note">내 시간은 표시되고, 다른 레슨 시간은 이름 없이 예약된 시간으로만 보입니다.</p>
+      <div class="schedule-table-wrap compact">
+        ${renderScheduleTable({ admin: false, studentId: student.id })}
+      </div>
+    </section>
   `;
 }
 
@@ -2644,6 +2777,12 @@ document.addEventListener("click", (event) => {
 
   const deleteBlock = event.target.closest("[data-delete-block]");
   if (deleteBlock) deleteBlockById(deleteBlock.dataset.deleteBlock);
+
+  const deleteSchedule = event.target.closest("[data-delete-schedule-slot]");
+  if (deleteSchedule) {
+    deleteScheduleSlot(deleteSchedule.dataset.deleteScheduleSlot);
+    return;
+  }
 
   const imageButton = event.target.closest("[data-view-image]");
   if (imageButton) {
@@ -2979,6 +3118,9 @@ els.migrateStorageFiles.addEventListener("click", migrateEmbeddedFilesToStorage)
 els.shareStudentPicker.addEventListener("change", () => {
   activeShareStudentId = els.shareStudentPicker.value;
   renderShare();
+});
+els.shareScheduleLink.addEventListener("click", () => {
+  document.querySelector("#shareScheduleSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 document.addEventListener("input", (event) => {
   if (event.target.matches("[data-tempo-slider]")) {
@@ -3481,6 +3623,7 @@ async function deleteActiveStudent() {
   if (!confirm(`"${student.name}" 학생과 레슨룸 기록을 삭제할까요?`)) return;
 
   state.students = state.students.filter((item) => item.id !== student.id);
+  state.schedule = (state.schedule || []).filter((slot) => slot.studentId !== student.id);
   activeStudentId = state.students[0]?.id || "";
   activeShareStudentId = activeStudentId;
   pendingBlockIds.clear();
@@ -3491,6 +3634,7 @@ async function deleteActiveStudent() {
 
 $("#addStudent").addEventListener("click", () => els.studentDialog.showModal());
 els.deleteStudent.addEventListener("click", deleteActiveStudent);
+els.addScheduleSlot.addEventListener("click", addScheduleSlot);
 
 $("#studentForm").addEventListener("submit", async (event) => {
   event.preventDefault();
