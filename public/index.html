@@ -229,13 +229,17 @@
             </div>
             <div class="schedule-view-toolbar">
               <div class="segmented small-segmented">
-                <button class="active" data-schedule-view-mode="weekly" type="button">위클리</button>
-                <button data-schedule-view-mode="calendar" type="button">달력</button>
+                <button class="active" data-schedule-view-mode="weekly" type="button">주간</button>
+                <button data-schedule-view-mode="calendar" type="button">월간</button>
               </div>
               <div class="schedule-month-controls">
                 <button class="secondary-button mini-button" data-schedule-month="-1" type="button">이전 달</button>
                 <strong id="scheduleMonthLabel">이번 달</strong>
                 <button class="secondary-button mini-button" data-schedule-month="1" type="button">다음 달</button>
+              </div>
+              <div class="schedule-export-actions">
+                <button class="secondary-button mini-button" data-export-schedule="named" type="button">실명 시간표 저장</button>
+                <button class="secondary-button mini-button" data-export-schedule="anonymous" type="button">익명 시간표 저장</button>
               </div>
             </div>
             <div class="schedule-piano-editor">
@@ -251,6 +255,7 @@
               <select id="scheduleRecurrence" aria-label="반복 주기">
                 <option value="weekly">매주</option>
                 <option value="biweekly">격주</option>
+                <option value="once">하루</option>
               </select>
               <input id="scheduleStartDate" type="date" aria-label="반복 기준 날짜" />
               <input id="scheduleNote" type="text" placeholder="메모 선택사항" aria-label="시간표 메모" />

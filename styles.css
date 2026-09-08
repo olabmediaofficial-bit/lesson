@@ -1408,6 +1408,13 @@ textarea {
   gap: 10px;
 }
 
+.schedule-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .schedule-view-toolbar.compact {
   margin-bottom: 10px;
 }
@@ -1470,12 +1477,12 @@ textarea {
 
 .schedule-timeline {
   --schedule-hour-height: 86px;
-  min-width: 880px;
+  min-width: 800px;
 }
 
 .schedule-timeline-head {
   display: grid;
-  grid-template-columns: 64px repeat(7, minmax(108px, 1fr));
+  grid-template-columns: 64px repeat(6, minmax(108px, 1fr));
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -1493,7 +1500,7 @@ textarea {
 
 .schedule-timeline-body {
   display: grid;
-  grid-template-columns: 64px repeat(7, minmax(108px, 1fr));
+  grid-template-columns: 64px repeat(6, minmax(108px, 1fr));
   gap: 8px;
   height: calc(var(--schedule-hours) * var(--schedule-hour-height));
 }
@@ -1551,6 +1558,22 @@ textarea {
     -3px -3px 10px rgba(255, 255, 255, 0.78);
 }
 
+.schedule-timeline-slot.guitar,
+.schedule-booked.guitar,
+.schedule-calendar-item.guitar {
+  border-color: rgba(176, 122, 77, 0.34);
+  background: #f1dccb;
+  color: #4a2f20;
+}
+
+.schedule-timeline-slot.piano,
+.schedule-booked.piano,
+.schedule-calendar-item.piano {
+  border-color: rgba(78, 131, 184, 0.34);
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
 .schedule-timeline-slot.dragging,
 .schedule-timeline-slot.resizing {
   opacity: 0.74;
@@ -1563,6 +1586,18 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.schedule-timeline-slot .tiny-button {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.schedule-timeline-slot:hover .tiny-button,
+.schedule-timeline-slot:focus-within .tiny-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .schedule-timeline-slot strong {
@@ -1704,18 +1739,27 @@ textarea {
   position: absolute;
   top: 5px;
   right: 5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.schedule-booked:hover .tiny-button,
+.schedule-booked:focus-within .tiny-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .schedule-calendar {
   display: grid;
   gap: 8px;
-  min-width: 820px;
+  min-width: 720px;
 }
 
 .schedule-calendar-head,
 .schedule-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(108px, 1fr));
+  grid-template-columns: repeat(6, minmax(108px, 1fr));
   gap: 8px;
 }
 

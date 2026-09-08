@@ -361,7 +361,6 @@ const SCHEDULE_DAYS = [
   { key: "thu", label: "목" },
   { key: "fri", label: "금" },
   { key: "sat", label: "토" },
-  { key: "sun", label: "일" },
 ];
 const SCHEDULE_START_MINUTES = 14 * 60;
 const SCHEDULE_END_MINUTES = 20 * 60;
@@ -2239,6 +2238,14 @@ function scheduleStudentTypeLabel(studentId) {
   return schedulePerson(studentId)?.type === "piano" ? "피아노" : "기타";
 }
 
+function scheduleStudentType(studentId) {
+  return schedulePerson(studentId)?.type === "piano" ? "piano" : "guitar";
+}
+
+function scheduleSlotTypeClass(slot) {
+  return scheduleStudentType(slot.studentId) === "piano" ? "piano" : "guitar";
+}
+
 function scheduleTimeMinutes(slot) {
   if (slot.time != null) return Number(slot.time);
   return Number(slot.hour || 0) * 60 + Number(slot.minute || 0);
@@ -2288,11 +2295,22 @@ function clampScheduleStart(minutes, duration = 30) {
 }
 
 function scheduleRecurrenceLabel(slot) {
+  if (slot.recurrence === "once") return "하루";
   return slot.recurrence === "biweekly" ? "격주" : "매주";
 }
 
 function scheduleReferenceDate(slot) {
   return slot.startDate || today();
+}
+
+function scheduleDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function scheduleDayFromDate(value) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][date.getDay()];
 }
 
 function sortedScheduleSlots() {
@@ -2304,8 +2322,12 @@ function sortedScheduleSlots() {
 }
 
 function slotOccursOnDate(slot, date) {
-  const dayKey = SCHEDULE_DAYS[(date.getDay() + 6) % 7].key;
+  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][date.getDay()];
   if (slot.day !== dayKey) return false;
+  if (slot.recurrence === "once") {
+    const dateKey = scheduleDateKey(date);
+    return scheduleReferenceDate(slot) === dateKey;
+  }
   if (slot.recurrence !== "biweekly") return true;
   const base = new Date(`${scheduleReferenceDate(slot)}T00:00:00`);
   if (Number.isNaN(base.getTime())) return true;
@@ -2398,7 +2420,7 @@ function renderScheduleCell(slots, { admin = false, studentId = "" } = {}) {
           const label = admin ? scheduleStudentName(slot.studentId) : isMine ? "내 레슨" : "레슨 예약됨";
           const meta = admin ? `<small>${scheduleStudentTypeLabel(slot.studentId)} · ${scheduleRecurrenceLabel(slot)}${slot.note ? ` · ${escapeHTML(slot.note)}` : ""}</small>` : `<small>${scheduleRecurrenceLabel(slot)}</small>`;
           return `
-            <div class="schedule-booked ${isMine ? "mine" : ""}">
+            <div class="schedule-booked ${scheduleSlotTypeClass(slot)} ${isMine ? "mine" : ""}">
               <strong>${escapeHTML(label)}</strong>
               ${meta}
               ${admin ? `<button class="icon-button tiny-button danger" type="button" data-delete-schedule-slot="${slot.id}" title="시간 삭제">×</button>` : ""}
@@ -2450,7 +2472,7 @@ function renderScheduleTimelineSlot(slot) {
   const top = ((scheduleTimeMinutes(slot) - SCHEDULE_START_MINUTES) / totalRange) * 100;
   const height = Math.max(8, (scheduleDurationMinutes(slot) / totalRange) * 100);
   return `
-    <article class="schedule-timeline-slot" draggable="true" data-schedule-drag-slot="${slot.id}" style="top:${top}%;height:${height}%">
+    <article class="schedule-timeline-slot ${scheduleSlotTypeClass(slot)}" draggable="true" data-schedule-drag-slot="${slot.id}" style="top:${top}%;height:${height}%">
       <div>
         <strong>${escapeHTML(scheduleStudentName(slot.studentId))}</strong>
         <small>${scheduleTimeRangeLabel(slot)} · ${scheduleStudentTypeLabel(slot.studentId)} · ${scheduleRecurrenceLabel(slot)}${slot.note ? ` · ${escapeHTML(slot.note)}` : ""}</small>
@@ -2465,18 +2487,26 @@ function renderScheduleCalendar({ admin = false, studentId = "" } = {}) {
   const first = monthStartDate();
   const year = first.getFullYear();
   const month = first.getMonth();
-  const startOffset = (first.getDay() + 6) % 7;
+  const startOffset = first.getDay() === 0 ? 6 : first.getDay() - 1;
   const start = new Date(year, month, 1 - startOffset);
   const slots = sortedScheduleSlots();
+  const dates = [];
+  const cursor = new Date(start);
+  while (dates.length < 36 || cursor.getMonth() === month) {
+    if (cursor.getDay() !== 0) dates.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  while (dates.length % SCHEDULE_DAYS.length !== 0) {
+    if (cursor.getDay() !== 0) dates.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
   return `
     <div class="schedule-calendar">
       <div class="schedule-calendar-head">
         ${SCHEDULE_DAYS.map((day) => `<span>${day.label}</span>`).join("")}
       </div>
       <div class="schedule-calendar-grid">
-        ${Array.from({ length: 42 }, (_, index) => {
-          const date = new Date(start);
-          date.setDate(start.getDate() + index);
+        ${dates.map((date) => {
           const dateSlots = slots.filter((slot) => slotOccursOnDate(slot, date));
           const muted = date.getMonth() !== month;
           return `
@@ -2497,7 +2527,7 @@ function renderScheduleCalendarItem(slot, { admin = false, studentId = "" } = {}
   const isMine = studentId && slot.studentId === studentId;
   const label = admin ? scheduleStudentName(slot.studentId) : isMine ? "내 레슨" : "레슨 예약됨";
   return `
-    <span class="schedule-calendar-item ${isMine ? "mine" : ""}">
+    <span class="schedule-calendar-item ${scheduleSlotTypeClass(slot)} ${isMine ? "mine" : ""}">
       <b>${scheduleTimeRangeLabel(slot)}</b>
       ${escapeHTML(label)}
       <small>${admin ? `${scheduleStudentTypeLabel(slot.studentId)} · ${scheduleRecurrenceLabel(slot)}` : scheduleRecurrenceLabel(slot)}</small>
@@ -2507,14 +2537,18 @@ function renderScheduleCalendarItem(slot, { admin = false, studentId = "" } = {}
 
 function addScheduleSlot() {
   const studentId = els.scheduleStudent.value;
-  const day = els.scheduleDay.value;
-  const time = parseScheduleTimeInput(els.scheduleHour.value);
-  const duration = Number(els.scheduleDuration?.value || 30);
   const recurrence = els.scheduleRecurrence.value || "weekly";
   const startDate = els.scheduleStartDate.value || today();
+  const day = recurrence === "once" ? scheduleDayFromDate(startDate) : els.scheduleDay.value;
+  const time = parseScheduleTimeInput(els.scheduleHour.value);
+  const duration = Number(els.scheduleDuration?.value || 30);
   const note = els.scheduleNote.value.trim();
   if (!studentId || !day || Number.isNaN(time) || Number.isNaN(duration)) {
     showToast("학생, 요일, 시간을 선택해주세요.");
+    return;
+  }
+  if (!SCHEDULE_DAYS.some((item) => item.key === day)) {
+    showToast("시간표는 월요일부터 토요일까지만 사용할 수 있습니다.");
     return;
   }
   if (time < SCHEDULE_START_MINUTES || time >= SCHEDULE_END_MINUTES || time + duration > SCHEDULE_END_MINUTES) {
@@ -2541,6 +2575,9 @@ function scheduleSlotsOverlap(left, right) {
   if (leftStart >= rightEnd || rightStart >= leftEnd) return false;
   const leftRecurrence = left.recurrence || "weekly";
   const rightRecurrence = right.recurrence || "weekly";
+  if (leftRecurrence === "once" && rightRecurrence === "once") return scheduleReferenceDate(left) === scheduleReferenceDate(right);
+  if (leftRecurrence === "once") return slotOccursOnDate(right, new Date(`${scheduleReferenceDate(left)}T00:00:00`));
+  if (rightRecurrence === "once") return slotOccursOnDate(left, new Date(`${scheduleReferenceDate(right)}T00:00:00`));
   if (leftRecurrence === "weekly" || rightRecurrence === "weekly") return true;
   const leftBase = new Date(`${scheduleReferenceDate(left)}T00:00:00`);
   const rightBase = new Date(`${scheduleReferenceDate(right)}T00:00:00`);
@@ -2584,6 +2621,177 @@ function scheduleMinutesFromPointer(event, column) {
   const rect = column.getBoundingClientRect();
   const ratio = (event.clientY - rect.top) / rect.height;
   return SCHEDULE_START_MINUTES + ratio * (SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES);
+}
+
+function scheduleExportLabel(slot, mode) {
+  if (mode === "anonymous") return `${scheduleStudentTypeLabel(slot.studentId)} 레슨`;
+  return `${scheduleStudentName(slot.studentId)} (${scheduleStudentTypeLabel(slot.studentId)})`;
+}
+
+function scheduleExportColor(slot) {
+  return scheduleStudentType(slot.studentId) === "piano"
+    ? { fill: "#dbeafe", stroke: "#93c5fd", text: "#1e3a8a" }
+    : { fill: "#f1dccb", stroke: "#d0a47f", text: "#4a2f20" };
+}
+
+function scheduleExportSlotsForView() {
+  const slots = sortedScheduleSlots().filter((slot) => SCHEDULE_DAYS.some((day) => day.key === slot.day));
+  if (scheduleViewMode !== "calendar") return slots;
+  const first = monthStartDate();
+  const month = first.getMonth();
+  return slots.filter((slot) => {
+    if (slot.recurrence === "once") {
+      const date = new Date(`${scheduleReferenceDate(slot)}T00:00:00`);
+      return !Number.isNaN(date.getTime()) && date.getMonth() === month && date.getFullYear() === first.getFullYear();
+    }
+    return true;
+  });
+}
+
+function scheduleSvgText(text, x, y, options = {}) {
+  const attrs = [
+    `x="${x}"`,
+    `y="${y}"`,
+    `font-size="${options.size || 18}"`,
+    `font-weight="${options.weight || 800}"`,
+    `fill="${options.fill || "#3e2a1d"}"`,
+  ];
+  if (options.anchor) attrs.push(`text-anchor="${options.anchor}"`);
+  return `<text ${attrs.join(" ")}>${escapeHTML(text)}</text>`;
+}
+
+function buildScheduleExportSvg(mode = "named") {
+  return scheduleViewMode === "calendar" ? buildScheduleMonthExportSvg(mode) : buildScheduleWeekExportSvg(mode);
+}
+
+function buildScheduleWeekExportSvg(mode = "named") {
+  const width = 1400;
+  const height = 900;
+  const margin = 46;
+  const titleHeight = 82;
+  const timeWidth = 90;
+  const dayGap = 10;
+  const dayWidth = (width - margin * 2 - timeWidth - dayGap * (SCHEDULE_DAYS.length - 1)) / SCHEDULE_DAYS.length;
+  const bodyTop = margin + titleHeight;
+  const bodyHeight = height - bodyTop - margin;
+  const totalRange = SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES;
+  const slots = scheduleExportSlotsForView();
+  const title = `레슨 시간표 · 주간 · ${mode === "anonymous" ? "익명" : "실명"}`;
+  const parts = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<rect width="100%" height="100%" fill="#f8f2ea"/>`,
+    scheduleSvgText(title, margin, 58, { size: 30, weight: 900 }),
+    scheduleSvgText("오후 2시 - 8시", width - margin, 58, { size: 18, weight: 900, fill: "#8a6951", anchor: "end" }),
+  ];
+  SCHEDULE_TIMES.forEach((time) => {
+    const y = bodyTop + ((Number(time.key) - SCHEDULE_START_MINUTES) / totalRange) * bodyHeight;
+    parts.push(scheduleSvgText(scheduleTimeLabel(time.key), margin + timeWidth - 14, y + 5, { size: 14, fill: "#8a6951", anchor: "end" }));
+  });
+  SCHEDULE_DAYS.forEach((day, dayIndex) => {
+    const x = margin + timeWidth + dayIndex * (dayWidth + dayGap);
+    parts.push(`<rect x="${x}" y="${bodyTop - 40}" width="${dayWidth}" height="30" rx="12" fill="#ead7c4" stroke="#d0a47f"/>`);
+    parts.push(scheduleSvgText(day.label, x + dayWidth / 2, bodyTop - 18, { size: 17, weight: 900, anchor: "middle" }));
+    parts.push(`<rect x="${x}" y="${bodyTop}" width="${dayWidth}" height="${bodyHeight}" rx="18" fill="#fffaf4" stroke="#d7bda5"/>`);
+    SCHEDULE_TIMES.slice(0, -1).forEach((time) => {
+      const y = bodyTop + ((Number(time.key) - SCHEDULE_START_MINUTES) / totalRange) * bodyHeight;
+      parts.push(`<line x1="${x}" y1="${y}" x2="${x + dayWidth}" y2="${y}" stroke="#e2cdb9" stroke-dasharray="6 7"/>`);
+    });
+    slots
+      .filter((slot) => slot.day === day.key)
+      .forEach((slot) => {
+        const color = scheduleExportColor(slot);
+        const top = bodyTop + ((scheduleTimeMinutes(slot) - SCHEDULE_START_MINUTES) / totalRange) * bodyHeight;
+        const slotHeight = Math.max(42, (scheduleDurationMinutes(slot) / totalRange) * bodyHeight);
+        parts.push(`<rect x="${x + 9}" y="${top + 4}" width="${dayWidth - 18}" height="${slotHeight - 8}" rx="14" fill="${color.fill}" stroke="${color.stroke}"/>`);
+        parts.push(scheduleSvgText(scheduleExportLabel(slot, mode), x + 21, top + 30, { size: 16, weight: 900, fill: color.text }));
+        parts.push(scheduleSvgText(`${scheduleTimeRangeLabel(slot)} · ${scheduleRecurrenceLabel(slot)}`, x + 21, top + 54, { size: 13, weight: 800, fill: color.text }));
+      });
+  });
+  parts.push(`</svg>`);
+  return parts.join("");
+}
+
+function buildScheduleMonthExportSvg(mode = "named") {
+  const width = 1400;
+  const height = 980;
+  const margin = 44;
+  const headHeight = 92;
+  const gap = 8;
+  const first = monthStartDate();
+  const monthLabel = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(first);
+  const startOffset = first.getDay() === 0 ? 6 : first.getDay() - 1;
+  const start = new Date(first.getFullYear(), first.getMonth(), 1 - startOffset);
+  const dates = [];
+  const cursor = new Date(start);
+  while (dates.length < 36 || cursor.getMonth() === first.getMonth()) {
+    if (cursor.getDay() !== 0) dates.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  while (dates.length % SCHEDULE_DAYS.length !== 0) {
+    if (cursor.getDay() !== 0) dates.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  const rows = Math.ceil(dates.length / SCHEDULE_DAYS.length);
+  const cellWidth = (width - margin * 2 - gap * (SCHEDULE_DAYS.length - 1)) / SCHEDULE_DAYS.length;
+  const cellHeight = (height - margin - headHeight - rows * gap) / rows;
+  const slots = sortedScheduleSlots();
+  const parts = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<rect width="100%" height="100%" fill="#f8f2ea"/>`,
+    scheduleSvgText(`레슨 시간표 · 월간 · ${mode === "anonymous" ? "익명" : "실명"}`, margin, 58, { size: 30, weight: 900 }),
+    scheduleSvgText(monthLabel, width - margin, 58, { size: 20, weight: 900, fill: "#8a6951", anchor: "end" }),
+  ];
+  SCHEDULE_DAYS.forEach((day, index) => {
+    const x = margin + index * (cellWidth + gap);
+    parts.push(`<rect x="${x}" y="${headHeight - 22}" width="${cellWidth}" height="30" rx="12" fill="#ead7c4" stroke="#d0a47f"/>`);
+    parts.push(scheduleSvgText(day.label, x + cellWidth / 2, headHeight, { size: 16, weight: 900, anchor: "middle" }));
+  });
+  dates.forEach((date, index) => {
+    const col = index % SCHEDULE_DAYS.length;
+    const row = Math.floor(index / SCHEDULE_DAYS.length);
+    const x = margin + col * (cellWidth + gap);
+    const y = headHeight + 18 + row * (cellHeight + gap);
+    const muted = date.getMonth() !== first.getMonth();
+    const dateSlots = slots.filter((slot) => slotOccursOnDate(slot, date));
+    parts.push(`<rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}" rx="16" fill="${muted ? "#efe7dc" : "#fffaf4"}" stroke="#d7bda5" opacity="${muted ? "0.58" : "1"}"/>`);
+    parts.push(scheduleSvgText(String(date.getDate()), x + 14, y + 25, { size: 15, weight: 900, fill: "#5a3927" }));
+    dateSlots.slice(0, 4).forEach((slot, slotIndex) => {
+      const color = scheduleExportColor(slot);
+      const itemY = y + 38 + slotIndex * 28;
+      parts.push(`<rect x="${x + 10}" y="${itemY}" width="${cellWidth - 20}" height="22" rx="9" fill="${color.fill}" stroke="${color.stroke}"/>`);
+      parts.push(scheduleSvgText(`${scheduleTimeLabel(scheduleTimeMinutes(slot))} ${scheduleExportLabel(slot, mode)}`, x + 18, itemY + 16, { size: 12, weight: 900, fill: color.text }));
+    });
+    if (dateSlots.length > 4) parts.push(scheduleSvgText(`+${dateSlots.length - 4}`, x + cellWidth - 16, y + cellHeight - 12, { size: 12, weight: 900, fill: "#8a6951", anchor: "end" }));
+  });
+  parts.push(`</svg>`);
+  return parts.join("");
+}
+
+function downloadScheduleImage(mode) {
+  const svg = buildScheduleExportSvg(mode);
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const image = new Image();
+  image.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#f8f2ea";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0);
+    URL.revokeObjectURL(url);
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `lesson-schedule-${scheduleViewMode}-${mode}-${today()}.png`;
+    link.click();
+    showToast("시간표 이미지를 저장했습니다.");
+  };
+  image.onerror = () => {
+    URL.revokeObjectURL(url);
+    showToast("시간표 이미지를 만들지 못했습니다.");
+  };
+  image.src = url;
 }
 
 function deleteScheduleSlot(slotId) {
@@ -3110,6 +3318,12 @@ document.addEventListener("click", (event) => {
   if (scheduleMonthButton) {
     scheduleMonthDate = new Date(scheduleMonthDate.getFullYear(), scheduleMonthDate.getMonth() + Number(scheduleMonthButton.dataset.scheduleMonth), 1);
     render();
+    return;
+  }
+
+  const exportScheduleButton = event.target.closest("[data-export-schedule]");
+  if (exportScheduleButton) {
+    downloadScheduleImage(exportScheduleButton.dataset.exportSchedule);
     return;
   }
 
