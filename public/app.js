@@ -231,6 +231,7 @@ const starterData = {
   practiceProgressScale: "four-step",
   resourceLibraryUrl: "",
   schedule: [],
+  schedulePeople: [],
   blocks: [
     {
       id: "blk-1",
@@ -312,6 +313,8 @@ let activeShareStudentId = activeStudentId;
 let activeKindFilter = "all";
 let activeChordCategory = "all";
 let lessonRoomMode = "weekly";
+let scheduleViewMode = "weekly";
+let scheduleMonthDate = new Date();
 let practiceRoomSort = "date";
 let practiceSortDirection = {
   date: "desc",
@@ -359,7 +362,14 @@ const SCHEDULE_DAYS = [
   { key: "sat", label: "토" },
   { key: "sun", label: "일" },
 ];
-const SCHEDULE_HOURS = Array.from({ length: 14 }, (_, index) => 9 + index);
+const SCHEDULE_TIMES = Array.from({ length: 13 }, (_, index) => {
+  const totalMinutes = 14 * 60 + index * 30;
+  return {
+    key: String(totalMinutes),
+    hour: Math.floor(totalMinutes / 60),
+    minute: totalMinutes % 60,
+  };
+});
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -474,8 +484,14 @@ const els = {
   scheduleStudent: $("#scheduleStudent"),
   scheduleDay: $("#scheduleDay"),
   scheduleHour: $("#scheduleHour"),
+  scheduleRecurrence: $("#scheduleRecurrence"),
+  scheduleStartDate: $("#scheduleStartDate"),
   scheduleNote: $("#scheduleNote"),
   addScheduleSlot: $("#addScheduleSlot"),
+  schedulePianoName: $("#schedulePianoName"),
+  addPianoScheduleStudent: $("#addPianoScheduleStudent"),
+  pianoScheduleStudentList: $("#pianoScheduleStudentList"),
+  scheduleMonthLabel: $("#scheduleMonthLabel"),
   adminScheduleTable: $("#adminScheduleTable"),
   shareStudentPicker: $("#shareStudentPicker"),
   copyPreviewShareLink: $("#copyPreviewShareLink"),
@@ -533,6 +549,7 @@ function migrateState(data) {
   if (!data.blocks) return structuredClone(starterData);
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
   data.schedule = Array.isArray(data.schedule) ? data.schedule : [];
+  data.schedulePeople = Array.isArray(data.schedulePeople) ? data.schedulePeople : [];
   data.blocks = data.blocks.map((block) => ({
     ...block,
     scores: normalizeScores(block),
@@ -2198,40 +2215,108 @@ function renderProgress() {
   `;
 }
 
-function scheduleStudentName(studentId) {
-  return state.students.find((student) => student.id === studentId)?.name || "학생";
+function schedulePeople() {
+  return [
+    ...state.students.map((student) => ({ id: student.id, name: student.name, type: "guitar" })),
+    ...(state.schedulePeople || []).map((person) => ({ ...person, type: person.type || "piano" })),
+  ];
 }
 
-function scheduleHourLabel(hour) {
-  return `${String(hour).padStart(2, "0")}:00`;
+function schedulePerson(studentId) {
+  return schedulePeople().find((person) => person.id === studentId);
+}
+
+function scheduleStudentName(studentId) {
+  return schedulePerson(studentId)?.name || "학생";
+}
+
+function scheduleStudentTypeLabel(studentId) {
+  return schedulePerson(studentId)?.type === "piano" ? "피아노" : "기타";
+}
+
+function scheduleTimeMinutes(slot) {
+  if (slot.time != null) return Number(slot.time);
+  return Number(slot.hour || 0) * 60 + Number(slot.minute || 0);
+}
+
+function scheduleTimeLabel(value) {
+  const totalMinutes = Number(value);
+  const hour = Math.floor(totalMinutes / 60);
+  const minute = totalMinutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function scheduleRecurrenceLabel(slot) {
+  return slot.recurrence === "biweekly" ? "격주" : "매주";
+}
+
+function scheduleReferenceDate(slot) {
+  return slot.startDate || today();
 }
 
 function sortedScheduleSlots() {
   const dayOrder = new Map(SCHEDULE_DAYS.map((day, index) => [day.key, index]));
   return [...(state.schedule || [])].sort((a, b) => {
     const dayDiff = (dayOrder.get(a.day) ?? 0) - (dayOrder.get(b.day) ?? 0);
-    return dayDiff || Number(a.hour) - Number(b.hour) || scheduleStudentName(a.studentId).localeCompare(scheduleStudentName(b.studentId), "ko");
+    return dayDiff || scheduleTimeMinutes(a) - scheduleTimeMinutes(b) || scheduleStudentName(a.studentId).localeCompare(scheduleStudentName(b.studentId), "ko");
   });
 }
 
-function scheduleSlotAt(dayKey, hour) {
-  return sortedScheduleSlots().find((slot) => slot.day === dayKey && Number(slot.hour) === Number(hour));
+function slotOccursOnDate(slot, date) {
+  const dayKey = SCHEDULE_DAYS[(date.getDay() + 6) % 7].key;
+  if (slot.day !== dayKey) return false;
+  if (slot.recurrence !== "biweekly") return true;
+  const base = new Date(`${scheduleReferenceDate(slot)}T00:00:00`);
+  if (Number.isNaN(base.getTime())) return true;
+  const diffDays = Math.floor((date - base) / 86400000);
+  return diffDays >= 0 && Math.floor(diffDays / 7) % 2 === 0;
+}
+
+function monthStartDate() {
+  return new Date(scheduleMonthDate.getFullYear(), scheduleMonthDate.getMonth(), 1);
 }
 
 function renderSchedule() {
   if (!els.adminScheduleTable) return;
   renderScheduleEditor();
-  els.adminScheduleTable.innerHTML = renderScheduleTable({ admin: true });
+  document.querySelectorAll("[data-schedule-view-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.scheduleViewMode === scheduleViewMode);
+  });
+  document.querySelectorAll(".schedule-month-controls").forEach((node) => {
+    node.hidden = scheduleViewMode !== "calendar";
+  });
+  els.scheduleMonthLabel.textContent = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(monthStartDate());
+  els.adminScheduleTable.innerHTML = scheduleViewMode === "calendar" ? renderScheduleCalendar({ admin: true }) : renderScheduleTable({ admin: true });
 }
 
 function renderScheduleEditor() {
   if (!els.scheduleStudent) return;
-  els.scheduleStudent.innerHTML = state.students.length
-    ? state.students.map((student) => `<option value="${student.id}">${escapeHTML(student.name)}</option>`).join("")
+  const people = schedulePeople();
+  els.scheduleStudent.innerHTML = people.length
+    ? people.map((person) => `<option value="${person.id}">[${person.type === "piano" ? "피아노" : "기타"}] ${escapeHTML(person.name)}</option>`).join("")
     : `<option value="">학생 없음</option>`;
-  els.scheduleStudent.disabled = !state.students.length;
+  els.scheduleStudent.disabled = !people.length;
   els.scheduleDay.innerHTML = SCHEDULE_DAYS.map((day) => `<option value="${day.key}">${day.label}요일</option>`).join("");
-  els.scheduleHour.innerHTML = SCHEDULE_HOURS.map((hour) => `<option value="${hour}">${scheduleHourLabel(hour)}</option>`).join("");
+  els.scheduleHour.innerHTML = SCHEDULE_TIMES.map((time) => `<option value="${time.key}">${scheduleTimeLabel(time.key)}</option>`).join("");
+  if (els.scheduleStartDate && !els.scheduleStartDate.value) els.scheduleStartDate.value = today();
+  renderPianoScheduleStudentList();
+}
+
+function renderPianoScheduleStudentList() {
+  if (!els.pianoScheduleStudentList) return;
+  const people = state.schedulePeople || [];
+  els.pianoScheduleStudentList.innerHTML = people.length
+    ? people
+        .map(
+          (person) => `
+            <span class="piano-student-pill">
+              피아노 · ${escapeHTML(person.name)}
+              <button class="icon-button tiny-button danger" type="button" data-delete-schedule-person="${person.id}" aria-label="${escapeHTML(person.name)} 삭제">×</button>
+            </span>
+          `,
+        )
+        .join("")
+    : `<span class="empty-inline">시간표 전용 피아노 학생이 없습니다.</span>`;
 }
 
 function renderScheduleTable({ admin = false, studentId = "" } = {}) {
@@ -2245,11 +2330,11 @@ function renderScheduleTable({ admin = false, studentId = "" } = {}) {
         </tr>
       </thead>
       <tbody>
-        ${SCHEDULE_HOURS.map(
-          (hour) => `
+        ${SCHEDULE_TIMES.map(
+          (time) => `
             <tr>
-              <th>${scheduleHourLabel(hour)}</th>
-              ${SCHEDULE_DAYS.map((day) => renderScheduleCell(slots.find((slot) => slot.day === day.key && Number(slot.hour) === hour), { admin, studentId })).join("")}
+              <th>${scheduleTimeLabel(time.key)}</th>
+              ${SCHEDULE_DAYS.map((day) => renderScheduleCell(slots.filter((slot) => slot.day === day.key && scheduleTimeMinutes(slot) === Number(time.key)), { admin, studentId })).join("")}
             </tr>
           `,
         ).join("")}
@@ -2258,47 +2343,134 @@ function renderScheduleTable({ admin = false, studentId = "" } = {}) {
   `;
 }
 
-function renderScheduleCell(slot, { admin = false, studentId = "" } = {}) {
-  if (!slot) return `<td class="schedule-empty"><span>비어있음</span></td>`;
+function renderScheduleCell(slots, { admin = false, studentId = "" } = {}) {
+  if (!slots.length) return `<td class="schedule-empty"><span>비어있음</span></td>`;
+  return `
+    <td class="schedule-booked-cell">
+      ${slots
+        .map((slot) => {
+          const isMine = studentId && slot.studentId === studentId;
+          const label = admin ? scheduleStudentName(slot.studentId) : isMine ? "내 레슨" : "레슨 예약됨";
+          const meta = admin ? `<small>${scheduleStudentTypeLabel(slot.studentId)} · ${scheduleRecurrenceLabel(slot)}${slot.note ? ` · ${escapeHTML(slot.note)}` : ""}</small>` : `<small>${scheduleRecurrenceLabel(slot)}</small>`;
+          return `
+            <div class="schedule-booked ${isMine ? "mine" : ""}">
+              <strong>${escapeHTML(label)}</strong>
+              ${meta}
+              ${admin ? `<button class="icon-button tiny-button danger" type="button" data-delete-schedule-slot="${slot.id}" title="시간 삭제">×</button>` : ""}
+            </div>
+          `;
+        })
+        .join("")}
+    </td>
+  `;
+}
+
+function renderScheduleCalendar({ admin = false, studentId = "" } = {}) {
+  const first = monthStartDate();
+  const year = first.getFullYear();
+  const month = first.getMonth();
+  const startOffset = (first.getDay() + 6) % 7;
+  const start = new Date(year, month, 1 - startOffset);
+  const slots = sortedScheduleSlots();
+  return `
+    <div class="schedule-calendar">
+      <div class="schedule-calendar-head">
+        ${SCHEDULE_DAYS.map((day) => `<span>${day.label}</span>`).join("")}
+      </div>
+      <div class="schedule-calendar-grid">
+        ${Array.from({ length: 42 }, (_, index) => {
+          const date = new Date(start);
+          date.setDate(start.getDate() + index);
+          const dateSlots = slots.filter((slot) => slotOccursOnDate(slot, date));
+          const muted = date.getMonth() !== month;
+          return `
+            <article class="schedule-date-card ${muted ? "muted" : ""}">
+              <time>${date.getDate()}</time>
+              <div>
+                ${dateSlots.length ? dateSlots.map((slot) => renderScheduleCalendarItem(slot, { admin, studentId })).join("") : `<span class="schedule-date-empty">비어있음</span>`}
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderScheduleCalendarItem(slot, { admin = false, studentId = "" } = {}) {
   const isMine = studentId && slot.studentId === studentId;
   const label = admin ? scheduleStudentName(slot.studentId) : isMine ? "내 레슨" : "레슨 예약됨";
-  const note = admin && slot.note ? `<small>${escapeHTML(slot.note)}</small>` : "";
   return `
-    <td class="schedule-booked ${isMine ? "mine" : ""}">
-      <div>
-        <strong>${escapeHTML(label)}</strong>
-        ${note}
-        ${admin ? `<button class="icon-button tiny-button danger" type="button" data-delete-schedule-slot="${slot.id}" title="시간 삭제">×</button>` : ""}
-      </div>
-    </td>
+    <span class="schedule-calendar-item ${isMine ? "mine" : ""}">
+      <b>${scheduleTimeLabel(scheduleTimeMinutes(slot))}</b>
+      ${escapeHTML(label)}
+      <small>${admin ? `${scheduleStudentTypeLabel(slot.studentId)} · ${scheduleRecurrenceLabel(slot)}` : scheduleRecurrenceLabel(slot)}</small>
+    </span>
   `;
 }
 
 function addScheduleSlot() {
   const studentId = els.scheduleStudent.value;
   const day = els.scheduleDay.value;
-  const hour = Number(els.scheduleHour.value);
+  const time = Number(els.scheduleHour.value);
+  const recurrence = els.scheduleRecurrence.value || "weekly";
+  const startDate = els.scheduleStartDate.value || today();
   const note = els.scheduleNote.value.trim();
-  if (!studentId || !day || !hour) {
+  if (!studentId || !day || Number.isNaN(time)) {
     showToast("학생, 요일, 시간을 선택해주세요.");
     return;
   }
-  const existing = (state.schedule || []).find((slot) => slot.day === day && Number(slot.hour) === hour);
-  if (existing && !confirm("이미 레슨이 있는 시간입니다. 이 시간으로 바꿀까요?")) return;
-  state.schedule = (state.schedule || []).filter((slot) => !(slot.day === day && Number(slot.hour) === hour));
-  state.schedule.push({ id: uid("sch"), studentId, day, hour, note, updatedAt: nowIso() });
+  const nextSlot = { id: uid("sch"), studentId, day, time, recurrence, startDate, note, updatedAt: nowIso() };
+  const conflicts = (state.schedule || []).filter((slot) => scheduleSlotsOverlap(slot, nextSlot));
+  if (conflicts.length && !confirm("이미 겹치는 레슨이 있는 시간입니다. 기존 시간을 바꾸고 새로 넣을까요?")) return;
+  state.schedule = (state.schedule || []).filter((slot) => !scheduleSlotsOverlap(slot, nextSlot));
+  state.schedule.push(nextSlot);
   els.scheduleNote.value = "";
   render();
   saveStateInBackground({}, "레슨 시간을 저장했습니다.");
 }
 
+function scheduleSlotsOverlap(left, right) {
+  if (left.day !== right.day || scheduleTimeMinutes(left) !== scheduleTimeMinutes(right)) return false;
+  const leftRecurrence = left.recurrence || "weekly";
+  const rightRecurrence = right.recurrence || "weekly";
+  if (leftRecurrence === "weekly" || rightRecurrence === "weekly") return true;
+  const leftBase = new Date(`${scheduleReferenceDate(left)}T00:00:00`);
+  const rightBase = new Date(`${scheduleReferenceDate(right)}T00:00:00`);
+  if (Number.isNaN(leftBase.getTime()) || Number.isNaN(rightBase.getTime())) return true;
+  const diffWeeks = Math.round((rightBase - leftBase) / 604800000);
+  return Math.abs(diffWeeks) % 2 === 0;
+}
+
 function deleteScheduleSlot(slotId) {
   const slot = (state.schedule || []).find((item) => item.id === slotId);
   if (!slot) return;
-  if (!confirm(`${scheduleStudentName(slot.studentId)}의 ${scheduleHourLabel(slot.hour)} 시간을 삭제할까요?`)) return;
+  if (!confirm(`${scheduleStudentName(slot.studentId)}의 ${scheduleTimeLabel(scheduleTimeMinutes(slot))} 시간을 삭제할까요?`)) return;
   state.schedule = (state.schedule || []).filter((item) => item.id !== slotId);
   render();
   saveStateInBackground({}, "레슨 시간을 삭제했습니다.");
+}
+
+function addPianoScheduleStudent() {
+  const name = els.schedulePianoName.value.trim();
+  if (!name) {
+    showToast("피아노 학생 이름을 입력해주세요.");
+    return;
+  }
+  state.schedulePeople = [...(state.schedulePeople || []), { id: uid("piano"), name, type: "piano", updatedAt: nowIso() }];
+  els.schedulePianoName.value = "";
+  render();
+  saveStateInBackground({}, `${name} 피아노 학생을 시간표에 추가했습니다.`);
+}
+
+function deleteSchedulePerson(personId) {
+  const person = (state.schedulePeople || []).find((item) => item.id === personId);
+  if (!person) return;
+  if (!confirm(`${person.name} 피아노 학생을 시간표에서 삭제할까요? 잡힌 시간도 함께 삭제됩니다.`)) return;
+  state.schedulePeople = (state.schedulePeople || []).filter((item) => item.id !== personId);
+  state.schedule = (state.schedule || []).filter((slot) => slot.studentId !== personId);
+  render();
+  saveStateInBackground({ mode: "overwrite" }, `${person.name} 피아노 학생을 시간표에서 삭제했습니다.`);
 }
 
 function renderLessonPicker() {
@@ -2640,8 +2812,23 @@ function renderShare() {
     <section class="share-section" id="shareScheduleSection">
       <h3>레슨 시간표</h3>
       <p class="share-section-note">내 시간은 표시되고, 다른 레슨 시간은 이름 없이 예약된 시간으로만 보입니다.</p>
+      <div class="schedule-view-toolbar compact">
+        <div class="segmented small-segmented">
+          <button class="${scheduleViewMode === "weekly" ? "active" : ""}" data-schedule-view-mode="weekly" type="button">위클리</button>
+          <button class="${scheduleViewMode === "calendar" ? "active" : ""}" data-schedule-view-mode="calendar" type="button">달력</button>
+        </div>
+        ${
+          scheduleViewMode === "calendar"
+            ? `<div class="schedule-month-controls">
+                <button class="secondary-button mini-button" data-schedule-month="-1" type="button">이전 달</button>
+                <strong>${new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(monthStartDate())}</strong>
+                <button class="secondary-button mini-button" data-schedule-month="1" type="button">다음 달</button>
+              </div>`
+            : ""
+        }
+      </div>
       <div class="schedule-table-wrap compact">
-        ${renderScheduleTable({ admin: false, studentId: student.id })}
+        ${scheduleViewMode === "calendar" ? renderScheduleCalendar({ admin: false, studentId: student.id }) : renderScheduleTable({ admin: false, studentId: student.id })}
       </div>
     </section>
   `;
@@ -2781,6 +2968,26 @@ document.addEventListener("click", (event) => {
   const deleteSchedule = event.target.closest("[data-delete-schedule-slot]");
   if (deleteSchedule) {
     deleteScheduleSlot(deleteSchedule.dataset.deleteScheduleSlot);
+    return;
+  }
+
+  const deleteSchedulePersonButton = event.target.closest("[data-delete-schedule-person]");
+  if (deleteSchedulePersonButton) {
+    deleteSchedulePerson(deleteSchedulePersonButton.dataset.deleteSchedulePerson);
+    return;
+  }
+
+  const scheduleViewButton = event.target.closest("[data-schedule-view-mode]");
+  if (scheduleViewButton) {
+    scheduleViewMode = scheduleViewButton.dataset.scheduleViewMode;
+    render();
+    return;
+  }
+
+  const scheduleMonthButton = event.target.closest("[data-schedule-month]");
+  if (scheduleMonthButton) {
+    scheduleMonthDate = new Date(scheduleMonthDate.getFullYear(), scheduleMonthDate.getMonth() + Number(scheduleMonthButton.dataset.scheduleMonth), 1);
+    render();
     return;
   }
 
@@ -3635,6 +3842,7 @@ async function deleteActiveStudent() {
 $("#addStudent").addEventListener("click", () => els.studentDialog.showModal());
 els.deleteStudent.addEventListener("click", deleteActiveStudent);
 els.addScheduleSlot.addEventListener("click", addScheduleSlot);
+els.addPianoScheduleStudent.addEventListener("click", addPianoScheduleStudent);
 
 $("#studentForm").addEventListener("submit", async (event) => {
   event.preventDefault();

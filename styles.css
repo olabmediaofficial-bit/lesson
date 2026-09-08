@@ -1399,9 +1399,71 @@ textarea {
   gap: 18px;
 }
 
+.schedule-view-toolbar,
+.schedule-piano-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.schedule-view-toolbar.compact {
+  margin-bottom: 10px;
+}
+
+.schedule-month-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.schedule-month-controls strong {
+  min-width: 112px;
+  color: #3e2a1d;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.schedule-piano-editor {
+  justify-content: flex-start;
+  padding: 12px;
+  border: 1px solid rgba(166, 125, 92, 0.2);
+  border-radius: 14px;
+  background: #fffaf4;
+}
+
+.schedule-piano-editor input {
+  flex: 1 1 180px;
+}
+
+.piano-schedule-student-list {
+  display: flex;
+  flex: 999 1 280px;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.piano-student-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid rgba(108, 140, 163, 0.24);
+  border-radius: 999px;
+  background: #eef4f7;
+  color: #334d5f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .schedule-editor {
   display: grid;
-  grid-template-columns: minmax(140px, 1.1fr) minmax(96px, 0.7fr) minmax(104px, 0.8fr) minmax(160px, 1.4fr) auto;
+  grid-template-columns: minmax(150px, 1.3fr) minmax(92px, 0.7fr) minmax(96px, 0.7fr) minmax(90px, 0.7fr) minmax(128px, 0.9fr) minmax(150px, 1.2fr) auto;
   gap: 10px;
   align-items: center;
 }
@@ -1458,7 +1520,7 @@ textarea {
   vertical-align: stretch;
 }
 
-.schedule-table td > div,
+.schedule-booked-cell,
 .schedule-empty span {
   display: flex;
   min-height: 58px;
@@ -1470,17 +1532,26 @@ textarea {
   text-align: center;
 }
 
+.schedule-booked-cell {
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+}
+
 .schedule-empty span {
   color: #b6a89b;
   font-size: 12px;
   font-weight: 800;
 }
 
-.schedule-booked > div {
+.schedule-booked {
   position: relative;
   display: grid;
+  flex: 1 1 0;
   gap: 3px;
   padding: 8px 28px 8px 10px;
+  border: 1px solid rgba(120, 83, 54, 0.28);
+  border-radius: 12px;
   border-color: rgba(120, 83, 54, 0.28);
   background: #ead7c4;
   color: #3e2a1d;
@@ -1489,7 +1560,7 @@ textarea {
     inset -2px -2px 5px rgba(255, 255, 255, 0.68);
 }
 
-.schedule-booked.mine > div {
+.schedule-booked.mine {
   border-color: rgba(42, 104, 76, 0.3);
   background: #dce9dd;
   color: #244737;
@@ -1513,6 +1584,90 @@ textarea {
   position: absolute;
   top: 5px;
   right: 5px;
+}
+
+.schedule-calendar {
+  display: grid;
+  gap: 8px;
+  min-width: 820px;
+}
+
+.schedule-calendar-head,
+.schedule-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(108px, 1fr));
+  gap: 8px;
+}
+
+.schedule-calendar-head span {
+  padding: 9px 10px;
+  border: 1px solid rgba(166, 125, 92, 0.22);
+  border-radius: 12px;
+  background: #f4eadf;
+  color: #5a3927;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.schedule-date-card {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-height: 132px;
+  padding: 9px;
+  border: 1px solid rgba(166, 125, 92, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 250, 244, 0.76);
+}
+
+.schedule-date-card.muted {
+  opacity: 0.46;
+}
+
+.schedule-date-card time {
+  color: #5a3927;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.schedule-date-card > div {
+  display: grid;
+  gap: 5px;
+}
+
+.schedule-calendar-item {
+  display: grid;
+  gap: 1px;
+  padding: 6px 7px;
+  border: 1px solid rgba(120, 83, 54, 0.22);
+  border-radius: 10px;
+  background: #ead7c4;
+  color: #3e2a1d;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.schedule-calendar-item.mine {
+  border-color: rgba(42, 104, 76, 0.3);
+  background: #dce9dd;
+  color: #244737;
+}
+
+.schedule-calendar-item b,
+.schedule-calendar-item small {
+  font-size: 10px;
+}
+
+.schedule-calendar-item small,
+.schedule-date-empty {
+  color: rgba(62, 42, 29, 0.6);
+  font-weight: 800;
+}
+
+.schedule-date-empty {
+  padding: 6px 0;
+  font-size: 11px;
 }
 
 .share-section-note {

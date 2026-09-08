@@ -224,13 +224,34 @@
               <div>
                 <p class="eyebrow">Weekly timetable</p>
                 <h2>레슨 시간표</h2>
-                <p>매주 반복되는 레슨 시간을 1시간 단위로 정리합니다.</p>
+                <p>오후 2시부터 8시까지의 레슨 시간을 30분 단위로 정리합니다.</p>
               </div>
+            </div>
+            <div class="schedule-view-toolbar">
+              <div class="segmented small-segmented">
+                <button class="active" data-schedule-view-mode="weekly" type="button">위클리</button>
+                <button data-schedule-view-mode="calendar" type="button">달력</button>
+              </div>
+              <div class="schedule-month-controls">
+                <button class="secondary-button mini-button" data-schedule-month="-1" type="button">이전 달</button>
+                <strong id="scheduleMonthLabel">이번 달</strong>
+                <button class="secondary-button mini-button" data-schedule-month="1" type="button">다음 달</button>
+              </div>
+            </div>
+            <div class="schedule-piano-editor">
+              <input id="schedulePianoName" type="text" placeholder="피아노 학생 이름" aria-label="피아노 학생 이름" />
+              <button class="secondary-button" id="addPianoScheduleStudent" type="button">피아노 학생 추가</button>
+              <div id="pianoScheduleStudentList" class="piano-schedule-student-list"></div>
             </div>
             <div class="schedule-editor">
               <select id="scheduleStudent" aria-label="학생 선택"></select>
               <select id="scheduleDay" aria-label="요일 선택"></select>
               <select id="scheduleHour" aria-label="시간 선택"></select>
+              <select id="scheduleRecurrence" aria-label="반복 주기">
+                <option value="weekly">매주</option>
+                <option value="biweekly">격주</option>
+              </select>
+              <input id="scheduleStartDate" type="date" aria-label="반복 기준 날짜" />
               <input id="scheduleNote" type="text" placeholder="메모 선택사항" aria-label="시간표 메모" />
               <button class="primary-button" id="addScheduleSlot" type="button">시간 추가</button>
             </div>
