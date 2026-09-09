@@ -2221,7 +2221,7 @@ function renderProgress() {
 
 function schedulePeople() {
   return [
-    ...state.students.map((student) => ({ id: student.id, name: student.name, type: "guitar" })),
+    ...state.students.map((student) => ({ id: student.id, name: student.name, type: student.type || student.instrument || "guitar" })),
     ...(state.schedulePeople || []).map((person) => ({ ...person, type: person.type || "piano" })),
   ];
 }
@@ -2313,6 +2313,34 @@ function scheduleDayFromDate(value) {
   return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][date.getDay()];
 }
 
+function scheduleCurrentWeekRangeLabel() {
+  const now = new Date();
+  const monday = new Date(now);
+  const dayOffset = now.getDay() === 0 ? -6 : 1 - now.getDay();
+  monday.setDate(now.getDate() + dayOffset);
+  const saturday = new Date(monday);
+  saturday.setDate(monday.getDate() + 5);
+  const format = (date) => `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
+  return `${format(monday)} - ${format(saturday)}`;
+}
+
+function scheduleCurrentWeekDates() {
+  const now = new Date();
+  const monday = new Date(now);
+  const dayOffset = now.getDay() === 0 ? -6 : 1 - now.getDay();
+  monday.setDate(now.getDate() + dayOffset);
+  return SCHEDULE_DAYS.map((_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    return date;
+  });
+}
+
+function scheduleSlotsForCurrentWeek() {
+  const weekDates = scheduleCurrentWeekDates();
+  return sortedScheduleSlots().filter((slot) => weekDates.some((date) => slotOccursOnDate(slot, date)));
+}
+
 function sortedScheduleSlots() {
   const dayOrder = new Map(SCHEDULE_DAYS.map((day, index) => [day.key, index]));
   return [...(state.schedule || [])].sort((a, b) => {
@@ -2354,16 +2382,22 @@ function renderSchedule() {
 
 function renderScheduleEditor() {
   if (!els.scheduleStudent) return;
+  const currentStudent = els.scheduleStudent.value;
+  const currentDay = els.scheduleDay.value;
   const currentTime = els.scheduleHour.value || "15:30";
   const currentDuration = els.scheduleDuration?.value || "30";
+  const currentRecurrence = els.scheduleRecurrence.value || "weekly";
   const people = schedulePeople();
   els.scheduleStudent.innerHTML = people.length
     ? people.map((person) => `<option value="${person.id}">[${person.type === "piano" ? "피아노" : "기타"}] ${escapeHTML(person.name)}</option>`).join("")
     : `<option value="">학생 없음</option>`;
+  if (currentStudent && people.some((person) => person.id === currentStudent)) els.scheduleStudent.value = currentStudent;
   els.scheduleStudent.disabled = !people.length;
   els.scheduleDay.innerHTML = SCHEDULE_DAYS.map((day) => `<option value="${day.key}">${day.label}요일</option>`).join("");
+  if (currentDay && SCHEDULE_DAYS.some((day) => day.key === currentDay)) els.scheduleDay.value = currentDay;
   els.scheduleHour.value = currentTime;
   if (els.scheduleDuration) els.scheduleDuration.value = currentDuration;
+  if (els.scheduleRecurrence) els.scheduleRecurrence.value = currentRecurrence;
   if (els.scheduleStartDate && !els.scheduleStartDate.value) els.scheduleStartDate.value = today();
   renderPianoScheduleStudentList();
 }
@@ -2433,7 +2467,7 @@ function renderScheduleCell(slots, { admin = false, studentId = "" } = {}) {
 }
 
 function renderScheduleTimeline() {
-  const slots = sortedScheduleSlots();
+  const slots = scheduleSlotsForCurrentWeek();
   const totalRange = SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES;
   return `
     <div class="schedule-timeline" style="--schedule-hours:${SCHEDULE_TIMES.length - 1}">
@@ -2638,8 +2672,8 @@ function scheduleExportColor(slot) {
 }
 
 function scheduleExportSlotsForView() {
+  if (scheduleViewMode !== "calendar") return scheduleSlotsForCurrentWeek();
   const slots = sortedScheduleSlots().filter((slot) => SCHEDULE_DAYS.some((day) => day.key === slot.day));
-  if (scheduleViewMode !== "calendar") return slots;
   const first = monthStartDate();
   const month = first.getMonth();
   return slots.filter((slot) => {
@@ -2681,12 +2715,14 @@ function buildScheduleWeekExportSvg(mode = "named") {
   const totalRange = SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES;
   const slots = scheduleExportSlotsForView();
   const title = "레슨 시간표 · 주간";
+  const weekLabel = scheduleCurrentWeekRangeLabel();
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<style>text{font-family:'Gmarket Sans','GmarketSans','GmarketSansMedium','GmarketSansTTF','Gmarket Sans TTF','Gmarket Sans Medium','Gmarket Sans TTF Medium','Pretendard','Apple SD Gothic Neo',sans-serif;}</style>`,
     `<rect width="100%" height="100%" fill="#f8f2ea"/>`,
     scheduleSvgText(title, margin, 58, { size: 30, weight: 900 }),
-    scheduleSvgText("오후 2시 - 8시", width - margin, 58, { size: 18, weight: 500, fill: "#8a6951", anchor: "end" }),
+    scheduleSvgText(weekLabel, width - margin, 48, { size: 18, weight: 700, fill: "#5a3927", anchor: "end" }),
+    scheduleSvgText("오후 2시 - 8시", width - margin, 74, { size: 15, weight: 500, fill: "#8a6951", anchor: "end" }),
   ];
   SCHEDULE_TIMES.forEach((time) => {
     const y = bodyTop + ((Number(time.key) - SCHEDULE_START_MINUTES) / totalRange) * bodyHeight;
