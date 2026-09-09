@@ -2475,7 +2475,10 @@ function renderScheduleTimelineSlot(slot) {
     <article class="schedule-timeline-slot ${scheduleSlotTypeClass(slot)}" draggable="true" data-schedule-drag-slot="${slot.id}" style="top:${top}%;height:${height}%">
       <div>
         <strong>${escapeHTML(scheduleStudentName(slot.studentId))}</strong>
-        <small>${scheduleTimeRangeLabel(slot)} · ${scheduleStudentTypeLabel(slot.studentId)} · ${scheduleRecurrenceLabel(slot)}${slot.note ? ` · ${escapeHTML(slot.note)}` : ""}</small>
+        <small>
+          <span>${scheduleTimeRangeLabel(slot)}</span>
+          <span>${scheduleStudentTypeLabel(slot)} · ${scheduleRecurrenceLabel(slot)}${slot.note ? ` · ${escapeHTML(slot.note)}` : ""}</span>
+        </small>
       </div>
       <button class="icon-button tiny-button danger" type="button" data-delete-schedule-slot="${slot.id}" title="시간 삭제">×</button>
       <span class="schedule-resize-handle" data-schedule-resize-slot="${slot.id}" title="길이 조절"></span>
@@ -2654,6 +2657,7 @@ function scheduleSvgText(text, x, y, options = {}) {
     `y="${y}"`,
     `font-size="${options.size || 18}"`,
     `font-weight="${options.weight || 800}"`,
+    `font-family="'Gmarket Sans','GmarketSans','GmarketSansMedium','GmarketSansTTF','Gmarket Sans TTF','Gmarket Sans Medium','Gmarket Sans TTF Medium','Pretendard','Apple SD Gothic Neo',sans-serif"`,
     `fill="${options.fill || "#3e2a1d"}"`,
   ];
   if (options.anchor) attrs.push(`text-anchor="${options.anchor}"`);
@@ -2676,12 +2680,13 @@ function buildScheduleWeekExportSvg(mode = "named") {
   const bodyHeight = height - bodyTop - margin;
   const totalRange = SCHEDULE_END_MINUTES - SCHEDULE_START_MINUTES;
   const slots = scheduleExportSlotsForView();
-  const title = `레슨 시간표 · 주간 · ${mode === "anonymous" ? "익명" : "실명"}`;
+  const title = "레슨 시간표 · 주간";
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<style>text{font-family:'Gmarket Sans','GmarketSans','GmarketSansMedium','GmarketSansTTF','Gmarket Sans TTF','Gmarket Sans Medium','Gmarket Sans TTF Medium','Pretendard','Apple SD Gothic Neo',sans-serif;}</style>`,
     `<rect width="100%" height="100%" fill="#f8f2ea"/>`,
     scheduleSvgText(title, margin, 58, { size: 30, weight: 900 }),
-    scheduleSvgText("오후 2시 - 8시", width - margin, 58, { size: 18, weight: 900, fill: "#8a6951", anchor: "end" }),
+    scheduleSvgText("오후 2시 - 8시", width - margin, 58, { size: 18, weight: 500, fill: "#8a6951", anchor: "end" }),
   ];
   SCHEDULE_TIMES.forEach((time) => {
     const y = bodyTop + ((Number(time.key) - SCHEDULE_START_MINUTES) / totalRange) * bodyHeight;
@@ -2690,7 +2695,7 @@ function buildScheduleWeekExportSvg(mode = "named") {
   SCHEDULE_DAYS.forEach((day, dayIndex) => {
     const x = margin + timeWidth + dayIndex * (dayWidth + dayGap);
     parts.push(`<rect x="${x}" y="${bodyTop - 40}" width="${dayWidth}" height="30" rx="12" fill="#ead7c4" stroke="#d0a47f"/>`);
-    parts.push(scheduleSvgText(day.label, x + dayWidth / 2, bodyTop - 18, { size: 17, weight: 900, anchor: "middle" }));
+    parts.push(scheduleSvgText(day.label, x + dayWidth / 2, bodyTop - 18, { size: 17, weight: 700, anchor: "middle" }));
     parts.push(`<rect x="${x}" y="${bodyTop}" width="${dayWidth}" height="${bodyHeight}" rx="18" fill="#fffaf4" stroke="#d7bda5"/>`);
     SCHEDULE_TIMES.slice(0, -1).forEach((time) => {
       const y = bodyTop + ((Number(time.key) - SCHEDULE_START_MINUTES) / totalRange) * bodyHeight;
@@ -2703,8 +2708,8 @@ function buildScheduleWeekExportSvg(mode = "named") {
         const top = bodyTop + ((scheduleTimeMinutes(slot) - SCHEDULE_START_MINUTES) / totalRange) * bodyHeight;
         const slotHeight = Math.max(42, (scheduleDurationMinutes(slot) / totalRange) * bodyHeight);
         parts.push(`<rect x="${x + 9}" y="${top + 4}" width="${dayWidth - 18}" height="${slotHeight - 8}" rx="14" fill="${color.fill}" stroke="${color.stroke}"/>`);
-        parts.push(scheduleSvgText(scheduleExportLabel(slot, mode), x + 21, top + 30, { size: 16, weight: 900, fill: color.text }));
-        parts.push(scheduleSvgText(`${scheduleTimeRangeLabel(slot)} · ${scheduleRecurrenceLabel(slot)}`, x + 21, top + 54, { size: 13, weight: 800, fill: color.text }));
+        parts.push(scheduleSvgText(scheduleExportLabel(slot, mode), x + 21, top + 30, { size: 16, weight: 700, fill: color.text }));
+        parts.push(scheduleSvgText(`${scheduleTimeRangeLabel(slot)} · ${scheduleRecurrenceLabel(slot)}`, x + 21, top + 54, { size: 13, weight: 500, fill: color.text }));
       });
   });
   parts.push(`</svg>`);
@@ -2737,14 +2742,15 @@ function buildScheduleMonthExportSvg(mode = "named") {
   const slots = sortedScheduleSlots();
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<style>text{font-family:'Gmarket Sans','GmarketSans','GmarketSansMedium','GmarketSansTTF','Gmarket Sans TTF','Gmarket Sans Medium','Gmarket Sans TTF Medium','Pretendard','Apple SD Gothic Neo',sans-serif;}</style>`,
     `<rect width="100%" height="100%" fill="#f8f2ea"/>`,
-    scheduleSvgText(`레슨 시간표 · 월간 · ${mode === "anonymous" ? "익명" : "실명"}`, margin, 58, { size: 30, weight: 900 }),
-    scheduleSvgText(monthLabel, width - margin, 58, { size: 20, weight: 900, fill: "#8a6951", anchor: "end" }),
+    scheduleSvgText("레슨 시간표 · 월간", margin, 58, { size: 30, weight: 900 }),
+    scheduleSvgText(monthLabel, width - margin, 58, { size: 20, weight: 500, fill: "#8a6951", anchor: "end" }),
   ];
   SCHEDULE_DAYS.forEach((day, index) => {
     const x = margin + index * (cellWidth + gap);
     parts.push(`<rect x="${x}" y="${headHeight - 22}" width="${cellWidth}" height="30" rx="12" fill="#ead7c4" stroke="#d0a47f"/>`);
-    parts.push(scheduleSvgText(day.label, x + cellWidth / 2, headHeight, { size: 16, weight: 900, anchor: "middle" }));
+    parts.push(scheduleSvgText(day.label, x + cellWidth / 2, headHeight, { size: 16, weight: 700, anchor: "middle" }));
   });
   dates.forEach((date, index) => {
     const col = index % SCHEDULE_DAYS.length;
@@ -2754,12 +2760,12 @@ function buildScheduleMonthExportSvg(mode = "named") {
     const muted = date.getMonth() !== first.getMonth();
     const dateSlots = slots.filter((slot) => slotOccursOnDate(slot, date));
     parts.push(`<rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}" rx="16" fill="${muted ? "#efe7dc" : "#fffaf4"}" stroke="#d7bda5" opacity="${muted ? "0.58" : "1"}"/>`);
-    parts.push(scheduleSvgText(String(date.getDate()), x + 14, y + 25, { size: 15, weight: 900, fill: "#5a3927" }));
+    parts.push(scheduleSvgText(String(date.getDate()), x + 14, y + 25, { size: 15, weight: 700, fill: "#5a3927" }));
     dateSlots.slice(0, 4).forEach((slot, slotIndex) => {
       const color = scheduleExportColor(slot);
       const itemY = y + 38 + slotIndex * 28;
       parts.push(`<rect x="${x + 10}" y="${itemY}" width="${cellWidth - 20}" height="22" rx="9" fill="${color.fill}" stroke="${color.stroke}"/>`);
-      parts.push(scheduleSvgText(`${scheduleTimeLabel(scheduleTimeMinutes(slot))} ${scheduleExportLabel(slot, mode)}`, x + 18, itemY + 16, { size: 12, weight: 900, fill: color.text }));
+      parts.push(scheduleSvgText(`${scheduleTimeLabel(scheduleTimeMinutes(slot))} ${scheduleExportLabel(slot, mode)}`, x + 18, itemY + 16, { size: 12, weight: 700, fill: color.text }));
     });
     if (dateSlots.length > 4) parts.push(scheduleSvgText(`+${dateSlots.length - 4}`, x + cellWidth - 16, y + cellHeight - 12, { size: 12, weight: 900, fill: "#8a6951", anchor: "end" }));
   });

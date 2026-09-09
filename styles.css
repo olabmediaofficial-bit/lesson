@@ -1476,7 +1476,7 @@ textarea {
 }
 
 .schedule-timeline {
-  --schedule-hour-height: 86px;
+  --schedule-hour-height: 108px;
   min-width: 800px;
 }
 
@@ -1546,8 +1546,8 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
-  min-height: 42px;
-  padding: 9px 8px 13px 10px;
+  min-height: 52px;
+  padding: 8px 8px 13px 10px;
   border: 1px solid rgba(120, 83, 54, 0.28);
   border-radius: 13px;
   background: #ead7c4;
@@ -1580,8 +1580,7 @@ textarea {
   cursor: grabbing;
 }
 
-.schedule-timeline-slot strong,
-.schedule-timeline-slot small {
+.schedule-timeline-slot strong {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1606,10 +1605,18 @@ textarea {
 }
 
 .schedule-timeline-slot small {
-  margin-top: 2px;
+  display: grid;
+  gap: 1px;
+  margin-top: 3px;
   color: rgba(62, 42, 29, 0.68);
   font-size: 11px;
   font-weight: 800;
+  line-height: 1.25;
+}
+
+.schedule-timeline-slot small span {
+  display: block;
+  overflow-wrap: anywhere;
 }
 
 .schedule-resize-handle {
