@@ -458,6 +458,7 @@ const els = {
   tagFilter: $("#tagFilter"),
   bulkTagInput: $("#bulkTagInput"),
   applyBulkTags: $("#applyBulkTags"),
+  deleteSelectedBlocks: $("#deleteSelectedBlocks"),
   blockKindTabs: $("#blockKindTabs"),
   bulkCurriculumPanel: $("#bulkCurriculumPanel"),
   libraryInsight: $("#libraryInsight"),
@@ -499,12 +500,20 @@ const els = {
   adminScheduleTable: $("#adminScheduleTable"),
   shareStudentPicker: $("#shareStudentPicker"),
   copyPreviewShareLink: $("#copyPreviewShareLink"),
+  openPreviewShareLink: $("#openPreviewShareLink"),
   shareStudentName: $("#shareStudentName"),
   shareResourceLibrary: $("#shareResourceLibrary"),
   shareScheduleLink: $("#shareScheduleLink"),
   shareContent: $("#shareContent"),
   toast: $("#toast"),
   materialDialog: $("#materialDialog"),
+  blockViewerDialog: $("#blockViewerDialog"),
+  blockViewerKind: $("#blockViewerKind"),
+  blockViewerTitle: $("#blockViewerTitle"),
+  blockViewerContent: $("#blockViewerContent"),
+  closeBlockViewer: $("#closeBlockViewer"),
+  closeBlockViewerBottom: $("#closeBlockViewerBottom"),
+  editViewedBlock: $("#editViewedBlock"),
   studentDialog: $("#studentDialog"),
   imageViewerDialog: $("#imageViewerDialog"),
   imageViewerTitle: $("#imageViewerTitle"),
@@ -2091,10 +2100,6 @@ function renderBlockGroup(title, blocks) {
     <section class="block-section">
       <div class="block-section-head">
         <h3>${escapeHTML(title)}</h3>
-        <div class="block-section-actions">
-          <button class="secondary-button mini-button" type="button" data-collapse-block-group="${blocks.map((block) => block.id).join(",")}">전체 접기</button>
-          <button class="secondary-button mini-button" type="button" data-expand-block-group="${blocks.map((block) => block.id).join(",")}">전체 펼치기</button>
-        </div>
       </div>
       <div class="material-grid inner-grid">
         ${blocks.map(renderBlockCard).join("")}
@@ -2104,34 +2109,42 @@ function renderBlockGroup(title, blocks) {
 }
 
 function renderBlockCard(block) {
-  const expanded = expandedLibraryBlockIds.has(block.id);
   return `
-    <article class="material-card block-card ${blockKindClass(block.kind)} ${expanded ? "expanded" : "collapsed"}">
-      <div class="block-card-head">
-        <button class="block-title-button" type="button" data-toggle-library-block="${block.id}" aria-expanded="${expanded}">
-          <span class="block-title-text">${escapeHTML(block.title)}</span>
-        </button>
-        <div class="block-card-meta-row">
-          <button class="collapse-indicator" type="button" data-toggle-library-block="${block.id}" aria-expanded="${expanded}">${expanded ? "접기" : "펼치기"}</button>
-          <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
-          <button class="secondary-button mini-button danger" type="button" data-delete-block="${block.id}">삭제</button>
-          <label class="block-select-control">
-            <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
-            선택
-          </label>
-        </div>
-      </div>
-      <div class="block-card-body">
-        ${renderPracticeMeta(block)}
-        <p>${escapeHTML(block.summary)}</p>
-        ${renderPracticeDetails(block)}
-        <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}</div>
-        ${renderBlockChordDictionary(block, { editable: true })}
-        ${renderScoreResources(block, "compact")}
-        ${renderResources(block, "compact")}
-      </div>
+    <article class="material-card block-card compact-block-card ${blockKindClass(block.kind)}">
+      <label class="block-select-control icon-only">
+        <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
+      </label>
+      <button class="block-title-button" type="button" data-view-library-block="${block.id}">
+        <span class="block-title-text">${escapeHTML(block.title)}</span>
+      </button>
     </article>
   `;
+}
+
+function renderBlockViewerContent(block) {
+  return `
+    ${renderPracticeMeta(block)}
+    ${block.summary ? `<p>${escapeHTML(block.summary)}</p>` : `<p class="empty-inline">설명이 없습니다.</p>`}
+    ${renderPracticeDetails(block)}
+    <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("") || `<span class="empty-inline">태그 없음</span>`}</div>
+    ${renderBlockChordDictionary(block, { editable: true })}
+    ${renderScoreResources(block, "compact")}
+    ${renderResources(block, "compact")}
+  `;
+}
+
+function openLibraryBlockViewer(blockId) {
+  const block = getBlock(blockId);
+  if (!block || !els.blockViewerDialog) return;
+  els.blockViewerDialog.dataset.blockId = block.id;
+  els.blockViewerKind.textContent = blockKindLabel(block.kind);
+  els.blockViewerTitle.textContent = block.title;
+  els.blockViewerContent.innerHTML = renderBlockViewerContent(block);
+  els.blockViewerDialog.showModal();
+}
+
+function closeLibraryBlockViewer() {
+  els.blockViewerDialog?.close();
 }
 
 function renderPracticeCategoryText(block) {
@@ -3193,6 +3206,7 @@ function renderShare() {
     els.shareStudentPicker.innerHTML = "";
     els.shareStudentName.textContent = "공유할 레슨룸 없음";
     els.shareContent.innerHTML = `<div class="empty">학생을 추가하면 공유 화면을 볼 수 있습니다.</div>`;
+    if (els.openPreviewShareLink) els.openPreviewShareLink.hidden = true;
     return;
   }
 
@@ -3204,11 +3218,13 @@ function renderShare() {
   if (publicShareMode) {
     els.shareStudentPicker.hidden = true;
     els.copyPreviewShareLink.hidden = true;
+    if (els.openPreviewShareLink) els.openPreviewShareLink.hidden = true;
     els.sharedMetronome.hidden = false;
     if (!publicShareInitialized) publicShareInitialized = true;
   } else {
     els.shareStudentPicker.hidden = false;
     els.copyPreviewShareLink.hidden = false;
+    if (els.openPreviewShareLink) els.openPreviewShareLink.hidden = false;
     els.sharedMetronome.hidden = false;
     els.shareStudentPicker.innerHTML = state.students
       .map((item) => `<option value="${item.id}">${item.name}</option>`)
@@ -3353,6 +3369,12 @@ document.addEventListener("click", (event) => {
 
   const editBlock = event.target.closest("[data-edit-block]");
   if (editBlock) openBlockDialog(editBlock.dataset.editBlock);
+
+  const viewLibraryBlock = event.target.closest("[data-view-library-block]");
+  if (viewLibraryBlock) {
+    openLibraryBlockViewer(viewLibraryBlock.dataset.viewLibraryBlock);
+    return;
+  }
 
   const deleteBlock = event.target.closest("[data-delete-block]");
   if (deleteBlock) deleteBlockById(deleteBlock.dataset.deleteBlock);
@@ -4150,6 +4172,32 @@ async function deleteBlockById(blockId) {
   saveStateInBackground({ mode: "overwrite" }, "블럭을 삭제했습니다.");
 }
 
+async function deleteSelectedLibraryBlocks() {
+  const ids = [...selectedBlockIds].filter((id) => getBlock(id));
+  if (!ids.length) {
+    showToast("삭제할 블럭을 선택해주세요.");
+    return;
+  }
+  const label = ids.length === 1 ? `"${getBlock(ids[0]).title}" 블럭` : `선택한 블럭 ${ids.length}개`;
+  if (!confirm(`${label}을 삭제할까요? 학생 레슨룸에서도 함께 빠집니다.`)) return;
+  const idSet = new Set(ids);
+  state.blocks = state.blocks.filter((block) => !idSet.has(block.id));
+  state.students.forEach((student) => {
+    student.lessons.forEach((lesson) => {
+      lesson.blockIds = lesson.blockIds.filter((id) => !idSet.has(id));
+    });
+    student.lessons = student.lessons.filter((lesson) => lesson.blockIds.length || lesson.memo);
+    if (student.practiceProgress) ids.forEach((id) => delete student.practiceProgress[id]);
+  });
+  ids.forEach((id) => {
+    selectedBlockIds.delete(id);
+    pendingBlockIds.delete(id);
+    expandedLibraryBlockIds.delete(id);
+  });
+  render();
+  saveStateInBackground({ mode: "overwrite" }, `${ids.length}개 블럭을 삭제했습니다.`);
+}
+
 function findLessonById(lessonId) {
   const student = getActiveStudent();
   return student?.lessons.find((lesson) => lesson.id === lessonId);
@@ -4311,6 +4359,14 @@ $("#addStudent").addEventListener("click", () => els.studentDialog.showModal());
 els.deleteStudent.addEventListener("click", deleteActiveStudent);
 els.addScheduleSlot.addEventListener("click", addScheduleSlot);
 els.addPianoScheduleStudent.addEventListener("click", addPianoScheduleStudent);
+els.deleteSelectedBlocks.addEventListener("click", deleteSelectedLibraryBlocks);
+els.closeBlockViewer.addEventListener("click", closeLibraryBlockViewer);
+els.closeBlockViewerBottom.addEventListener("click", closeLibraryBlockViewer);
+els.editViewedBlock.addEventListener("click", () => {
+  const blockId = els.blockViewerDialog.dataset.blockId;
+  closeLibraryBlockViewer();
+  openBlockDialog(blockId);
+});
 
 $("#studentForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -4380,16 +4436,30 @@ els.copyPreviewShareLink.addEventListener("click", async () => {
   await copyStudentShareLink(student);
 });
 
+els.openPreviewShareLink.addEventListener("click", () => {
+  const student = state.students.find((item) => item.id === activeShareStudentId);
+  openStudentShareLink(student);
+});
+
 async function copyStudentShareLink(student) {
   if (!student) return;
-  const origin = shareOrigin || location.origin;
-  const url = `${origin}${location.pathname}?room=${student.id}`;
+  const url = studentShareUrl(student);
   try {
     await navigator.clipboard.writeText(url);
     showToast("공유 링크를 복사했습니다.");
   } catch {
     showToast(url);
   }
+}
+
+function studentShareUrl(student) {
+  const origin = shareOrigin || location.origin;
+  return `${origin}${location.pathname}?room=${student.id}`;
+}
+
+function openStudentShareLink(student) {
+  if (!student) return;
+  window.open(studentShareUrl(student), "_blank", "noopener,noreferrer");
 }
 
 async function init() {

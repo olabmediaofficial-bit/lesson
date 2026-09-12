@@ -87,6 +87,7 @@
             </select>
             <input id="bulkTagInput" type="text" placeholder="선택 블럭에 태그 추가" aria-label="선택 블럭 일괄 태그" />
             <button class="secondary-button" id="applyBulkTags" type="button">태그 넣기</button>
+            <button class="secondary-button danger" id="deleteSelectedBlocks" type="button">선택 삭제</button>
             <input id="quickLessonDate" type="date" aria-label="배정 날짜" />
             <button class="secondary-button" id="assignSelected" type="button">선택 블럭 넣기</button>
           </div>
@@ -299,6 +300,7 @@
                 <div class="share-actions">
                   <select id="shareStudentPicker" aria-label="공유 학생 선택"></select>
                   <button class="primary-button" id="copyPreviewShareLink" type="button">레슨생에게 공유하기</button>
+                  <button class="secondary-button" id="openPreviewShareLink" type="button">학생 화면</button>
                 </div>
                 <div class="metronome compact-metronome" id="sharedMetronome" data-metronome aria-label="메트로놈">
                   <div class="metronome-display">
@@ -434,6 +436,23 @@
           <button class="primary-button" id="saveMaterial" value="default" type="submit">저장</button>
         </menu>
       </form>
+    </dialog>
+
+    <dialog id="blockViewerDialog">
+      <div class="dialog-card block-viewer-card">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow" id="blockViewerKind">블럭</p>
+            <h2 id="blockViewerTitle">블럭 보기</h2>
+          </div>
+          <button class="icon-button" id="closeBlockViewer" type="button" title="닫기">×</button>
+        </div>
+        <div id="blockViewerContent" class="block-viewer-content"></div>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="editViewedBlock" type="button">편집</button>
+          <button class="primary-button" id="closeBlockViewerBottom" type="button">닫기</button>
+        </div>
+      </div>
     </dialog>
 
     <dialog id="studentDialog">
