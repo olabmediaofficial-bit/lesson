@@ -1026,6 +1026,7 @@ function updateImageViewer() {
   if (!item) return;
 
   const isChordGrid = imageViewer.mode === "chord-grid";
+  syncImageViewerMetronomeTempo();
   if (els.imageViewerBack) {
     const previous = imageViewerStack[imageViewerStack.length - 1];
     els.imageViewerBack.hidden = !imageViewerStack.length;
@@ -1069,6 +1070,25 @@ function updateImageViewer() {
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
   els.imageViewerNext.disabled = imageViewer.items.length < 2;
+}
+
+function practiceTempoForBlock(block) {
+  const tempo = Number(block?.practice?.tempo);
+  if (!block || block.kind !== "practice" || Number.isNaN(tempo)) return 90;
+  return Math.min(220, Math.max(40, tempo));
+}
+
+function syncImageViewerMetronomeTempo() {
+  if (imageViewer.mode !== "score") return;
+  const block = currentImageViewerBlock();
+  const nextTempo = practiceTempoForBlock(block);
+  if (metronome.tempo === nextTempo) return;
+  metronome.tempo = nextTempo;
+  metronome.beat = 0;
+  metronome.bar = metronome.advanced ? -1 : 0;
+  metronome.visibleBeat = 0;
+  if (metronome.isPlaying) restartMetronome();
+  renderMetronome();
 }
 
 function renderImageViewerChordGrid() {
