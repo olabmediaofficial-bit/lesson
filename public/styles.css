@@ -2292,7 +2292,7 @@ dialog::backdrop {
 }
 
 .image-viewer-dialog.chord-only {
-  width: min(520px, calc(100vw - 28px));
+  width: min(480px, calc(100vw - 28px));
   height: auto;
   max-height: calc(100dvh - 28px);
   background: #fff8f0;
@@ -2318,6 +2318,10 @@ dialog::backdrop {
   max-height: calc(100dvh - 28px);
   grid-template-rows: auto minmax(0, 1fr);
   background: #fff8f0;
+}
+
+.image-viewer-dialog.chord-only:not(.chord-grid-mode) .image-viewer {
+  display: block;
 }
 
 .image-viewer-head {
@@ -2649,6 +2653,10 @@ dialog::backdrop {
   background: #fff8f0;
 }
 
+.image-viewer-dialog.chord-only:not(.chord-grid-mode) .image-viewer-stage {
+  display: block;
+}
+
 .image-viewer-scroll {
   display: block;
   min-height: 0;
@@ -2662,6 +2670,12 @@ dialog::backdrop {
   place-items: center;
   overflow: auto;
   padding: 18px;
+}
+
+.image-viewer-dialog.chord-only:not(.chord-grid-mode) .image-viewer-scroll {
+  max-height: min(72dvh, 560px);
+  overflow: visible;
+  padding: 14px 18px 20px;
 }
 
 .image-viewer-chord-grid {
@@ -2722,8 +2736,9 @@ dialog::backdrop {
 }
 
 .image-viewer-dialog.chord-only .image-viewer img {
-  width: min(380px, 82vw) !important;
+  width: min(420px, 82vw) !important;
   max-width: 100%;
+  max-height: min(68dvh, 520px);
   border-radius: 8px;
   box-shadow:
     8px 8px 18px rgba(68, 43, 29, 0.16),

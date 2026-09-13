@@ -2114,7 +2114,7 @@ function renderBlockCard(block) {
       <label class="block-select-control icon-only">
         <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
       </label>
-      <button class="block-title-button" type="button" data-view-library-block="${block.id}">
+      <button class="block-title-button" type="button" data-edit-block="${block.id}">
         <span class="block-title-text">${escapeHTML(block.title)}</span>
       </button>
     </article>
@@ -3114,6 +3114,7 @@ function renderLessonBlock(block, options = {}) {
           controls
             ? `<div class="block-controls">
                 <span class="drag-handle" title="드래그해서 순서 바꾸기">↕</span>
+                <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
                 <button class="icon-button tiny-button" type="button" data-move-block="${block.id}" data-lesson-id="${lessonId}" data-direction="up" ${index === 0 ? "disabled" : ""} title="위로">↑</button>
                 <button class="icon-button tiny-button" type="button" data-move-block="${block.id}" data-lesson-id="${lessonId}" data-direction="down" ${index === total - 1 ? "disabled" : ""} title="아래로">↓</button>
                 <button class="icon-button tiny-button danger" type="button" data-remove-lesson-block="${block.id}" data-lesson-id="${lessonId}" title="수업에서 빼기">×</button>
@@ -3368,7 +3369,10 @@ document.addEventListener("click", (event) => {
   }
 
   const editBlock = event.target.closest("[data-edit-block]");
-  if (editBlock) openBlockDialog(editBlock.dataset.editBlock);
+  if (editBlock) {
+    openBlockDialog(editBlock.dataset.editBlock);
+    return;
+  }
 
   const viewLibraryBlock = event.target.closest("[data-view-library-block]");
   if (viewLibraryBlock) {
