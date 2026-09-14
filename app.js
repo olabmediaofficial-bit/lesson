@@ -192,9 +192,19 @@ const CHORD_CATEGORY_TABS = [
   { key: "worship", label: "워십" },
   { key: "jazz", label: "재즈" },
   { key: "slash", label: "분수" },
+  { key: "custom", label: "커스텀" },
   { key: "other", label: "그외" },
 ];
 const CHORD_CATEGORY_ORDER = CHORD_CATEGORY_TABS.map((tab) => tab.key);
+const GUITAR_STRINGS = [
+  { label: "6번", note: "E", pitch: 4 },
+  { label: "5번", note: "A", pitch: 9 },
+  { label: "4번", note: "D", pitch: 2 },
+  { label: "3번", note: "G", pitch: 7 },
+  { label: "2번", note: "B", pitch: 11 },
+  { label: "1번", note: "E", pitch: 4 },
+];
+const NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const CURRICULUM_AREAS = [
   {
     key: "left",
@@ -232,6 +242,7 @@ const starterData = {
   resourceLibraryUrl: "",
   schedule: [],
   schedulePeople: [],
+  customChords: [],
   blocks: [
     {
       id: "blk-1",
@@ -324,6 +335,12 @@ let practiceSortDirection = {
 let selectedBlockIds = new Set();
 let selectedCurriculumSkills = new Set();
 let selectedChordNames = [];
+let chordBuilder = {
+  baseFret: 1,
+  positions: [],
+  showNotes: true,
+  rootMode: false,
+};
 let pendingBlockIds = new Set();
 let expandedLessonIds = new Set();
 let expandedLibraryBlockIds = new Set();
@@ -443,6 +460,99 @@ const CHORD_DICTIONARY = CHORD_IMAGE_FILES.map((fileName) => ({
     a.fileName.localeCompare(b.fileName, "en", { numeric: true }),
 );
 
+function noteAt(stringIndex, fret) {
+  const string = GUITAR_STRINGS[stringIndex];
+  if (!string) return "";
+  return NOTE_NAMES[(string.pitch + Number(fret || 0)) % NOTE_NAMES.length];
+}
+
+function customChordSvg(chord) {
+  const name = escapeHTML(chord.name || "Custom");
+  const baseFret = Math.max(1, Number(chord.baseFret || 1));
+  const positions = Array.isArray(chord.positions) ? chord.positions : [];
+  const width = 420;
+  const height = 520;
+  const left = 58;
+  const right = 362;
+  const top = 112;
+  const row = 72;
+  const col = (right - left) / 5;
+  const fretRows = [0, 1, 2, 3, 4].map((index) => top + index * row);
+  const stringXs = [0, 1, 2, 3, 4, 5].map((index) => left + index * col);
+  const circles = positions
+    .map((position) => {
+      const stringIndex = Number(position.string);
+      const fret = Number(position.fret);
+      if (Number.isNaN(stringIndex) || Number.isNaN(fret)) return "";
+      if (fret < baseFret || fret > baseFret + 3) return "";
+      const x = stringXs[stringIndex];
+      const y = top + (fret - baseFret) * row + row / 2;
+      const fill = position.root ? "#6f4329" : "#b98255";
+      const label = position.root ? "R" : noteAt(stringIndex, fret);
+      return `
+        <circle cx="${x}" cy="${y}" r="24" fill="${fill}" />
+        <text x="${x}" y="${y + 7}" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">${escapeHTML(label)}</text>
+      `;
+    })
+    .join("");
+  const fretLabels = [0, 1, 2, 3]
+    .map((index) => `<text x="29" y="${top + index * row + row / 2 + 7}" font-size="15" font-weight="800" fill="#9a7a61">${baseFret + index}fr</text>`)
+    .join("");
+  const stringLabels = GUITAR_STRINGS.map((string, index) => `<text x="${stringXs[index]}" y="470" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${string.note}</text>`).join("");
+  const nut = baseFret === 1 ? `<rect x="${left - 3}" y="${top - 8}" width="${right - left + 6}" height="12" rx="6" fill="#6f4329" />` : "";
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect width="100%" height="100%" rx="28" fill="#fffaf4" />
+      <text x="210" y="58" text-anchor="middle" font-size="34" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
+      ${fretRows.map((y) => `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#c8a98d" stroke-width="3" />`).join("")}
+      ${stringXs.map((x, index) => `<line x1="${x}" y1="${top}" x2="${x}" y2="${top + row * 4}" stroke="#7f6048" stroke-width="${index === 0 || index === 5 ? 3.2 : 2}" />`).join("")}
+      ${nut}
+      ${fretLabels}
+      ${stringLabels}
+      ${circles}
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function normalizeCustomChord(chord = {}) {
+  return {
+    id: chord.id || uid("chord"),
+    name: String(chord.name || "").trim() || "이름 없는 코드",
+    category: "custom",
+    baseFret: Math.min(18, Math.max(1, Number(chord.baseFret || 1))),
+    positions: Array.isArray(chord.positions)
+      ? chord.positions
+          .map((position) => ({
+            string: Number(position.string),
+            fret: Number(position.fret),
+            root: Boolean(position.root),
+          }))
+          .filter((position) => !Number.isNaN(position.string) && !Number.isNaN(position.fret))
+      : [],
+    updatedAt: chord.updatedAt || nowIso(),
+  };
+}
+
+function customChordEntry(chord) {
+  const normalized = normalizeCustomChord(chord);
+  return {
+    ...normalized,
+    fileName: `custom:${normalized.id}`,
+    src: customChordSvg(normalized),
+    family: "custom",
+  };
+}
+
+function chordDictionary() {
+  return [...CHORD_DICTIONARY, ...(state.customChords || []).map(customChordEntry)].sort(
+    (a, b) =>
+      CHORD_CATEGORY_ORDER.indexOf(a.category) - CHORD_CATEGORY_ORDER.indexOf(b.category) ||
+      a.name.localeCompare(b.name, "en", { numeric: true }) ||
+      a.fileName.localeCompare(b.fileName, "en", { numeric: true }),
+  );
+}
+
 const els = {
   viewTitle: $("#viewTitle"),
   navItems: document.querySelectorAll(".nav-item"),
@@ -467,6 +577,16 @@ const els = {
   chordSearch: $("#chordSearch"),
   chordCategoryTabs: $("#chordCategoryTabs"),
   chordGrid: $("#chordGrid"),
+  openChordBuilder: $("#openChordBuilder"),
+  chordBuilderDialog: $("#chordBuilderDialog"),
+  chordBuilderName: $("#chordBuilderName"),
+  chordBuilderBoard: $("#chordBuilderBoard"),
+  chordBuilderFretLabel: $("#chordBuilderFretLabel"),
+  chordBuilderPrevFret: $("#chordBuilderPrevFret"),
+  chordBuilderNextFret: $("#chordBuilderNextFret"),
+  chordBuilderRootMode: $("#chordBuilderRootMode"),
+  chordBuilderShowNotes: $("#chordBuilderShowNotes"),
+  clearChordBuilder: $("#clearChordBuilder"),
   resourceLibraryUrl: $("#resourceLibraryUrl"),
   saveResourceLibrary: $("#saveResourceLibrary"),
   migrateStorageFiles: $("#migrateStorageFiles"),
@@ -563,6 +683,7 @@ function migrateState(data) {
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
   data.schedule = Array.isArray(data.schedule) ? data.schedule : [];
   data.schedulePeople = Array.isArray(data.schedulePeople) ? data.schedulePeople : [];
+  data.customChords = Array.isArray(data.customChords) ? data.customChords.map(normalizeCustomChord) : [];
   data.blocks = data.blocks.map((block) => ({
     ...block,
     scores: normalizeScores(block),
@@ -1323,7 +1444,7 @@ function openPracticeScoreByBlock(blockId) {
 }
 
 function openChordViewer(chordName, fileName = "") {
-  const chord = CHORD_DICTIONARY.find((item) => item.fileName === fileName) || getChordByName(chordName);
+  const chord = chordDictionary().find((item) => item.fileName === fileName) || getChordByName(chordName);
   if (!chord) {
     showToast("코드표를 찾을 수 없습니다.");
     return;
@@ -1543,7 +1664,7 @@ function normalizeChordSearch(value) {
 
 function normalizeChordName(value) {
   const raw = String(value || "").trim().replace(/♯/g, "#").replace(/＃/g, "#");
-  const match = CHORD_DICTIONARY.find((chord) => normalizeChordSearch(chord.name) === normalizeChordSearch(raw));
+  const match = chordDictionary().find((chord) => normalizeChordSearch(chord.name) === normalizeChordSearch(raw) || chord.fileName === raw);
   return match?.name || raw;
 }
 
@@ -1554,7 +1675,7 @@ function normalizeChordNames(value) {
 
 function getChordByName(name) {
   const normalized = normalizeChordSearch(name);
-  return CHORD_DICTIONARY.find((chord) => chord.fileName === name) || CHORD_DICTIONARY.find((chord) => normalizeChordSearch(chord.name) === normalized);
+  return chordDictionary().find((chord) => chord.fileName === name) || chordDictionary().find((chord) => normalizeChordSearch(chord.name) === normalized);
 }
 
 function allCurriculumSkillLabels() {
@@ -1928,7 +2049,7 @@ function renderLibraryInsight() {
 
 function filteredChords() {
   const query = normalizeChordSearch(els.chordSearch?.value || "");
-  return CHORD_DICTIONARY.filter((chord) => {
+  return chordDictionary().filter((chord) => {
     const matchesCategory = activeChordCategory === "all" || chord.category === activeChordCategory;
     const matchesQuery = !query || normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query);
     return matchesCategory && matchesQuery;
@@ -1940,6 +2061,7 @@ function renderChordDictionary() {
   const chords = filteredChords();
   renderChordCategoryTabs();
   els.chordGrid.innerHTML = chords.length ? renderChordCards(chords) : `<div class="empty">찾는 코드가 없습니다.</div>`;
+  if (els.openChordBuilder) els.openChordBuilder.hidden = publicShareMode;
   document.querySelectorAll("[data-share-back-button]").forEach((button) => {
     button.hidden = !publicShareMode;
   });
@@ -1947,8 +2069,9 @@ function renderChordDictionary() {
 
 function renderChordCategoryTabs() {
   if (!els.chordCategoryTabs) return;
+  const chords = chordDictionary();
   els.chordCategoryTabs.innerHTML = CHORD_CATEGORY_TABS.map((tab) => {
-    const count = tab.key === "all" ? CHORD_DICTIONARY.length : CHORD_DICTIONARY.filter((chord) => chord.category === tab.key).length;
+    const count = tab.key === "all" ? chords.length : chords.filter((chord) => chord.category === tab.key).length;
     return `
       <button class="${activeChordCategory === tab.key ? "active" : ""}" type="button" data-chord-category="${tab.key}">
         ${escapeHTML(tab.label)} <span>${count}</span>
@@ -1995,8 +2118,9 @@ function renderBlockChordDictionary(block, { editable = false } = {}) {
 
 function filteredPickerChords() {
   const query = normalizeChordSearch(els.chordPickerSearch?.value || "");
-  if (!query) return CHORD_DICTIONARY;
-  return CHORD_DICTIONARY.filter((chord) => normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query));
+  const chords = chordDictionary();
+  if (!query) return chords;
+  return chords.filter((chord) => normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query));
 }
 
 function renderChordPickerGrid() {
@@ -2067,6 +2191,95 @@ function reorderSelectedChord(fromIndex, toIndex) {
   const [moved] = next.splice(fromIndex, 1);
   next.splice(toIndex, 0, moved);
   selectedChordNames = next;
+}
+
+function openChordBuilder() {
+  chordBuilder = {
+    baseFret: 1,
+    positions: [],
+    showNotes: true,
+    rootMode: false,
+  };
+  els.chordBuilderName.value = "";
+  els.chordBuilderShowNotes.checked = true;
+  els.chordBuilderRootMode.checked = false;
+  renderChordBuilder();
+  els.chordBuilderDialog.showModal();
+}
+
+function renderChordBuilder() {
+  if (!els.chordBuilderBoard) return;
+  const baseFret = Math.max(1, Number(chordBuilder.baseFret || 1));
+  els.chordBuilderFretLabel.textContent = `${baseFret}-${baseFret + 3}프렛`;
+  els.chordBuilderPrevFret.disabled = baseFret <= 1;
+  const positionMap = new Map(chordBuilder.positions.map((position) => [`${position.string}:${position.fret}`, position]));
+  const fretLabels = [0, 1, 2, 3].map((index) => `<span class="chord-builder-fret-label">${baseFret + index}fr</span>`).join("");
+  const stringLabels = GUITAR_STRINGS.map((string) => `<span>${string.label}<b>${string.note}</b></span>`).join("");
+  const cells = [0, 1, 2, 3]
+    .map((row) =>
+      GUITAR_STRINGS.map((string, stringIndex) => {
+        const fret = baseFret + row;
+        const key = `${stringIndex}:${fret}`;
+        const position = positionMap.get(key);
+        const note = noteAt(stringIndex, fret);
+        return `
+          <button
+            class="chord-builder-cell ${position ? "active" : ""} ${position?.root ? "root" : ""}"
+            type="button"
+            data-chord-string="${stringIndex}"
+            data-chord-fret="${fret}"
+            aria-label="${string.label} ${fret}프렛 ${note}"
+          >
+            <span class="note-label ${chordBuilder.showNotes ? "" : "hidden"}">${escapeHTML(note)}</span>
+            ${position ? `<span class="finger-dot">${position.root ? "R" : ""}</span>` : ""}
+          </button>
+        `;
+      }).join(""),
+    )
+    .join("");
+  els.chordBuilderBoard.innerHTML = `
+    <div class="chord-builder-string-labels">${stringLabels}</div>
+    <div class="chord-builder-fret-labels">${fretLabels}</div>
+    <div class="chord-builder-grid">${cells}</div>
+  `;
+}
+
+function toggleChordBuilderPosition(stringIndex, fret) {
+  const index = chordBuilder.positions.findIndex((position) => position.string === stringIndex && position.fret === fret);
+  if (index >= 0) {
+    if (chordBuilder.rootMode && !chordBuilder.positions[index].root) {
+      chordBuilder.positions[index].root = true;
+    } else {
+      chordBuilder.positions.splice(index, 1);
+    }
+  } else {
+    chordBuilder.positions.push({ string: stringIndex, fret, root: chordBuilder.rootMode });
+  }
+  renderChordBuilder();
+}
+
+function saveCustomChordFromBuilder() {
+  const name = els.chordBuilderName.value.trim();
+  if (!name) {
+    showToast("코드 이름을 입력해주세요.");
+    return;
+  }
+  if (!chordBuilder.positions.length) {
+    showToast("지판에 운지를 하나 이상 찍어주세요.");
+    return;
+  }
+  const chord = normalizeCustomChord({
+    id: uid("chord"),
+    name,
+    baseFret: chordBuilder.baseFret,
+    positions: chordBuilder.positions,
+    updatedAt: nowIso(),
+  });
+  state.customChords = [chord, ...(state.customChords || []).filter((item) => normalizeChordSearch(item.name) !== normalizeChordSearch(chord.name))];
+  activeChordCategory = "custom";
+  els.chordBuilderDialog.close();
+  render();
+  saveStateInBackground({}, `${chord.name} 코드표를 저장했습니다.`);
 }
 
 function renderKindGroups(blocks) {
@@ -3732,6 +3945,36 @@ els.views.library.addEventListener("drop", async (event) => {
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
 els.chordSearch.addEventListener("input", renderChordDictionary);
+els.openChordBuilder.addEventListener("click", openChordBuilder);
+els.chordBuilderPrevFret.addEventListener("click", () => {
+  chordBuilder.baseFret = Math.max(1, chordBuilder.baseFret - 1);
+  renderChordBuilder();
+});
+els.chordBuilderNextFret.addEventListener("click", () => {
+  chordBuilder.baseFret = Math.min(18, chordBuilder.baseFret + 1);
+  renderChordBuilder();
+});
+els.chordBuilderRootMode.addEventListener("change", () => {
+  chordBuilder.rootMode = els.chordBuilderRootMode.checked;
+});
+els.chordBuilderShowNotes.addEventListener("change", () => {
+  chordBuilder.showNotes = els.chordBuilderShowNotes.checked;
+  renderChordBuilder();
+});
+els.clearChordBuilder.addEventListener("click", () => {
+  chordBuilder.positions = [];
+  renderChordBuilder();
+});
+els.chordBuilderBoard.addEventListener("click", (event) => {
+  const cell = event.target.closest("[data-chord-string]");
+  if (!cell) return;
+  toggleChordBuilderPosition(Number(cell.dataset.chordString), Number(cell.dataset.chordFret));
+});
+els.chordBuilderDialog.addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  saveCustomChordFromBuilder();
+});
 els.applyBulkTags.addEventListener("click", async () => {
   const tags = parseTags(els.bulkTagInput.value);
   const selectedIds = [...selectedBlockIds];

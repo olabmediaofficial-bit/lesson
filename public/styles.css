@@ -415,6 +415,13 @@ textarea {
   margin-bottom: 0;
 }
 
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .count-pill {
   display: inline-grid;
   min-width: 34px;
@@ -2188,6 +2195,169 @@ textarea {
   box-shadow: 0 8px 18px rgba(185, 130, 85, 0.1);
 }
 
+.chord-builder-dialog {
+  width: min(760px, calc(100vw - 28px));
+  max-height: min(92vh, 860px);
+  overflow: auto;
+}
+
+.chord-builder-dialog .dialog-head p {
+  margin: 4px 0 0;
+  color: #7b6d63;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chord-builder-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(198, 170, 143, 0.72);
+  border-radius: 8px;
+  background: #fff8f0;
+}
+
+.chord-builder-toolbar strong {
+  min-width: 92px;
+  color: var(--accent-strong);
+  text-align: center;
+}
+
+.chord-builder-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #5f4b3d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.chord-builder-board {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid rgba(198, 170, 143, 0.72);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 248, 240, 0.92));
+  box-shadow:
+    inset 2px 2px 8px rgba(117, 82, 55, 0.08),
+    inset -2px -2px 8px rgba(255, 252, 247, 0.95);
+}
+
+.chord-builder-string-labels {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-left: 54px;
+  color: #8a6951;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.chord-builder-string-labels span {
+  display: grid;
+  gap: 2px;
+}
+
+.chord-builder-string-labels b {
+  color: var(--accent-strong);
+  font-size: 15px;
+}
+
+.chord-builder-fret-labels {
+  display: grid;
+  float: left;
+  width: 48px;
+  grid-template-rows: repeat(4, 72px);
+  color: #9a7a61;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.chord-builder-fret-label {
+  display: flex;
+  align-items: center;
+}
+
+.chord-builder-grid {
+  position: relative;
+  display: grid;
+  min-height: 288px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(4, 72px);
+  margin-left: 54px;
+  overflow: hidden;
+  border: 3px solid #7f6048;
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(to right, transparent 0, transparent calc(20% - 1px), rgba(127, 96, 72, 0.5) calc(20% - 1px), rgba(127, 96, 72, 0.5) calc(20% + 1px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), rgba(200, 169, 141, 0.85) calc(25% - 1px), rgba(200, 169, 141, 0.85) calc(25% + 2px)),
+    #fffaf4;
+}
+
+.chord-builder-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.chord-builder-cell::after {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(185, 130, 85, 0.16);
+  opacity: 0;
+  transform: scale(0.82);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.chord-builder-cell:hover::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.chord-builder-cell .note-label {
+  position: absolute;
+  right: 7px;
+  bottom: 5px;
+  z-index: 1;
+  color: rgba(95, 75, 61, 0.42);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.chord-builder-cell .note-label.hidden {
+  display: none;
+}
+
+.finger-dot {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: #b98255;
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 8px 16px rgba(95, 67, 45, 0.22);
+}
+
+.chord-builder-cell.root .finger-dot {
+  background: #6f4329;
+}
+
 .used-chord-panel {
   min-width: 0;
   border: 0;
@@ -3832,6 +4002,28 @@ textarea,
   .chord-picker-grid {
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
     padding: 12px;
+  }
+
+  .chord-builder-dialog {
+    width: calc(100vw - 18px);
+  }
+
+  .chord-builder-board {
+    padding: 12px;
+  }
+
+  .chord-builder-string-labels,
+  .chord-builder-grid {
+    margin-left: 40px;
+  }
+
+  .chord-builder-fret-labels {
+    width: 36px;
+  }
+
+  .finger-dot {
+    width: 34px;
+    height: 34px;
   }
 
   .bulk-curriculum-head,
