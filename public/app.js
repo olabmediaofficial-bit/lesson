@@ -492,10 +492,10 @@ function customChordSvg(chord) {
       const x = left + (fret - baseFret) * col + col / 2;
       const y = stringYs[displayIndex];
       const fill = position.root ? "#6f4329" : "#b98255";
-      const label = position.root ? "R" : noteAt(stringIndex, fret);
+      const label = position.root ? "R" : "";
       return `
         <circle cx="${x}" cy="${y}" r="24" fill="${fill}" />
-        <text x="${x}" y="${y + 7}" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">${escapeHTML(label)}</text>
+        ${label ? `<text x="${x}" y="${y + 7}" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">${escapeHTML(label)}</text>` : ""}
       `;
     })
     .join("");

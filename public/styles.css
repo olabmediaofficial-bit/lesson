@@ -2196,9 +2196,26 @@ textarea {
 }
 
 .chord-builder-dialog {
-  width: min(980px, calc(100vw - 28px));
-  max-height: min(94vh, 900px);
+  display: grid;
+  width: min(1180px, calc(100vw - 28px));
+  max-height: min(92vh, 820px);
+  grid-template-columns: minmax(260px, 320px) minmax(520px, 1fr);
+  grid-template-areas:
+    "head head"
+    "name board"
+    "tools board"
+    "actions board";
+  align-items: start;
+  gap: 16px 18px;
   overflow: visible;
+}
+
+.chord-builder-dialog .dialog-head {
+  grid-area: head;
+}
+
+.chord-builder-name-field {
+  grid-area: name;
 }
 
 .chord-builder-dialog .dialog-head p {
@@ -2210,18 +2227,22 @@ textarea {
 
 .chord-builder-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  grid-area: tools;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
-  padding: 10px;
+  padding: 14px;
   border: 1px solid rgba(198, 170, 143, 0.72);
   border-radius: 8px;
   background: #fff8f0;
 }
 
 .chord-builder-toolbar strong {
-  min-width: 92px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
   color: var(--accent-strong);
+  background: #fffaf4;
   text-align: center;
 }
 
@@ -2236,10 +2257,12 @@ textarea {
 
 .chord-builder-board {
   display: grid;
+  grid-area: board;
   grid-template-columns: 58px minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   gap: 10px 12px;
-  padding: 22px;
+  min-height: 520px;
+  padding: 24px;
   border: 1px solid rgba(198, 170, 143, 0.72);
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 248, 240, 0.92));
@@ -2252,7 +2275,7 @@ textarea {
   display: grid;
   grid-column: 1;
   grid-row: 2;
-  grid-template-rows: repeat(6, 64px);
+  grid-template-rows: repeat(6, 72px);
   align-items: center;
   color: #8a6951;
   font-size: 14px;
@@ -2285,16 +2308,13 @@ textarea {
   display: grid;
   grid-column: 2;
   grid-row: 2;
-  min-height: 384px;
+  min-height: 432px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(6, 64px);
+  grid-template-rows: repeat(6, 72px);
   overflow: hidden;
   border: 3px solid #7f6048;
   border-radius: 8px;
-  background:
-    repeating-linear-gradient(to right, transparent 0, transparent calc(25% - 1px), rgba(200, 169, 141, 0.85) calc(25% - 1px), rgba(200, 169, 141, 0.85) calc(25% + 2px)),
-    repeating-linear-gradient(to bottom, transparent 0, transparent calc(16.666% - 1px), rgba(127, 96, 72, 0.48) calc(16.666% - 1px), rgba(127, 96, 72, 0.48) calc(16.666% + 1px)),
-    #fffaf4;
+  background: #fffaf4;
 }
 
 .chord-builder-cell {
@@ -2302,16 +2322,33 @@ textarea {
   display: grid;
   place-items: center;
   border: 0;
+  border-left: 2px solid rgba(200, 169, 141, 0.9);
   background: transparent;
   cursor: pointer;
   font-family: inherit;
 }
 
+.chord-builder-cell:nth-child(4n) {
+  border-right: 2px solid rgba(200, 169, 141, 0.9);
+}
+
+.chord-builder-cell::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 50%;
+  height: 3px;
+  background: #7f6048;
+  transform: translateY(-50%);
+}
+
 .chord-builder-cell::after {
   content: "";
   position: absolute;
-  width: 34px;
-  height: 34px;
+  z-index: 2;
+  width: 42px;
+  height: 42px;
   border-radius: 999px;
   background: rgba(185, 130, 85, 0.16);
   opacity: 0;
@@ -2328,7 +2365,7 @@ textarea {
   position: absolute;
   right: 7px;
   bottom: 5px;
-  z-index: 1;
+  z-index: 3;
   color: rgba(95, 75, 61, 0.42);
   font-size: 12px;
   font-weight: 900;
@@ -2340,10 +2377,10 @@ textarea {
 
 .finger-dot {
   position: relative;
-  z-index: 2;
+  z-index: 4;
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   place-items: center;
   border-radius: 999px;
   color: #fff;
@@ -2355,6 +2392,12 @@ textarea {
 
 .chord-builder-cell.root .finger-dot {
   background: #6f4329;
+}
+
+.chord-builder-dialog menu {
+  grid-area: actions;
+  align-self: end;
+  margin: 0;
 }
 
 .used-chord-panel {
@@ -4005,26 +4048,36 @@ textarea,
 
   .chord-builder-dialog {
     width: calc(100vw - 18px);
+    max-height: calc(100dvh - 18px);
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "head"
+      "name"
+      "tools"
+      "board"
+      "actions";
+    overflow: auto;
   }
 
   .chord-builder-board {
     grid-template-columns: 40px minmax(0, 1fr);
+    min-height: auto;
     padding: 12px;
   }
 
   .chord-builder-string-labels {
-    grid-template-rows: repeat(6, 52px);
+    grid-template-rows: repeat(6, 48px);
     font-size: 12px;
   }
 
   .chord-builder-grid {
-    min-height: 312px;
-    grid-template-rows: repeat(6, 52px);
+    min-height: 288px;
+    grid-template-rows: repeat(6, 48px);
   }
 
   .finger-dot {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
   }
 
   .bulk-curriculum-head,
