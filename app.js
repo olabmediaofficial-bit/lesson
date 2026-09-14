@@ -470,23 +470,27 @@ function customChordSvg(chord) {
   const name = escapeHTML(chord.name || "Custom");
   const baseFret = Math.max(1, Number(chord.baseFret || 1));
   const positions = Array.isArray(chord.positions) ? chord.positions : [];
-  const width = 420;
-  const height = 520;
-  const left = 58;
-  const right = 362;
-  const top = 112;
-  const row = 72;
-  const col = (right - left) / 5;
-  const fretRows = [0, 1, 2, 3, 4].map((index) => top + index * row);
-  const stringXs = [0, 1, 2, 3, 4, 5].map((index) => left + index * col);
+  const width = 520;
+  const height = 430;
+  const left = 98;
+  const right = 444;
+  const top = 104;
+  const bottom = 344;
+  const row = (bottom - top) / 5;
+  const col = (right - left) / 4;
+  const displayStrings = GUITAR_STRINGS.map((string, index) => ({ ...string, index })).reverse();
+  const stringYs = displayStrings.map((_, index) => top + index * row);
+  const fretXs = [0, 1, 2, 3, 4].map((index) => left + index * col);
   const circles = positions
     .map((position) => {
       const stringIndex = Number(position.string);
       const fret = Number(position.fret);
       if (Number.isNaN(stringIndex) || Number.isNaN(fret)) return "";
       if (fret < baseFret || fret > baseFret + 3) return "";
-      const x = stringXs[stringIndex];
-      const y = top + (fret - baseFret) * row + row / 2;
+      const displayIndex = displayStrings.findIndex((string) => string.index === stringIndex);
+      if (displayIndex < 0) return "";
+      const x = left + (fret - baseFret) * col + col / 2;
+      const y = stringYs[displayIndex];
       const fill = position.root ? "#6f4329" : "#b98255";
       const label = position.root ? "R" : noteAt(stringIndex, fret);
       return `
@@ -496,16 +500,16 @@ function customChordSvg(chord) {
     })
     .join("");
   const fretLabels = [0, 1, 2, 3]
-    .map((index) => `<text x="29" y="${top + index * row + row / 2 + 7}" font-size="15" font-weight="800" fill="#9a7a61">${baseFret + index}fr</text>`)
+    .map((index) => `<text x="${left + index * col + col / 2}" y="386" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${baseFret + index}fr</text>`)
     .join("");
-  const stringLabels = GUITAR_STRINGS.map((string, index) => `<text x="${stringXs[index]}" y="470" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${string.note}</text>`).join("");
-  const nut = baseFret === 1 ? `<rect x="${left - 3}" y="${top - 8}" width="${right - left + 6}" height="12" rx="6" fill="#6f4329" />` : "";
+  const stringLabels = displayStrings.map((string, index) => `<text x="54" y="${stringYs[index] + 6}" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${string.label}</text>`).join("");
+  const nut = baseFret === 1 ? `<rect x="${left - 8}" y="${top - 7}" width="14" height="${bottom - top + 14}" rx="7" fill="#6f4329" />` : "";
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" rx="28" fill="#fffaf4" />
-      <text x="210" y="58" text-anchor="middle" font-size="34" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
-      ${fretRows.map((y) => `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#c8a98d" stroke-width="3" />`).join("")}
-      ${stringXs.map((x, index) => `<line x1="${x}" y1="${top}" x2="${x}" y2="${top + row * 4}" stroke="#7f6048" stroke-width="${index === 0 || index === 5 ? 3.2 : 2}" />`).join("")}
+      <text x="260" y="58" text-anchor="middle" font-size="34" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
+      ${stringYs.map((y) => `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#7f6048" stroke-width="2.6" />`).join("")}
+      ${fretXs.map((x) => `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#c8a98d" stroke-width="3" />`).join("")}
       ${nut}
       ${fretLabels}
       ${stringLabels}
@@ -2213,20 +2217,21 @@ function renderChordBuilder() {
   els.chordBuilderFretLabel.textContent = `${baseFret}-${baseFret + 3}프렛`;
   els.chordBuilderPrevFret.disabled = baseFret <= 1;
   const positionMap = new Map(chordBuilder.positions.map((position) => [`${position.string}:${position.fret}`, position]));
-  const fretLabels = [0, 1, 2, 3].map((index) => `<span class="chord-builder-fret-label">${baseFret + index}fr</span>`).join("");
-  const stringLabels = GUITAR_STRINGS.map((string) => `<span>${string.label}<b>${string.note}</b></span>`).join("");
-  const cells = [0, 1, 2, 3]
-    .map((row) =>
-      GUITAR_STRINGS.map((string, stringIndex) => {
-        const fret = baseFret + row;
-        const key = `${stringIndex}:${fret}`;
+  const displayStrings = GUITAR_STRINGS.map((string, index) => ({ ...string, index })).reverse();
+  const fretLabels = [0, 1, 2, 3].map((index) => `<span class="chord-builder-fret-label">${baseFret + index}</span>`).join("");
+  const stringLabels = displayStrings.map((string) => `<span>${string.label}</span>`).join("");
+  const cells = displayStrings
+    .map((string) =>
+      [0, 1, 2, 3].map((col) => {
+        const fret = baseFret + col;
+        const key = `${string.index}:${fret}`;
         const position = positionMap.get(key);
-        const note = noteAt(stringIndex, fret);
+        const note = noteAt(string.index, fret);
         return `
           <button
             class="chord-builder-cell ${position ? "active" : ""} ${position?.root ? "root" : ""}"
             type="button"
-            data-chord-string="${stringIndex}"
+            data-chord-string="${string.index}"
             data-chord-fret="${fret}"
             aria-label="${string.label} ${fret}프렛 ${note}"
           >
@@ -2238,8 +2243,8 @@ function renderChordBuilder() {
     )
     .join("");
   els.chordBuilderBoard.innerHTML = `
-    <div class="chord-builder-string-labels">${stringLabels}</div>
     <div class="chord-builder-fret-labels">${fretLabels}</div>
+    <div class="chord-builder-string-labels">${stringLabels}</div>
     <div class="chord-builder-grid">${cells}</div>
   `;
 }

@@ -2196,9 +2196,9 @@ textarea {
 }
 
 .chord-builder-dialog {
-  width: min(760px, calc(100vw - 28px));
-  max-height: min(92vh, 860px);
-  overflow: auto;
+  width: min(980px, calc(100vw - 28px));
+  max-height: min(94vh, 900px);
+  overflow: visible;
 }
 
 .chord-builder-dialog .dialog-head p {
@@ -2236,8 +2236,10 @@ textarea {
 
 .chord-builder-board {
   display: grid;
-  gap: 10px;
-  padding: 18px;
+  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px 12px;
+  padding: 22px;
   border: 1px solid rgba(198, 170, 143, 0.72);
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 248, 240, 0.92));
@@ -2248,53 +2250,50 @@ textarea {
 
 .chord-builder-string-labels {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
-  margin-left: 54px;
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-rows: repeat(6, 64px);
+  align-items: center;
   color: #8a6951;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 900;
-  text-align: center;
+  text-align: right;
 }
 
 .chord-builder-string-labels span {
-  display: grid;
-  gap: 2px;
-}
-
-.chord-builder-string-labels b {
-  color: var(--accent-strong);
-  font-size: 15px;
+  padding-right: 8px;
 }
 
 .chord-builder-fret-labels {
   display: grid;
-  float: left;
-  width: 48px;
-  grid-template-rows: repeat(4, 72px);
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
   color: #9a7a61;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 900;
+  text-align: center;
 }
 
 .chord-builder-fret-label {
-  display: flex;
-  align-items: center;
+  display: block;
 }
 
 .chord-builder-grid {
   position: relative;
   display: grid;
-  min-height: 288px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: repeat(4, 72px);
-  margin-left: 54px;
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 384px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(6, 64px);
   overflow: hidden;
   border: 3px solid #7f6048;
   border-radius: 8px;
   background:
-    repeating-linear-gradient(to right, transparent 0, transparent calc(20% - 1px), rgba(127, 96, 72, 0.5) calc(20% - 1px), rgba(127, 96, 72, 0.5) calc(20% + 1px)),
-    repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), rgba(200, 169, 141, 0.85) calc(25% - 1px), rgba(200, 169, 141, 0.85) calc(25% + 2px)),
+    repeating-linear-gradient(to right, transparent 0, transparent calc(25% - 1px), rgba(200, 169, 141, 0.85) calc(25% - 1px), rgba(200, 169, 141, 0.85) calc(25% + 2px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(16.666% - 1px), rgba(127, 96, 72, 0.48) calc(16.666% - 1px), rgba(127, 96, 72, 0.48) calc(16.666% + 1px)),
     #fffaf4;
 }
 
@@ -4009,16 +4008,18 @@ textarea,
   }
 
   .chord-builder-board {
+    grid-template-columns: 40px minmax(0, 1fr);
     padding: 12px;
   }
 
-  .chord-builder-string-labels,
-  .chord-builder-grid {
-    margin-left: 40px;
+  .chord-builder-string-labels {
+    grid-template-rows: repeat(6, 52px);
+    font-size: 12px;
   }
 
-  .chord-builder-fret-labels {
-    width: 36px;
+  .chord-builder-grid {
+    min-height: 312px;
+    grid-template-rows: repeat(6, 52px);
   }
 
   .finger-dot {
