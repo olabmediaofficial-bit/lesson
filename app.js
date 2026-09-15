@@ -197,6 +197,16 @@ const CHORD_CATEGORY_TABS = [
   { key: "other", label: "그외" },
 ];
 const CHORD_CATEGORY_ORDER = CHORD_CATEGORY_TABS.map((tab) => tab.key);
+const RHYTHM_CATEGORY_TABS = [
+  { key: "all", label: "전체" },
+  { key: "strum", label: "스트로크" },
+  { key: "finger", label: "핑거링" },
+  { key: "picking", label: "피킹" },
+  { key: "training", label: "리듬훈련" },
+  { key: "custom", label: "커스텀" },
+  { key: "other", label: "그외" },
+];
+const RHYTHM_CATEGORY_ORDER = RHYTHM_CATEGORY_TABS.map((tab) => tab.key);
 const GUITAR_STRINGS = [
   { label: "6", note: "E", pitch: 4 },
   { label: "5", note: "A", pitch: 9 },
@@ -244,6 +254,7 @@ const starterData = {
   schedule: [],
   schedulePeople: [],
   customChords: [],
+  customRhythms: [],
   blocks: [
     {
       id: "blk-1",
@@ -324,6 +335,7 @@ let activeStudentId = state.students[0]?.id || "";
 let activeShareStudentId = activeStudentId;
 let activeKindFilter = "all";
 let activeChordCategory = "all";
+let activeRhythmCategory = "all";
 let lessonRoomMode = "weekly";
 let scheduleViewMode = "weekly";
 let scheduleMonthDate = new Date();
@@ -375,6 +387,14 @@ let metronome = {
   bar: 0,
   advanced: false,
   visibleBeat: 0,
+};
+let rhythmBuilder = {
+  id: "",
+  name: "",
+  category: "strum",
+  meter: "4/4",
+  unit: 16,
+  cells: [],
 };
 
 const SCHEDULE_DAYS = [
@@ -612,6 +632,113 @@ function chordDictionary() {
   );
 }
 
+function rhythmCategoryLabel(category) {
+  return RHYTHM_CATEGORY_TABS.find((item) => item.key === category)?.label || "커스텀";
+}
+
+function rhythmSlotCount(meter = "4/4", unit = 16) {
+  const [beats, denominator] = String(meter || "4/4")
+    .split("/")
+    .map((part) => Number(part));
+  const safeBeats = Number.isFinite(beats) && beats > 0 ? beats : 4;
+  const safeDenominator = Number.isFinite(denominator) && denominator > 0 ? denominator : 4;
+  const safeUnit = Number(unit) || 16;
+  return Math.max(1, Math.round(safeBeats * (safeUnit / safeDenominator)));
+}
+
+function normalizeRhythmCells(cells, count) {
+  const source = Array.isArray(cells) ? cells : [];
+  return Array.from({ length: count }, (_, index) => {
+    const cell = source[index] || {};
+    return {
+      hit: cell.hit === "circle" ? "circle" : "line",
+      stroke: ["down", "up"].includes(cell.stroke) ? cell.stroke : "",
+    };
+  });
+}
+
+function normalizeCustomRhythm(rhythm = {}) {
+  const meter = ["4/4", "3/4", "6/8"].includes(rhythm.meter) ? rhythm.meter : "4/4";
+  const unit = [4, 8, 16].includes(Number(rhythm.unit)) ? Number(rhythm.unit) : 16;
+  const count = rhythmSlotCount(meter, unit);
+  const category = RHYTHM_CATEGORY_TABS.some((tab) => tab.key === rhythm.category && tab.key !== "all") ? rhythm.category : "custom";
+  return {
+    id: rhythm.id || uid("rhythm"),
+    name: String(rhythm.name || "").trim() || "이름 없는 리듬",
+    category,
+    meter,
+    unit,
+    cells: normalizeRhythmCells(rhythm.cells, count),
+    updatedAt: rhythm.updatedAt || nowIso(),
+  };
+}
+
+function rhythmSvg(rhythm) {
+  const normalized = normalizeCustomRhythm(rhythm);
+  const name = escapeHTML(normalized.name);
+  const count = normalized.cells.length;
+  const width = Math.max(560, count * 48 + 160);
+  const height = 230;
+  const left = 92;
+  const right = width - 54;
+  const top = 82;
+  const step = (right - left) / Math.max(1, count - 1);
+  const beamGroups = normalized.unit === 16 ? 4 : normalized.unit === 8 ? 2 : 1;
+  const stemTop = top - 34;
+  const svgCells = normalized.cells
+    .map((cell, index) => {
+      const x = left + index * step;
+      const note = cell.hit === "circle"
+        ? `<circle cx="${x}" cy="${top}" r="11" fill="none" stroke="#6f4329" stroke-width="4" />`
+        : `<line x1="${x - 12}" y1="${top + 10}" x2="${x + 12}" y2="${top - 10}" stroke="#6f4329" stroke-width="5" stroke-linecap="round" />`;
+      const stem = `<line x1="${x + 12}" y1="${top - 6}" x2="${x + 12}" y2="${stemTop}" stroke="#201b18" stroke-width="3" stroke-linecap="round" />`;
+      const arrow = cell.stroke === "down" ? "↓" : cell.stroke === "up" ? "↑" : "";
+      return `
+        ${note}
+        ${normalized.unit > 4 ? stem : ""}
+        ${arrow ? `<text x="${x}" y="${top + 50}" text-anchor="middle" font-size="24" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
+      `;
+    })
+    .join("");
+  const beams = normalized.unit > 4
+    ? Array.from({ length: Math.ceil(count / beamGroups) }, (_, groupIndex) => {
+        const start = groupIndex * beamGroups;
+        const end = Math.min(count - 1, start + beamGroups - 1);
+        const x1 = left + start * step + 12;
+        const x2 = left + end * step + 12;
+        if (end <= start) return "";
+        return `
+          <line x1="${x1}" y1="${stemTop}" x2="${x2}" y2="${stemTop}" stroke="#201b18" stroke-width="7" stroke-linecap="round" />
+          ${normalized.unit === 16 ? `<line x1="${x1}" y1="${stemTop + 10}" x2="${x2}" y2="${stemTop + 10}" stroke="#201b18" stroke-width="5" stroke-linecap="round" />` : ""}
+        `;
+      }).join("")
+    : "";
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect width="100%" height="100%" rx="26" fill="#fffaf4" />
+      <text x="34" y="52" font-size="28" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${escapeHTML(normalized.meter)}</text>
+      <text x="${width / 2}" y="42" text-anchor="middle" font-size="24" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
+      <line x1="${left - 42}" y1="${top - 28}" x2="${left - 42}" y2="${top + 28}" stroke="#6f4329" stroke-width="4" />
+      <line x1="${right + 26}" y1="${top - 28}" x2="${right + 26}" y2="${top + 28}" stroke="#6f4329" stroke-width="4" />
+      <line x1="${left - 54}" y1="${top - 28}" x2="${left - 54}" y2="${top + 28}" stroke="#6f4329" stroke-width="2" />
+      <line x1="${right + 36}" y1="${top - 28}" x2="${right + 36}" y2="${top + 28}" stroke="#6f4329" stroke-width="2" />
+      ${beams}
+      ${svgCells}
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function rhythmDictionary() {
+  return (state.customRhythms || [])
+    .map(normalizeCustomRhythm)
+    .sort(
+      (a, b) =>
+        RHYTHM_CATEGORY_ORDER.indexOf(a.category) - RHYTHM_CATEGORY_ORDER.indexOf(b.category) ||
+        a.name.localeCompare(b.name, "ko", { numeric: true }),
+    );
+}
+
 const els = {
   viewTitle: $("#viewTitle"),
   navItems: document.querySelectorAll(".nav-item"),
@@ -621,6 +748,7 @@ const els = {
     progress: $("#progressView"),
     schedule: $("#scheduleView"),
     chords: $("#chordsView"),
+    rhythms: $("#rhythmsView"),
     share: $("#shareView"),
   },
   librarySearch: $("#librarySearch"),
@@ -637,6 +765,17 @@ const els = {
   chordCategoryTabs: $("#chordCategoryTabs"),
   chordGrid: $("#chordGrid"),
   openChordBuilder: $("#openChordBuilder"),
+  rhythmSearch: $("#rhythmSearch"),
+  rhythmCategoryTabs: $("#rhythmCategoryTabs"),
+  rhythmGrid: $("#rhythmGrid"),
+  openRhythmBuilder: $("#openRhythmBuilder"),
+  rhythmBuilderDialog: $("#rhythmBuilderDialog"),
+  rhythmBuilderName: $("#rhythmBuilderName"),
+  rhythmBuilderCategory: $("#rhythmBuilderCategory"),
+  rhythmBuilderMeter: $("#rhythmBuilderMeter"),
+  rhythmBuilderUnit: $("#rhythmBuilderUnit"),
+  rhythmBuilderBoard: $("#rhythmBuilderBoard"),
+  clearRhythmBuilder: $("#clearRhythmBuilder"),
   chordBuilderDialog: $("#chordBuilderDialog"),
   chordBuilderName: $("#chordBuilderName"),
   chordBuilderCategory: $("#chordBuilderCategory"),
@@ -746,6 +885,7 @@ function migrateState(data) {
   data.schedule = Array.isArray(data.schedule) ? data.schedule : [];
   data.schedulePeople = Array.isArray(data.schedulePeople) ? data.schedulePeople : [];
   data.customChords = Array.isArray(data.customChords) ? data.customChords.map(normalizeCustomChord) : [];
+  data.customRhythms = Array.isArray(data.customRhythms) ? data.customRhythms.map(normalizeCustomRhythm) : [];
   data.blocks = data.blocks.map((block) => ({
     ...block,
     scores: normalizeScores(block),
@@ -1533,6 +1673,7 @@ function switchView(view) {
     progress: "진도표",
     schedule: "레슨 시간표",
     chords: "코드사전",
+    rhythms: "리듬 사전",
     share: "공유 화면",
   };
 
@@ -1554,6 +1695,7 @@ function render() {
   renderProgress();
   renderSchedule();
   renderChordDictionary();
+  renderRhythmDictionary();
   renderShare();
 }
 
@@ -1721,6 +1863,13 @@ function parseTags(value) {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFC")
+    .replace(/\s+/g, "")
+    .toLowerCase();
 }
 
 function normalizeChordSearch(value) {
@@ -2189,6 +2338,183 @@ function renderChordCards(chords, { compact = false } = {}) {
       `,
     )
     .join("");
+}
+
+function filteredRhythms() {
+  const query = normalizeText(els.rhythmSearch?.value || "");
+  return rhythmDictionary().filter((rhythm) => {
+    const matchesCategory = activeRhythmCategory === "all" || rhythm.category === activeRhythmCategory;
+    const haystack = normalizeText(`${rhythm.name} ${rhythmCategoryLabel(rhythm.category)} ${rhythm.meter} ${rhythm.unit}`);
+    return matchesCategory && (!query || haystack.includes(query));
+  });
+}
+
+function renderRhythmDictionary() {
+  if (!els.rhythmGrid) return;
+  renderRhythmCategoryTabs();
+  const rhythms = filteredRhythms();
+  els.rhythmGrid.innerHTML = rhythms.length
+    ? rhythms
+        .map(
+          (rhythm) => `
+            <article class="rhythm-card">
+              <button class="rhythm-card-main" type="button" data-edit-rhythm="${escapeHTML(rhythm.id)}">
+                <strong>${escapeHTML(rhythm.name)}</strong>
+                <span class="chord-category-badge">${escapeHTML(rhythmCategoryLabel(rhythm.category))} · ${escapeHTML(rhythm.meter)} · ${escapeHTML(String(rhythm.unit))}분</span>
+                <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
+              </button>
+              <div class="chord-card-actions">
+                <button class="chord-edit-button" type="button" data-edit-rhythm="${escapeHTML(rhythm.id)}">편집</button>
+                <button class="chord-delete-button" type="button" data-delete-rhythm="${escapeHTML(rhythm.id)}">삭제</button>
+              </div>
+            </article>
+          `,
+        )
+        .join("")
+    : `<div class="empty">저장된 리듬표가 없습니다.</div>`;
+}
+
+function renderRhythmCategoryTabs() {
+  if (!els.rhythmCategoryTabs) return;
+  const rhythms = rhythmDictionary();
+  els.rhythmCategoryTabs.innerHTML = RHYTHM_CATEGORY_TABS.map((tab) => {
+    const count = tab.key === "all" ? rhythms.length : rhythms.filter((rhythm) => rhythm.category === tab.key).length;
+    return `
+      <button class="${activeRhythmCategory === tab.key ? "active" : ""}" type="button" data-rhythm-category="${tab.key}">
+        ${escapeHTML(tab.label)} <span>${count}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderRhythmBuilderCategorySelect() {
+  if (!els.rhythmBuilderCategory) return;
+  els.rhythmBuilderCategory.innerHTML = RHYTHM_CATEGORY_TABS.filter((tab) => tab.key !== "all")
+    .map((tab) => `<option value="${escapeHTML(tab.key)}" ${rhythmBuilder.category === tab.key ? "selected" : ""}>${escapeHTML(tab.label)}</option>`)
+    .join("");
+}
+
+function openRhythmBuilder(options = {}) {
+  const editRhythm = options.editRhythm ? normalizeCustomRhythm(options.editRhythm) : null;
+  rhythmBuilder = {
+    id: editRhythm?.id || "",
+    name: editRhythm?.name || "",
+    category: editRhythm?.category || (activeRhythmCategory !== "all" ? activeRhythmCategory : "strum"),
+    meter: editRhythm?.meter || "4/4",
+    unit: editRhythm?.unit || 16,
+    cells: editRhythm?.cells ? structuredClone(editRhythm.cells) : [],
+  };
+  if (!RHYTHM_CATEGORY_TABS.some((tab) => tab.key === rhythmBuilder.category && tab.key !== "all")) rhythmBuilder.category = "strum";
+  rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit));
+  els.rhythmBuilderName.value = rhythmBuilder.name;
+  els.rhythmBuilderMeter.value = rhythmBuilder.meter;
+  els.rhythmBuilderUnit.value = String(rhythmBuilder.unit);
+  renderRhythmBuilderCategorySelect();
+  renderRhythmBuilder();
+  els.rhythmBuilderDialog.showModal();
+}
+
+function renderRhythmBuilder() {
+  if (!els.rhythmBuilderBoard) return;
+  const count = rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit);
+  rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, count);
+  const unitLabel = `${rhythmBuilder.unit}분`;
+  els.rhythmBuilderBoard.innerHTML = `
+    <div class="rhythm-measure-meta">
+      <strong>${escapeHTML(rhythmBuilder.meter)}</strong>
+      <span>${escapeHTML(unitLabel)} 기준 · ${count}칸</span>
+    </div>
+    <div class="rhythm-measure">
+      ${rhythmBuilder.cells
+        .map(
+          (cell, index) => `
+            <button class="rhythm-hit-cell ${cell.hit === "circle" ? "is-circle" : "is-line"}" type="button" data-rhythm-hit="${index}" aria-label="${index + 1}번째 음표">
+              <span aria-hidden="true"></span>
+            </button>
+          `,
+        )
+        .join("")}
+    </div>
+    <div class="rhythm-stroke-row">
+      ${rhythmBuilder.cells
+        .map(
+          (cell, index) => `
+            <button class="rhythm-stroke-cell ${cell.stroke ? "active" : ""}" type="button" data-rhythm-stroke="${index}" aria-label="${index + 1}번째 스트로크 방향">
+              ${cell.stroke === "down" ? "↓" : cell.stroke === "up" ? "↑" : "·"}
+            </button>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function syncRhythmBuilderOptions() {
+  rhythmBuilder.meter = els.rhythmBuilderMeter.value;
+  rhythmBuilder.unit = Number(els.rhythmBuilderUnit.value);
+  rhythmBuilder.category = els.rhythmBuilderCategory.value;
+  rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit));
+  renderRhythmBuilder();
+}
+
+function toggleRhythmHit(index) {
+  const cell = rhythmBuilder.cells[index];
+  if (!cell) return;
+  cell.hit = cell.hit === "circle" ? "line" : "circle";
+  renderRhythmBuilder();
+}
+
+function toggleRhythmStroke(index) {
+  const cell = rhythmBuilder.cells[index];
+  if (!cell) return;
+  cell.stroke = cell.stroke === "" ? "down" : cell.stroke === "down" ? "up" : "";
+  renderRhythmBuilder();
+}
+
+function saveCustomRhythmFromBuilder() {
+  const name = els.rhythmBuilderName.value.trim();
+  if (!name) {
+    showToast("리듬 이름을 입력해주세요.");
+    return;
+  }
+  const rhythm = normalizeCustomRhythm({
+    id: rhythmBuilder.id || uid("rhythm"),
+    name,
+    category: els.rhythmBuilderCategory.value || rhythmBuilder.category || "custom",
+    meter: els.rhythmBuilderMeter.value || rhythmBuilder.meter,
+    unit: Number(els.rhythmBuilderUnit.value || rhythmBuilder.unit),
+    cells: rhythmBuilder.cells,
+    updatedAt: nowIso(),
+  });
+  state.customRhythms = [
+    rhythm,
+    ...(state.customRhythms || []).filter((item) => item.id !== rhythm.id),
+  ];
+  activeRhythmCategory = rhythm.category;
+  els.rhythmBuilderDialog.close();
+  render();
+  saveStateInBackground({}, `${rhythm.name} 리듬표를 저장했습니다.`);
+}
+
+function editCustomRhythm(rhythmId) {
+  const rhythm = rhythmDictionary().find((item) => item.id === rhythmId);
+  if (!rhythm) {
+    showToast("편집할 리듬표를 찾을 수 없습니다.");
+    return;
+  }
+  openRhythmBuilder({ editRhythm: rhythm });
+}
+
+function deleteCustomRhythm(rhythmId) {
+  const rhythm = rhythmDictionary().find((item) => item.id === rhythmId);
+  if (!rhythm) {
+    showToast("삭제할 리듬표를 찾을 수 없습니다.");
+    return;
+  }
+  if (!window.confirm(`${rhythm.name} 리듬표를 삭제할까요?`)) return;
+  state.customRhythms = (state.customRhythms || []).filter((item) => item.id !== rhythm.id);
+  render();
+  saveStateInBackground({}, `${rhythm.name} 리듬표를 삭제했습니다.`);
 }
 
 function renderBlockChordDictionary(block, { editable = false } = {}) {
@@ -3343,7 +3669,7 @@ function renderLessonPicker() {
 function renderKindPicker(picker, kind) {
   const available = state.blocks.filter((block) => block.kind === kind && !pendingBlockIds.has(block.id));
   picker.innerHTML = available
-    .map((block) => `<option value="${block.id}">${escapeHTML(block.title)}</option>`)
+    .map((block) => `<option value="${block.id}">${escapeHTML(String(block.title || "").normalize("NFC"))}</option>`)
     .join("");
   picker.disabled = !available.length;
 }
@@ -3766,6 +4092,25 @@ document.addEventListener("click", (event) => {
     renderLibrary();
   }
 
+  const rhythmCategory = event.target.closest("[data-rhythm-category]");
+  if (rhythmCategory) {
+    activeRhythmCategory = rhythmCategory.dataset.rhythmCategory;
+    renderRhythmDictionary();
+    return;
+  }
+
+  const editRhythm = event.target.closest("[data-edit-rhythm]");
+  if (editRhythm) {
+    editCustomRhythm(editRhythm.dataset.editRhythm);
+    return;
+  }
+
+  const deleteRhythm = event.target.closest("[data-delete-rhythm]");
+  if (deleteRhythm) {
+    deleteCustomRhythm(deleteRhythm.dataset.deleteRhythm);
+    return;
+  }
+
   const assignRoom = event.target.closest("[data-assign-room]");
   if (assignRoom) assignSelectedToStudent(assignRoom.dataset.assignRoom);
 
@@ -4176,7 +4521,30 @@ els.views.library.addEventListener("drop", async (event) => {
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
 els.chordSearch.addEventListener("input", renderChordDictionary);
+els.rhythmSearch?.addEventListener("input", renderRhythmDictionary);
 els.openChordBuilder.addEventListener("click", openChordBuilder);
+els.openRhythmBuilder?.addEventListener("click", () => openRhythmBuilder());
+els.rhythmBuilderCategory?.addEventListener("change", syncRhythmBuilderOptions);
+els.rhythmBuilderMeter?.addEventListener("change", syncRhythmBuilderOptions);
+els.rhythmBuilderUnit?.addEventListener("change", syncRhythmBuilderOptions);
+els.clearRhythmBuilder?.addEventListener("click", () => {
+  rhythmBuilder.cells = normalizeRhythmCells([], rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit));
+  renderRhythmBuilder();
+});
+els.rhythmBuilderBoard?.addEventListener("click", (event) => {
+  const hit = event.target.closest("[data-rhythm-hit]");
+  if (hit) {
+    toggleRhythmHit(Number(hit.dataset.rhythmHit));
+    return;
+  }
+  const stroke = event.target.closest("[data-rhythm-stroke]");
+  if (stroke) toggleRhythmStroke(Number(stroke.dataset.rhythmStroke));
+});
+els.rhythmBuilderDialog?.addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  saveCustomRhythmFromBuilder();
+});
 els.chordBuilderPrevFret.addEventListener("click", () => {
   chordBuilder.baseFret = Math.max(1, chordBuilder.baseFret - 1);
   renderChordBuilder();

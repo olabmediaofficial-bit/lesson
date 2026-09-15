@@ -52,6 +52,10 @@
             <span aria-hidden="true">♬</span>
             코드사전
           </button>
+          <button class="nav-item" data-view="rhythms" type="button">
+            <span aria-hidden="true">♩</span>
+            리듬 사전
+          </button>
         </nav>
 
         <div class="sidebar-note">
@@ -288,6 +292,29 @@
             </div>
             <div class="segmented chord-category-tabs" id="chordCategoryTabs" aria-label="코드 종류 선택"></div>
             <div id="chordGrid" class="chord-grid"></div>
+          </section>
+        </section>
+
+        <section class="view" id="rhythmsView" aria-label="리듬 사전">
+          <section class="panel rhythm-dictionary-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Rhythm dictionary</p>
+                <h2>리듬 사전</h2>
+                <p>수업에서 쓰는 리듬표를 그리고 폴더별로 정리합니다.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="secondary-button" id="openRhythmBuilder" type="button">리듬 그리기</button>
+              </div>
+            </div>
+            <div class="control-row">
+              <label class="search-box">
+                <span aria-hidden="true">⌕</span>
+                <input id="rhythmSearch" type="search" placeholder="예: 16비트 패턴, 6/8" />
+              </label>
+            </div>
+            <div class="segmented chord-category-tabs" id="rhythmCategoryTabs" aria-label="리듬 종류 선택"></div>
+            <div id="rhythmGrid" class="rhythm-grid"></div>
           </section>
         </section>
 
@@ -560,6 +587,50 @@
           <button class="secondary-button" id="clearChordBuilder" type="button">지우기</button>
           <button class="secondary-button" value="cancel" type="submit">취소</button>
           <button class="primary-button" id="saveChordBuilder" value="default" type="submit">커스텀 코드 저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="rhythmBuilderDialog">
+      <form method="dialog" class="dialog-card rhythm-builder-dialog" id="rhythmBuilderForm">
+        <div class="dialog-head">
+          <div>
+            <h2 id="rhythmBuilderTitle">리듬 그리기</h2>
+            <p>한 마디 안에서 음표 자리와 다운/업 방향을 표시합니다.</p>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="닫기">×</button>
+        </div>
+        <div class="rhythm-builder-fields">
+          <label>
+            리듬 이름
+            <input id="rhythmBuilderName" type="text" placeholder="예: 16비트 패턴 1" />
+          </label>
+          <label>
+            저장 폴더
+            <select id="rhythmBuilderCategory"></select>
+          </label>
+          <label>
+            박자표
+            <select id="rhythmBuilderMeter">
+              <option value="4/4">4/4</option>
+              <option value="3/4">3/4</option>
+              <option value="6/8">6/8</option>
+            </select>
+          </label>
+          <label>
+            음표 기준
+            <select id="rhythmBuilderUnit">
+              <option value="4">4분</option>
+              <option value="8">8분</option>
+              <option value="16">16분</option>
+            </select>
+          </label>
+        </div>
+        <div id="rhythmBuilderBoard" class="rhythm-builder-board" aria-label="리듬 그리기 보드"></div>
+        <menu>
+          <button class="secondary-button" id="clearRhythmBuilder" type="button">지우기</button>
+          <button class="secondary-button" value="cancel" type="submit">취소</button>
+          <button class="primary-button" value="save" type="submit">저장</button>
         </menu>
       </form>
     </dialog>

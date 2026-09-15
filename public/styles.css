@@ -35,6 +35,15 @@ textarea {
   font: inherit;
 }
 
+select,
+option {
+  font-family:
+    "Gmarket Sans", "GmarketSans", "Apple SD Gothic Neo", "Noto Sans KR",
+    "Malgun Gothic", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-ligatures: none;
+  text-rendering: optimizeLegibility;
+}
+
 button {
   cursor: pointer;
 }
@@ -1020,17 +1029,16 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 8;
-  margin: 0 -18px 14px;
-  padding: 8px 18px;
-  border-top: 1px solid rgba(185, 130, 85, 0.08);
-  border-bottom: 1px solid rgba(185, 130, 85, 0.12);
-  background: rgba(251, 250, 247, 0.94);
-  backdrop-filter: blur(10px);
+  margin: 14px 0 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .compact-metronome {
   width: 100%;
-  max-width: 680px;
+  max-width: 760px;
   grid-template-columns: minmax(94px, auto) minmax(170px, 1fr) minmax(220px, auto);
   align-items: center;
   gap: 8px;
@@ -2141,14 +2149,20 @@ textarea {
 }
 
 .chord-grid,
-.used-chord-grid {
+.used-chord-grid,
+.rhythm-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
   padding: 18px;
 }
 
-.chord-card {
+.rhythm-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.chord-card,
+.rhythm-card {
   display: grid;
   gap: 8px;
   width: 100%;
@@ -2160,7 +2174,8 @@ textarea {
   text-align: left;
 }
 
-.chord-card-main {
+.chord-card-main,
+.rhythm-card-main {
   display: grid;
   gap: 8px;
   width: 100%;
@@ -2173,7 +2188,8 @@ textarea {
   text-align: left;
 }
 
-.chord-card strong {
+.chord-card strong,
+.rhythm-card strong {
   color: var(--accent-strong);
   font-size: 14px;
 }
@@ -2188,7 +2204,8 @@ textarea {
   font-weight: 900;
 }
 
-.chord-card img {
+.chord-card img,
+.rhythm-card img {
   width: 100%;
   border-radius: 6px;
   background: #fbfaf7;
@@ -2202,7 +2219,8 @@ textarea {
   font-size: 12px;
 }
 
-.chord-card:hover {
+.chord-card:hover,
+.rhythm-card:hover {
   border-color: rgba(185, 130, 85, 0.34);
   box-shadow: 0 8px 18px rgba(185, 130, 85, 0.1);
 }
@@ -2236,6 +2254,134 @@ textarea {
   font: inherit;
   font-size: 12px;
   font-weight: 900;
+}
+
+#rhythmBuilderDialog {
+  width: min(1180px, calc(100vw - 24px));
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+#rhythmBuilderDialog::backdrop {
+  background: rgba(25, 18, 13, 0.62);
+  backdrop-filter: blur(2px);
+}
+
+.rhythm-builder-dialog {
+  gap: 18px;
+  border: 1px solid rgba(111, 67, 41, 0.32);
+  background: #fff8f0;
+  box-shadow:
+    0 24px 72px rgba(44, 30, 20, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.72) inset;
+}
+
+.rhythm-builder-dialog .dialog-head p {
+  margin: 4px 0 0;
+  color: #7b6d63;
+  font-size: 13px;
+}
+
+.rhythm-builder-fields {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(140px, 0.8fr));
+  gap: 12px;
+}
+
+.rhythm-builder-board {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid rgba(198, 170, 143, 0.72);
+  border-radius: 8px;
+  background: #fffaf4;
+  box-shadow:
+    inset 2px 2px 5px rgba(117, 82, 55, 0.1),
+    inset -2px -2px 6px rgba(255, 252, 247, 0.9);
+}
+
+.rhythm-measure-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--accent-strong);
+  font-weight: 900;
+}
+
+.rhythm-measure-meta span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.rhythm-measure,
+.rhythm-stroke-row {
+  display: grid;
+  grid-auto-columns: minmax(32px, 1fr);
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.rhythm-measure {
+  min-height: 108px;
+  padding: 24px 18px 16px;
+  border-inline: 3px solid #6f4329;
+  background:
+    linear-gradient(#d8c0a6, #d8c0a6) 0 50% / 100% 2px no-repeat,
+    rgba(255, 255, 255, 0.48);
+}
+
+.rhythm-hit-cell,
+.rhythm-stroke-cell {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+  font: inherit;
+  font-weight: 900;
+}
+
+.rhythm-hit-cell {
+  min-height: 66px;
+}
+
+.rhythm-hit-cell span {
+  display: block;
+  width: 26px;
+  height: 5px;
+  border-radius: 999px;
+  background: #6f4329;
+  transform: rotate(-28deg);
+}
+
+.rhythm-hit-cell.is-circle span {
+  width: 24px;
+  height: 24px;
+  border: 4px solid #6f4329;
+  background: transparent;
+  transform: none;
+}
+
+.rhythm-hit-cell:hover span,
+.rhythm-stroke-cell:hover {
+  filter: brightness(1.2);
+}
+
+.rhythm-stroke-cell {
+  min-height: 36px;
+  border-radius: 8px;
+  color: #c8a98d;
+  font-size: 22px;
+}
+
+.rhythm-stroke-cell.active {
+  color: var(--accent);
+  background: #fff2e3;
 }
 
 #chordBuilderDialog {
@@ -3905,6 +4051,7 @@ body {
 .lesson-card,
 .share-preview,
 .chord-dictionary-panel,
+.rhythm-dictionary-panel,
 .curriculum-map,
 .curriculum-area-card,
 .curriculum-skill-card,
@@ -3944,6 +4091,7 @@ textarea,
 .practice-skill-fields fieldset,
 .used-chord-panel,
 .chord-card,
+.rhythm-card,
 .score-preview,
 .metronome {
   border: 1px solid rgba(198, 170, 143, 0.72);
@@ -4101,7 +4249,7 @@ textarea,
   }
 
   .nav {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   }
 
   .sidebar-note {
@@ -4157,8 +4305,8 @@ textarea,
   }
 
   .room-session-bar {
-    margin: 0 -12px 12px;
-    padding: 8px 12px;
+    margin: 12px 0 14px;
+    padding: 0;
   }
 
   .compact-metronome {
@@ -4202,6 +4350,21 @@ textarea,
   .chord-grid {
     grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
     padding: 14px;
+  }
+
+  .rhythm-grid,
+  .rhythm-builder-fields {
+    grid-template-columns: 1fr;
+  }
+
+  #rhythmBuilderDialog {
+    width: min(100vw - 12px, 760px);
+  }
+
+  .rhythm-measure,
+  .rhythm-stroke-row {
+    overflow-x: auto;
+    grid-auto-columns: minmax(34px, 42px);
   }
 
   .image-viewer-chord-grid {
