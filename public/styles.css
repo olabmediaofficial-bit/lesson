@@ -2207,6 +2207,12 @@ textarea {
   box-shadow: 0 8px 18px rgba(185, 130, 85, 0.1);
 }
 
+.chord-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .chord-edit-button {
   justify-self: start;
   padding: 5px 9px;
@@ -2214,6 +2220,18 @@ textarea {
   border-radius: 999px;
   color: var(--accent-strong);
   background: #fff8f0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.chord-delete-button {
+  padding: 5px 9px;
+  border: 1px solid rgba(153, 73, 56, 0.28);
+  border-radius: 999px;
+  color: #994938;
+  background: #fff5f2;
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -2646,6 +2664,13 @@ dialog::backdrop {
   background: #fff8f0;
 }
 
+.image-viewer-dialog.chord-only:not(.chord-grid-mode) {
+  width: fit-content;
+  height: fit-content !important;
+  max-width: calc(100vw - 28px);
+  max-height: calc(100dvh - 28px);
+}
+
 .image-viewer-dialog.chord-grid-mode {
   width: min(900px, calc(100vw - 28px));
 }
@@ -2669,7 +2694,10 @@ dialog::backdrop {
 }
 
 .image-viewer-dialog.chord-only:not(.chord-grid-mode) .image-viewer {
-  display: block;
+  display: grid;
+  height: auto;
+  max-height: none;
+  grid-template-rows: auto auto;
 }
 
 .image-viewer-head {
@@ -3006,7 +3034,8 @@ dialog::backdrop {
 }
 
 .image-viewer-dialog.chord-only:not(.chord-grid-mode) .image-viewer-stage {
-  display: block;
+  display: grid;
+  place-items: center;
 }
 
 .image-viewer-scroll {
@@ -3029,9 +3058,9 @@ dialog::backdrop {
 }
 
 .image-viewer-dialog.chord-only:not(.chord-grid-mode) .image-viewer-scroll {
-  max-height: min(72dvh, 560px);
+  max-height: none;
   overflow: visible;
-  padding: 14px 18px 20px;
+  padding: 10px 14px 14px;
 }
 
 .image-viewer-chord-grid {
@@ -3094,7 +3123,7 @@ dialog::backdrop {
 .image-viewer-dialog.chord-only .image-viewer img {
   width: min(420px, 82vw) !important;
   max-width: 100%;
-  max-height: min(68dvh, 520px);
+  max-height: calc(100dvh - 104px);
   border-radius: 8px;
   box-shadow:
     8px 8px 18px rgba(68, 43, 29, 0.16),

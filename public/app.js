@@ -542,7 +542,7 @@ function customChordSvg(chord) {
       const openEntry = openStrings.get(string.index);
       if (openEntry) {
         return `
-          <text x="${left - 54}" y="${y + 7}" text-anchor="middle" font-size="18" font-weight="900" fill="#6f4329">0</text>
+          <text x="${left - 54}" y="${y + 7}" text-anchor="middle" font-size="18" font-weight="900" fill="#6f4329">${escapeHTML(string.label)}</text>
           ${openEntry.root ? `<text x="${left - 28}" y="${y + 6}" text-anchor="middle" font-size="13" font-weight="900" fill="#b98255">R</text>` : ""}
         `;
       }
@@ -1414,6 +1414,10 @@ function renderImageViewerMastery() {
 
 function fitImageViewerToScreen() {
   const image = els.imageViewerImage;
+  if (imageViewer.mode === "chord") {
+    image.removeAttribute("style");
+    return;
+  }
   const scroller = image.closest(".image-viewer-scroll");
   if (!scroller || !image.naturalWidth || !image.naturalHeight) return;
 
@@ -1723,13 +1727,30 @@ function normalizeChordSearch(value) {
   return String(value || "")
     .replace(/♯/g, "#")
     .replace(/＃/g, "#")
+    .replace(/\.png$/i, "")
     .replace(/\s+/g, "")
     .toLowerCase();
 }
 
+function chordSearchAliases(chord) {
+  const fileBase = String(chord.fileName || "").split("/").pop()?.replace(/\.[^.]+$/, "") || "";
+  return [
+    chord.name,
+    chord.fileName,
+    fileBase,
+    chordNameFromFile(chord.fileName || ""),
+  ].map(normalizeChordSearch);
+}
+
+function findChord(value) {
+  const raw = String(value || "").trim().replace(/♯/g, "#").replace(/＃/g, "#");
+  const normalized = normalizeChordSearch(raw);
+  return chordDictionary().find((chord) => chord.fileName === raw || chordSearchAliases(chord).includes(normalized));
+}
+
 function normalizeChordName(value) {
   const raw = String(value || "").trim().replace(/♯/g, "#").replace(/＃/g, "#");
-  const match = chordDictionary().find((chord) => normalizeChordSearch(chord.name) === normalizeChordSearch(raw) || chord.fileName === raw);
+  const match = findChord(raw);
   return match?.fileName || raw;
 }
 
@@ -1739,8 +1760,7 @@ function normalizeChordNames(value) {
 }
 
 function getChordByName(name) {
-  const normalized = normalizeChordSearch(name);
-  return chordDictionary().find((chord) => chord.fileName === name) || chordDictionary().find((chord) => normalizeChordSearch(chord.name) === normalized);
+  return findChord(name);
 }
 
 function allCurriculumSkillLabels() {
@@ -2155,7 +2175,16 @@ function renderChordCards(chords, { compact = false } = {}) {
             <span class="chord-category-badge">${escapeHTML(chordDisplayCategoryLabel(chord))}</span>
             <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
           </button>
-          ${!publicShareMode && chord.fileName?.startsWith("custom:") ? `<button class="chord-edit-button" type="button" data-edit-custom-chord="${escapeHTML(chord.fileName)}">편집</button>` : ""}
+          ${
+            !publicShareMode && chord.fileName?.startsWith("custom:")
+              ? `
+                <div class="chord-card-actions">
+                  <button class="chord-edit-button" type="button" data-edit-custom-chord="${escapeHTML(chord.fileName)}">편집</button>
+                  <button class="chord-delete-button" type="button" data-delete-custom-chord="${escapeHTML(chord.fileName)}">삭제</button>
+                </div>
+              `
+              : ""
+          }
         </article>
       `,
     )
@@ -2311,6 +2340,27 @@ function openCustomChordEditor(fileName) {
     return;
   }
   openChordBuilder({ editChord: chord });
+}
+
+function deleteCustomChord(fileName) {
+  const chord = chordDictionary().find((item) => item.fileName === fileName);
+  if (!chord || !fileName.startsWith("custom:")) {
+    showToast("삭제할 커스텀 코드표를 찾을 수 없습니다.");
+    return;
+  }
+  if (!window.confirm(`${chord.name} 코드표를 삭제할까요?`)) return;
+  state.customChords = (state.customChords || []).filter((item) => item.id !== chord.id);
+  state.blocks = state.blocks.map((block) =>
+    block.kind === "practice"
+      ? {
+          ...block,
+          chords: normalizeChordNames(block.chords || []).filter((name) => name !== fileName),
+          updatedAt: nowIso(),
+        }
+      : block,
+  );
+  render();
+  saveStateInBackground({}, `${chord.name} 코드표를 삭제했습니다.`);
 }
 
 function renderChordBuilder() {
@@ -3821,6 +3871,13 @@ document.addEventListener("click", (event) => {
   if (editCustomChordButton) {
     event.preventDefault();
     openCustomChordEditor(editCustomChordButton.dataset.editCustomChord);
+    return;
+  }
+
+  const deleteCustomChordButton = event.target.closest("[data-delete-custom-chord]");
+  if (deleteCustomChordButton) {
+    event.preventDefault();
+    deleteCustomChord(deleteCustomChordButton.dataset.deleteCustomChord);
     return;
   }
 
