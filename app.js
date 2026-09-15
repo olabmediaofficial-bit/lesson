@@ -652,7 +652,7 @@ function normalizeRhythmCells(cells, count) {
     const cell = source[index] || {};
     return {
       hit: cell.hit === "circle" ? "circle" : "line",
-      stroke: ["down", "up"].includes(cell.stroke) ? cell.stroke : "",
+      stroke: ["down", "up"].includes(cell.stroke) ? cell.stroke : index % 2 === 0 ? "down" : "up",
     };
   });
 }
@@ -677,26 +677,31 @@ function rhythmSvg(rhythm) {
   const normalized = normalizeCustomRhythm(rhythm);
   const name = escapeHTML(normalized.name);
   const count = normalized.cells.length;
-  const width = Math.max(560, count * 48 + 160);
-  const height = 230;
-  const left = 92;
-  const right = width - 54;
-  const top = 82;
+  const width = Math.max(720, count * 42 + 190);
+  const height = 250;
+  const left = 136;
+  const right = width - 70;
+  const noteY = 112;
   const step = (right - left) / Math.max(1, count - 1);
   const beamGroups = normalized.unit === 16 ? 4 : normalized.unit === 8 ? 2 : 1;
-  const stemTop = top - 34;
+  const stemTop = noteY - 58;
+  const stemRightOffset = 10;
+  const circleY = noteY + 34;
+  const arrowY = noteY + 70;
   const svgCells = normalized.cells
     .map((cell, index) => {
       const x = left + index * step;
-      const note = cell.hit === "circle"
-        ? `<circle cx="${x}" cy="${top}" r="11" fill="none" stroke="#6f4329" stroke-width="4" />`
-        : `<line x1="${x - 12}" y1="${top + 10}" x2="${x + 12}" y2="${top - 10}" stroke="#6f4329" stroke-width="5" stroke-linecap="round" />`;
-      const stem = `<line x1="${x + 12}" y1="${top - 6}" x2="${x + 12}" y2="${stemTop}" stroke="#201b18" stroke-width="3" stroke-linecap="round" />`;
-      const arrow = cell.stroke === "down" ? "↓" : cell.stroke === "up" ? "↑" : "";
+      const note = `<ellipse cx="${x}" cy="${noteY}" rx="11" ry="8" fill="#111" transform="rotate(-20 ${x} ${noteY})" />`;
+      const stem = `<line x1="${x + stemRightOffset}" y1="${noteY - 5}" x2="${x + stemRightOffset}" y2="${stemTop}" stroke="#111" stroke-width="3" stroke-linecap="round" />`;
+      const mark = cell.hit === "circle"
+        ? `<circle cx="${x}" cy="${circleY}" r="11" fill="none" stroke="#111" stroke-width="3" />`
+        : `<line x1="${x - 10}" y1="${circleY}" x2="${x + 10}" y2="${circleY}" stroke="#111" stroke-width="3" stroke-linecap="round" />`;
+      const arrow = cell.stroke === "down" ? "↓" : "↑";
       return `
         ${note}
         ${normalized.unit > 4 ? stem : ""}
-        ${arrow ? `<text x="${x}" y="${top + 50}" text-anchor="middle" font-size="24" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
+        ${mark}
+        <text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>
       `;
     })
     .join("");
@@ -704,24 +709,27 @@ function rhythmSvg(rhythm) {
     ? Array.from({ length: Math.ceil(count / beamGroups) }, (_, groupIndex) => {
         const start = groupIndex * beamGroups;
         const end = Math.min(count - 1, start + beamGroups - 1);
-        const x1 = left + start * step + 12;
-        const x2 = left + end * step + 12;
+        const x1 = left + start * step + stemRightOffset;
+        const x2 = left + end * step + stemRightOffset;
         if (end <= start) return "";
         return `
-          <line x1="${x1}" y1="${stemTop}" x2="${x2}" y2="${stemTop}" stroke="#201b18" stroke-width="7" stroke-linecap="round" />
-          ${normalized.unit === 16 ? `<line x1="${x1}" y1="${stemTop + 10}" x2="${x2}" y2="${stemTop + 10}" stroke="#201b18" stroke-width="5" stroke-linecap="round" />` : ""}
+          <line x1="${x1}" y1="${stemTop}" x2="${x2}" y2="${stemTop}" stroke="#111" stroke-width="7" stroke-linecap="butt" />
+          ${normalized.unit === 16 ? `<line x1="${x1}" y1="${stemTop + 10}" x2="${x2}" y2="${stemTop + 10}" stroke="#111" stroke-width="5" stroke-linecap="butt" />` : ""}
         `;
       }).join("")
     : "";
+  const meter = normalized.meter.split("/");
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" rx="26" fill="#fffaf4" />
-      <text x="34" y="52" font-size="28" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${escapeHTML(normalized.meter)}</text>
-      <text x="${width / 2}" y="42" text-anchor="middle" font-size="24" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
-      <line x1="${left - 42}" y1="${top - 28}" x2="${left - 42}" y2="${top + 28}" stroke="#6f4329" stroke-width="4" />
-      <line x1="${right + 26}" y1="${top - 28}" x2="${right + 26}" y2="${top + 28}" stroke="#6f4329" stroke-width="4" />
-      <line x1="${left - 54}" y1="${top - 28}" x2="${left - 54}" y2="${top + 28}" stroke="#6f4329" stroke-width="2" />
-      <line x1="${right + 36}" y1="${top - 28}" x2="${right + 36}" y2="${top + 28}" stroke="#6f4329" stroke-width="2" />
+      <text x="${width / 2}" y="38" text-anchor="middle" font-size="22" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
+      <line x1="54" y1="${noteY - 22}" x2="54" y2="${noteY + 22}" stroke="#111" stroke-width="2" />
+      <line x1="65" y1="${noteY - 28}" x2="65" y2="${noteY + 28}" stroke="#111" stroke-width="5" />
+      <text x="100" y="${noteY - 6}" text-anchor="middle" font-size="36" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${escapeHTML(meter[0] || "4")}</text>
+      <text x="100" y="${noteY + 32}" text-anchor="middle" font-size="36" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${escapeHTML(meter[1] || "4")}</text>
+      <line x1="84" y1="${noteY + 2}" x2="116" y2="${noteY + 2}" stroke="#111" stroke-width="3" />
+      <line x1="${left - 30}" y1="${noteY - 30}" x2="${left - 30}" y2="${noteY + 30}" stroke="#9a7a61" stroke-width="2" />
+      <line x1="${right + 28}" y1="${noteY - 30}" x2="${right + 28}" y2="${noteY + 30}" stroke="#9a7a61" stroke-width="2" />
       ${beams}
       ${svgCells}
     </svg>
@@ -800,6 +808,8 @@ const els = {
   lessonMemo: $("#lessonMemo"),
   lessonTheoryPicker: $("#lessonTheoryPicker"),
   lessonPracticePicker: $("#lessonPracticePicker"),
+  drawLessonChord: $("#drawLessonChord"),
+  drawLessonRhythm: $("#drawLessonRhythm"),
   pendingMaterialList: $("#pendingMaterialList"),
   lessonList: $("#lessonList"),
   progressStudentName: $("#progressStudentName"),
@@ -2358,7 +2368,7 @@ function renderRhythmDictionary() {
         .map(
           (rhythm) => `
             <article class="rhythm-card">
-              <button class="rhythm-card-main" type="button" data-edit-rhythm="${escapeHTML(rhythm.id)}">
+              <button class="rhythm-card-main" type="button" data-view-rhythm="${escapeHTML(rhythm.id)}">
                 <strong>${escapeHTML(rhythm.name)}</strong>
                 <span class="chord-category-badge">${escapeHTML(rhythmCategoryLabel(rhythm.category))} · ${escapeHTML(rhythm.meter)} · ${escapeHTML(String(rhythm.unit))}분</span>
                 <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
@@ -2403,6 +2413,7 @@ function openRhythmBuilder(options = {}) {
     meter: editRhythm?.meter || "4/4",
     unit: editRhythm?.unit || 16,
     cells: editRhythm?.cells ? structuredClone(editRhythm.cells) : [],
+    attachToLesson: Boolean(options.attachToLesson),
   };
   if (!RHYTHM_CATEGORY_TABS.some((tab) => tab.key === rhythmBuilder.category && tab.key !== "all")) rhythmBuilder.category = "strum";
   rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit));
@@ -2429,7 +2440,8 @@ function renderRhythmBuilder() {
         .map(
           (cell, index) => `
             <button class="rhythm-hit-cell ${cell.hit === "circle" ? "is-circle" : "is-line"}" type="button" data-rhythm-hit="${index}" aria-label="${index + 1}번째 음표">
-              <span aria-hidden="true"></span>
+              <span class="rhythm-note" aria-hidden="true"></span>
+              <span class="rhythm-under-mark" aria-hidden="true"></span>
             </button>
           `,
         )
@@ -2467,8 +2479,17 @@ function toggleRhythmHit(index) {
 function toggleRhythmStroke(index) {
   const cell = rhythmBuilder.cells[index];
   if (!cell) return;
-  cell.stroke = cell.stroke === "" ? "down" : cell.stroke === "down" ? "up" : "";
+  cell.stroke = cell.stroke === "down" ? "up" : "down";
   renderRhythmBuilder();
+}
+
+function openRhythmViewer(rhythmId) {
+  const rhythm = rhythmDictionary().find((item) => item.id === rhythmId);
+  if (!rhythm) {
+    showToast("리듬표를 찾을 수 없습니다.");
+    return;
+  }
+  openImageViewerItems([{ src: rhythmSvg(rhythm), title: `${rhythm.name} 리듬표` }], 0, { mode: "chord" });
 }
 
 function saveCustomRhythmFromBuilder() {
@@ -2490,6 +2511,15 @@ function saveCustomRhythmFromBuilder() {
     rhythm,
     ...(state.customRhythms || []).filter((item) => item.id !== rhythm.id),
   ];
+  if (rhythmBuilder.attachToLesson) {
+    const block = createGeneratedLessonBlock({
+      title: `${rhythm.name} 리듬 그리기`,
+      summary: `${rhythm.name} 리듬 패턴을 직접 그려 확인했습니다.`,
+      tags: ["리듬표", "리듬 그리기"],
+      resources: [{ name: `${rhythm.name} 리듬표.png`, data: rhythmSvg(rhythm) }],
+    });
+    pendingBlockIds.add(block.id);
+  }
   activeRhythmCategory = rhythm.category;
   els.rhythmBuilderDialog.close();
   render();
@@ -2515,6 +2545,20 @@ function deleteCustomRhythm(rhythmId) {
   state.customRhythms = (state.customRhythms || []).filter((item) => item.id !== rhythm.id);
   render();
   saveStateInBackground({}, `${rhythm.name} 리듬표를 삭제했습니다.`);
+}
+
+function createGeneratedLessonBlock({ title, summary, tags = [], resources = [] }) {
+  const block = {
+    id: uid("blk"),
+    kind: "theory",
+    title,
+    summary,
+    tags,
+    resources,
+    updatedAt: nowIso(),
+  };
+  state.blocks = [block, ...state.blocks];
+  return block;
 }
 
 function renderBlockChordDictionary(block, { editable = false } = {}) {
@@ -2643,6 +2687,7 @@ function openChordBuilder(options = {}) {
     rootMode: false,
     studentId: options.studentId ?? editChord?.studentId ?? chordBuilderStudentId(),
     blockId: options.blockId ?? (els.imageViewerDialog?.open && imageViewer.mode === "score" ? currentImageViewerBlock()?.id || "" : ""),
+    attachToLesson: Boolean(options.attachToLesson),
     category: editChord?.category || options.category || "custom",
   };
   els.chordBuilderName.value = editChord?.name || "";
@@ -2795,6 +2840,15 @@ function saveCustomChordFromBuilder() {
     chord,
     ...(state.customChords || []).filter((item) => item.id !== chord.id && !(normalizeChordSearch(item.name) === normalizeChordSearch(chord.name) && (item.studentId || "") === (chord.studentId || ""))),
   ];
+  if (chordBuilder.attachToLesson) {
+    const block = createGeneratedLessonBlock({
+      title: `${chord.name} 코드 그리기`,
+      summary: `${chord.name} 코드 운지를 직접 그려 확인했습니다.`,
+      tags: ["코드표", "코드 그리기"],
+      resources: [{ name: `${chord.name} 코드표.png`, data: customChordEntry(chord).src }],
+    });
+    pendingBlockIds.add(block.id);
+  }
   const sourceBlock = chordBuilder.blockId ? getBlock(chordBuilder.blockId) : null;
   if (sourceBlock?.kind === "practice") {
     sourceBlock.chords = normalizeChordNames([...(sourceBlock.chords || []), `custom:${chord.id}`]);
@@ -4099,6 +4153,12 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const viewRhythm = event.target.closest("[data-view-rhythm]");
+  if (viewRhythm) {
+    openRhythmViewer(viewRhythm.dataset.viewRhythm);
+    return;
+  }
+
   const editRhythm = event.target.closest("[data-edit-rhythm]");
   if (editRhythm) {
     editCustomRhythm(editRhythm.dataset.editRhythm);
@@ -5255,6 +5315,8 @@ function attachPickedBlock(kind) {
 
 $("#attachTheoryMaterial").addEventListener("click", () => attachPickedBlock("theory"));
 $("#attachPracticeMaterial").addEventListener("click", () => attachPickedBlock("practice"));
+els.drawLessonChord?.addEventListener("click", () => openChordBuilder({ attachToLesson: true, studentId: activeStudentId }));
+els.drawLessonRhythm?.addEventListener("click", () => openRhythmBuilder({ attachToLesson: true }));
 
 $("#saveLesson").addEventListener("click", async () => {
   const student = getActiveStudent();
