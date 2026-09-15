@@ -2197,14 +2197,14 @@ textarea {
 
 .chord-builder-dialog {
   display: grid;
-  width: min(1180px, calc(100vw - 28px));
+  width: min(1760px, calc(100vw - 18px));
   max-height: min(92vh, 820px);
-  grid-template-columns: minmax(260px, 320px) minmax(520px, 1fr);
+  grid-template-columns: minmax(320px, 420px) 1fr auto;
   grid-template-areas:
-    "head head"
-    "name board"
-    "tools board"
-    "actions board";
+    "head head head"
+    "name tools actions"
+    "board board board"
+    "fret-controls fret-controls fret-controls";
   align-items: start;
   gap: 16px 18px;
   overflow: visible;
@@ -2228,8 +2228,8 @@ textarea {
 .chord-builder-toolbar {
   display: flex;
   grid-area: tools;
-  flex-direction: column;
-  align-items: stretch;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   padding: 14px;
   border: 1px solid rgba(198, 170, 143, 0.72);
@@ -2258,10 +2258,12 @@ textarea {
 .chord-builder-board {
   display: grid;
   grid-area: board;
-  grid-template-columns: 58px minmax(0, 1fr);
+  width: min(1040px, 100%);
+  grid-template-columns: 58px 72px minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   gap: 10px 12px;
-  min-height: 520px;
+  justify-self: center;
+  min-height: 390px;
   padding: 24px;
   border: 1px solid rgba(198, 170, 143, 0.72);
   border-radius: 12px;
@@ -2275,7 +2277,7 @@ textarea {
   display: grid;
   grid-column: 1;
   grid-row: 2;
-  grid-template-rows: repeat(6, 72px);
+  grid-template-rows: repeat(6, 54px);
   align-items: center;
   color: #8a6951;
   font-size: 14px;
@@ -2289,7 +2291,7 @@ textarea {
 
 .chord-builder-fret-labels {
   display: grid;
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: end;
@@ -2306,14 +2308,14 @@ textarea {
 .chord-builder-grid {
   position: relative;
   display: grid;
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 2;
-  min-height: 432px;
+  min-height: 324px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(6, 72px);
+  grid-template-rows: repeat(6, 54px);
   overflow: hidden;
-  border: 3px solid #7f6048;
-  border-radius: 8px;
+  border: 0;
+  border-radius: 0;
   background: #fffaf4;
 }
 
@@ -2322,7 +2324,7 @@ textarea {
   display: grid;
   place-items: center;
   border: 0;
-  border-left: 2px solid rgba(200, 169, 141, 0.9);
+  border-left: 2px solid rgba(200, 169, 141, 0.7);
   background: transparent;
   cursor: pointer;
   font-family: inherit;
@@ -2379,8 +2381,8 @@ textarea {
   position: relative;
   z-index: 4;
   display: grid;
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   place-items: center;
   border-radius: 999px;
   color: #fff;
@@ -2396,8 +2398,59 @@ textarea {
 
 .chord-builder-dialog menu {
   grid-area: actions;
-  align-self: end;
+  align-self: stretch;
+  justify-self: end;
   margin: 0;
+}
+
+.chord-builder-open-strings {
+  display: grid;
+  grid-column: 2;
+  grid-row: 2;
+  grid-template-rows: repeat(6, 54px);
+  align-items: center;
+}
+
+.chord-builder-open-string {
+  display: inline-grid;
+  width: 48px;
+  height: 38px;
+  place-items: center;
+  justify-self: center;
+  border: 1px solid rgba(198, 170, 143, 0.65);
+  border-radius: 999px;
+  color: #8a6951;
+  background: #fffaf4;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow:
+    3px 3px 8px rgba(117, 82, 55, 0.1),
+    -3px -3px 8px rgba(255, 252, 247, 0.88);
+}
+
+.chord-builder-open-string b {
+  color: var(--accent-strong);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.chord-builder-open-string span {
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.chord-builder-open-string.active {
+  border-color: rgba(111, 67, 41, 0.44);
+  color: #fff;
+  background: #f2dfca;
+}
+
+.chord-builder-fret-controls {
+  grid-area: fret-controls;
+  display: inline-flex;
+  justify-self: center;
+  gap: 10px;
 }
 
 .used-chord-panel {
@@ -4054,13 +4107,14 @@ textarea,
       "head"
       "name"
       "tools"
+      "actions"
       "board"
-      "actions";
+      "fret-controls";
     overflow: auto;
   }
 
   .chord-builder-board {
-    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-columns: 36px 52px minmax(0, 1fr);
     min-height: auto;
     padding: 12px;
   }
@@ -4073,6 +4127,15 @@ textarea,
   .chord-builder-grid {
     min-height: 288px;
     grid-template-rows: repeat(6, 48px);
+  }
+
+  .chord-builder-open-strings {
+    grid-template-rows: repeat(6, 48px);
+  }
+
+  .chord-builder-open-string {
+    width: 40px;
+    height: 34px;
   }
 
   .finger-dot {

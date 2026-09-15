@@ -489,6 +489,7 @@
             <a class="viewer-audio-button" id="imageViewerAudio" href="#" target="_blank" rel="noreferrer" hidden>음원</a>
             <button class="viewer-resource-button" id="imageViewerChords" type="button">코드</button>
             <button class="viewer-resource-button" id="imageViewerRhythm" type="button">리듬</button>
+            <button class="viewer-resource-button" id="imageViewerChordBuilder" type="button">코드 그리기</button>
             <div class="metronome viewer-metronome" data-metronome aria-label="메트로놈">
               <div class="metronome-display">
                 <div class="beat-dots" data-beat-dots aria-hidden="true"></div>
@@ -543,9 +544,7 @@
           <input id="chordBuilderName" type="text" placeholder="예: Cadd9, G/B, F#m7" />
         </label>
         <div class="chord-builder-toolbar">
-          <button class="secondary-button" id="chordBuilderPrevFret" type="button">← 프렛</button>
           <strong id="chordBuilderFretLabel">1-4프렛</strong>
-          <button class="secondary-button" id="chordBuilderNextFret" type="button">프렛 →</button>
           <label>
             <input id="chordBuilderRootMode" type="checkbox" />
             루트 찍기
@@ -556,6 +555,10 @@
           </label>
         </div>
         <div class="chord-builder-board" id="chordBuilderBoard" aria-label="코드 지판"></div>
+        <div class="chord-builder-fret-controls">
+          <button class="icon-button tiny-button" id="chordBuilderPrevFret" type="button" title="이전 프렛">←</button>
+          <button class="icon-button tiny-button" id="chordBuilderNextFret" type="button" title="다음 프렛">→</button>
+        </div>
         <menu>
           <button class="secondary-button" id="clearChordBuilder" type="button">지우기</button>
           <button class="secondary-button" value="cancel" type="submit">취소</button>

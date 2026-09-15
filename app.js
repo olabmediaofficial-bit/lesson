@@ -9,6 +9,7 @@ const SERVER_INFO_ENDPOINT = "/api/info";
 const SERVER_LOGIN_ENDPOINT = "/api/login";
 const SERVER_ROOM_ENDPOINT = "/api/room";
 const SERVER_UPLOAD_ENDPOINT = "/api/upload";
+const SERVER_CUSTOM_CHORD_ENDPOINT = "/api/custom-chord";
 const ADMIN_TOKEN_KEY = "lessonRoomAdminToken";
 const ADVANCED_METRONOME_PATTERN_4_4 = [
   [true, true, true, true],
@@ -338,8 +339,10 @@ let selectedChordNames = [];
 let chordBuilder = {
   baseFret: 1,
   positions: [],
+  openStrings: [],
   showNotes: true,
   rootMode: false,
+  studentId: "",
 };
 let pendingBlockIds = new Set();
 let expandedLessonIds = new Set();
@@ -470,6 +473,7 @@ function customChordSvg(chord) {
   const name = escapeHTML(chord.name || "Custom");
   const baseFret = Math.max(1, Number(chord.baseFret || 1));
   const positions = Array.isArray(chord.positions) ? chord.positions : [];
+  const openStrings = new Set(Array.isArray(chord.openStrings) ? chord.openStrings.map(Number) : []);
   const width = 520;
   const height = 430;
   const left = 98;
@@ -503,6 +507,18 @@ function customChordSvg(chord) {
     .map((index) => `<text x="${left + index * col + col / 2}" y="386" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${baseFret + index}fr</text>`)
     .join("");
   const stringLabels = displayStrings.map((string, index) => `<text x="54" y="${stringYs[index] + 6}" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${string.label}</text>`).join("");
+  const openMarkers = displayStrings
+    .map((string, index) => {
+      const y = stringYs[index];
+      if (openStrings.has(string.index)) {
+        return `
+          <circle cx="${left - 38}" cy="${y}" r="17" fill="#fffaf4" stroke="#b98255" stroke-width="3" />
+          <text x="${left - 38}" y="${y + 5}" text-anchor="middle" font-size="13" font-weight="900" fill="#6f4329">${escapeHTML(string.note)}</text>
+        `;
+      }
+      return `<text x="${left - 38}" y="${y + 7}" text-anchor="middle" font-size="20" font-weight="900" fill="#8a6951">X</text>`;
+    })
+    .join("");
   const nut = baseFret === 1 ? `<rect x="${left - 8}" y="${top - 7}" width="14" height="${bottom - top + 14}" rx="7" fill="#6f4329" />` : "";
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
@@ -511,6 +527,7 @@ function customChordSvg(chord) {
       ${stringYs.map((y) => `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#7f6048" stroke-width="2.6" />`).join("")}
       ${fretXs.map((x) => `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#c8a98d" stroke-width="3" />`).join("")}
       ${nut}
+      ${openMarkers}
       ${fretLabels}
       ${stringLabels}
       ${circles}
@@ -525,6 +542,9 @@ function normalizeCustomChord(chord = {}) {
     name: String(chord.name || "").trim() || "이름 없는 코드",
     category: "custom",
     baseFret: Math.min(18, Math.max(1, Number(chord.baseFret || 1))),
+    openStrings: Array.isArray(chord.openStrings)
+      ? [...new Set(chord.openStrings.map(Number).filter((value) => !Number.isNaN(value) && value >= 0 && value < GUITAR_STRINGS.length))]
+      : [],
     positions: Array.isArray(chord.positions)
       ? chord.positions
           .map((position) => ({
@@ -534,6 +554,7 @@ function normalizeCustomChord(chord = {}) {
           }))
           .filter((position) => !Number.isNaN(position.string) && !Number.isNaN(position.fret))
       : [],
+    studentId: chord.studentId || "",
     updatedAt: chord.updatedAt || nowIso(),
   };
 }
@@ -549,7 +570,11 @@ function customChordEntry(chord) {
 }
 
 function chordDictionary() {
-  return [...CHORD_DICTIONARY, ...(state.customChords || []).map(customChordEntry)].sort(
+  const visibleCustomChords = (state.customChords || []).filter((chord) => {
+    if (!publicShareMode) return true;
+    return !chord.studentId || chord.studentId === activeShareStudentId || chord.studentId === state.students[0]?.id;
+  });
+  return [...CHORD_DICTIONARY, ...visibleCustomChords.map(customChordEntry)].sort(
     (a, b) =>
       CHORD_CATEGORY_ORDER.indexOf(a.category) - CHORD_CATEGORY_ORDER.indexOf(b.category) ||
       a.name.localeCompare(b.name, "en", { numeric: true }) ||
@@ -645,6 +670,7 @@ const els = {
   imageViewerAudio: $("#imageViewerAudio"),
   imageViewerChords: $("#imageViewerChords"),
   imageViewerRhythm: $("#imageViewerRhythm"),
+  imageViewerChordBuilder: $("#imageViewerChordBuilder"),
   imageViewerBack: $("#imageViewerBack"),
   imageViewerChordGrid: $("#imageViewerChordGrid"),
   imageViewerImage: $("#imageViewerImage"),
@@ -1270,6 +1296,7 @@ function renderImageViewerResourceButtons() {
   const hasRhythm = hasScoreContext && rhythmViewerItems(block).length > 0;
   if (els.imageViewerChords) els.imageViewerChords.hidden = !hasChords;
   if (els.imageViewerRhythm) els.imageViewerRhythm.hidden = !hasRhythm;
+  if (els.imageViewerChordBuilder) els.imageViewerChordBuilder.hidden = imageViewer.mode !== "score";
 }
 
 function openImageViewerChords() {
@@ -2065,7 +2092,7 @@ function renderChordDictionary() {
   const chords = filteredChords();
   renderChordCategoryTabs();
   els.chordGrid.innerHTML = chords.length ? renderChordCards(chords) : `<div class="empty">찾는 코드가 없습니다.</div>`;
-  if (els.openChordBuilder) els.openChordBuilder.hidden = publicShareMode;
+  if (els.openChordBuilder) els.openChordBuilder.hidden = false;
   document.querySelectorAll("[data-share-back-button]").forEach((button) => {
     button.hidden = !publicShareMode;
   });
@@ -2197,12 +2224,26 @@ function reorderSelectedChord(fromIndex, toIndex) {
   selectedChordNames = next;
 }
 
-function openChordBuilder() {
+function imageViewerStudentId() {
+  const item = imageViewer.items[imageViewer.index];
+  return item?.studentId || currentPracticeStudent()?.id || "";
+}
+
+function chordBuilderStudentId() {
+  if (publicShareMode) return activeShareStudentId || state.students[0]?.id || "";
+  if (els.imageViewerDialog?.open && imageViewer.mode === "score") return imageViewerStudentId();
+  if (currentView === "rooms" || currentView === "progress") return activeStudentId || "";
+  return "";
+}
+
+function openChordBuilder(options = {}) {
   chordBuilder = {
     baseFret: 1,
     positions: [],
+    openStrings: [],
     showNotes: true,
     rootMode: false,
+    studentId: options.studentId ?? chordBuilderStudentId(),
   };
   els.chordBuilderName.value = "";
   els.chordBuilderShowNotes.checked = true;
@@ -2217,9 +2258,21 @@ function renderChordBuilder() {
   els.chordBuilderFretLabel.textContent = `${baseFret}-${baseFret + 3}프렛`;
   els.chordBuilderPrevFret.disabled = baseFret <= 1;
   const positionMap = new Map(chordBuilder.positions.map((position) => [`${position.string}:${position.fret}`, position]));
+  const openSet = new Set(chordBuilder.openStrings || []);
   const displayStrings = GUITAR_STRINGS.map((string, index) => ({ ...string, index })).reverse();
   const fretLabels = [0, 1, 2, 3].map((index) => `<span class="chord-builder-fret-label">${baseFret + index}</span>`).join("");
   const stringLabels = displayStrings.map((string) => `<span>${string.label}</span>`).join("");
+  const openButtons = displayStrings
+    .map((string) => {
+      const isOpen = openSet.has(string.index);
+      return `
+        <button class="chord-builder-open-string ${isOpen ? "active" : ""}" type="button" data-chord-open-string="${string.index}" aria-label="${string.label} 개방현 ${string.note}">
+          <b>${escapeHTML(string.note)}</b>
+          <span>${isOpen ? "O" : "X"}</span>
+        </button>
+      `;
+    })
+    .join("");
   const cells = displayStrings
     .map((string) =>
       [0, 1, 2, 3].map((col) => {
@@ -2245,6 +2298,7 @@ function renderChordBuilder() {
   els.chordBuilderBoard.innerHTML = `
     <div class="chord-builder-fret-labels">${fretLabels}</div>
     <div class="chord-builder-string-labels">${stringLabels}</div>
+    <div class="chord-builder-open-strings">${openButtons}</div>
     <div class="chord-builder-grid">${cells}</div>
   `;
 }
@@ -2259,7 +2313,19 @@ function toggleChordBuilderPosition(stringIndex, fret) {
     }
   } else {
     chordBuilder.positions.push({ string: stringIndex, fret, root: chordBuilder.rootMode });
+    chordBuilder.openStrings = (chordBuilder.openStrings || []).filter((item) => item !== stringIndex);
   }
+  renderChordBuilder();
+}
+
+function toggleChordBuilderOpenString(stringIndex) {
+  const openSet = new Set(chordBuilder.openStrings || []);
+  if (openSet.has(stringIndex)) openSet.delete(stringIndex);
+  else {
+    openSet.add(stringIndex);
+    chordBuilder.positions = chordBuilder.positions.filter((position) => position.string !== stringIndex);
+  }
+  chordBuilder.openStrings = [...openSet];
   renderChordBuilder();
 }
 
@@ -2269,21 +2335,45 @@ function saveCustomChordFromBuilder() {
     showToast("코드 이름을 입력해주세요.");
     return;
   }
-  if (!chordBuilder.positions.length) {
-    showToast("지판에 운지를 하나 이상 찍어주세요.");
+  if (!chordBuilder.positions.length && !chordBuilder.openStrings.length) {
+    showToast("지판 운지나 개방현을 하나 이상 찍어주세요.");
     return;
   }
   const chord = normalizeCustomChord({
     id: uid("chord"),
     name,
     baseFret: chordBuilder.baseFret,
+    openStrings: chordBuilder.openStrings,
     positions: chordBuilder.positions,
+    studentId: chordBuilder.studentId,
     updatedAt: nowIso(),
   });
-  state.customChords = [chord, ...(state.customChords || []).filter((item) => normalizeChordSearch(item.name) !== normalizeChordSearch(chord.name))];
+  state.customChords = [
+    chord,
+    ...(state.customChords || []).filter((item) => !(normalizeChordSearch(item.name) === normalizeChordSearch(chord.name) && (item.studentId || "") === (chord.studentId || ""))),
+  ];
   activeChordCategory = "custom";
   els.chordBuilderDialog.close();
   render();
+  saveCustomChord(chord);
+}
+
+async function saveCustomChord(chord) {
+  if (publicShareMode) {
+    try {
+      const response = await fetch(SERVER_CUSTOM_CHORD_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId: chord.studentId, chord }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      showToast(`${chord.name} 코드표를 저장했습니다.`);
+    } catch (error) {
+      console.error(error);
+      showToast("코드표 저장에 실패했습니다.");
+    }
+    return;
+  }
   saveStateInBackground({}, `${chord.name} 코드표를 저장했습니다.`);
 }
 
@@ -3971,6 +4061,11 @@ els.clearChordBuilder.addEventListener("click", () => {
   renderChordBuilder();
 });
 els.chordBuilderBoard.addEventListener("click", (event) => {
+  const openString = event.target.closest("[data-chord-open-string]");
+  if (openString) {
+    toggleChordBuilderOpenString(Number(openString.dataset.chordOpenString));
+    return;
+  }
   const cell = event.target.closest("[data-chord-string]");
   if (!cell) return;
   toggleChordBuilderPosition(Number(cell.dataset.chordString), Number(cell.dataset.chordFret));
@@ -4014,6 +4109,7 @@ els.imageViewerNext.addEventListener("click", () => moveImageViewer(1));
 els.imageViewerBack.addEventListener("click", restorePreviousImageViewer);
 els.imageViewerChords.addEventListener("click", openImageViewerChords);
 els.imageViewerRhythm.addEventListener("click", openImageViewerRhythm);
+els.imageViewerChordBuilder.addEventListener("click", () => openChordBuilder({ studentId: imageViewerStudentId() }));
 els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
 els.imageViewerDialog.addEventListener(
   "wheel",

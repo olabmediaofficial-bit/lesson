@@ -328,8 +328,23 @@ function mergeState(serverState, incomingState) {
     ...incomingState,
     resourceLibraryUrl: incomingState.resourceLibraryUrl ?? serverState.resourceLibraryUrl ?? "",
     blocks: mergeBlocks(serverState.blocks || [], incomingState.blocks || []),
+    customChords: mergeCustomChords(serverState.customChords || [], incomingState.customChords || []),
     students: mergeStudents(serverState.students || [], incomingState.students || []),
   };
+}
+
+function mergeCustomChords(serverChords = [], incomingChords = []) {
+  const chords = new Map();
+  const keyFor = (chord) => chord.id || `${chord.studentId || "global"}:${String(chord.name || "").trim().toLowerCase()}`;
+  serverChords.forEach((chord) => chords.set(keyFor(chord), chord));
+  incomingChords.forEach((chord) => {
+    const key = keyFor(chord);
+    const existing = chords.get(key);
+    if (!existing || isIncomingNewer(existing, chord)) {
+      chords.set(key, { ...(existing || {}), ...chord });
+    }
+  });
+  return [...chords.values()];
 }
 
 function isAuthorized(request) {
@@ -482,17 +497,54 @@ async function handlePublicRoom(request, response) {
 
   const blockIds = new Set(student.lessons.flatMap((lesson) => lesson.blockIds || []));
   const blocks = state.blocks.filter((block) => blockIds.has(block.id));
+  const customChords = (state.customChords || []).filter((chord) => !chord.studentId || chord.studentId === student.id);
   send(
     response,
     200,
     JSON.stringify({
       blocks,
       students: [student],
+      customChords,
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
     }),
     "application/json; charset=utf-8",
   );
+}
+
+async function handlePublicCustomChord(request, response) {
+  if (request.method !== "POST") {
+    send(response, 405, "Method not allowed");
+    return;
+  }
+
+  try {
+    const body = await readJsonBody(request, 1024 * 1024);
+    const roomId = body.roomId;
+    const chord = body.chord;
+    if (!roomId || !chord?.name) {
+      send(response, 400, JSON.stringify({ error: "Invalid custom chord" }), "application/json; charset=utf-8");
+      return;
+    }
+    const state = await readState();
+    const student = state?.students?.find((item) => item.id === roomId);
+    if (!state || !student) {
+      send(response, 404, JSON.stringify({ error: "Room not found" }), "application/json; charset=utf-8");
+      return;
+    }
+    const customChord = {
+      ...chord,
+      studentId: student.id,
+      updatedAt: new Date().toISOString(),
+    };
+    const sameOwnerAndName = (item) => (item.studentId || "") === student.id && String(item.name || "").trim().toLowerCase() === String(customChord.name || "").trim().toLowerCase();
+    state.customChords = [customChord, ...(state.customChords || []).filter((item) => !sameOwnerAndName(item))];
+    await writeState(state);
+    send(response, 200, JSON.stringify({ ok: true, chord: customChord }), "application/json; charset=utf-8");
+  } catch (error) {
+    console.error(error);
+    send(response, 500, JSON.stringify({ error: "Unable to save custom chord", detail: error.message || String(error) }), "application/json; charset=utf-8");
+  }
 }
 
 function getLocalAddress() {
@@ -535,6 +587,10 @@ const server = http.createServer((request, response) => {
   }
   if (request.url.startsWith("/api/room")) {
     handlePublicRoom(request, response);
+    return;
+  }
+  if (request.url.startsWith("/api/custom-chord")) {
+    handlePublicCustomChord(request, response);
     return;
   }
   if (request.url.startsWith("/api/info")) {

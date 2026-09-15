@@ -20,6 +20,7 @@ export default {
     if (url.pathname === "/api/state") return handleState(request, env);
     if (url.pathname === "/api/upload") return handleUpload(request, env);
     if (url.pathname === "/api/room") return handleRoom(request, env);
+    if (url.pathname === "/api/custom-chord") return handleCustomChord(request, env);
     if (url.pathname === "/api/info") return handleInfo(request, env);
     if (url.pathname.startsWith("/files/")) return handleFile(request, env);
 
@@ -93,14 +94,43 @@ async function handleRoom(request, env) {
 
     const blockIds = new Set(student.lessons.flatMap((lesson) => lesson.blockIds || []));
     const blocks = state.blocks.filter((block) => blockIds.has(block.id));
+    const customChords = (state.customChords || []).filter((chord) => !chord.studentId || chord.studentId === student.id);
     return json({
       blocks,
       students: [student],
+      customChords,
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
     });
   } catch (error) {
     return json({ error: "Room storage unavailable", detail: error.message || String(error) }, 500);
+  }
+}
+
+async function handleCustomChord(request, env) {
+  if (request.method !== "POST") return text("Method not allowed", 405);
+
+  try {
+    const body = await readJson(request);
+    const roomId = body.roomId;
+    const chord = body.chord;
+    if (!roomId || !chord?.name) return json({ error: "Invalid custom chord" }, 400);
+
+    const state = await readState(env);
+    const student = state?.students?.find((item) => item.id === roomId);
+    if (!state || !student) return json({ error: "Room not found" }, 404);
+
+    const customChord = {
+      ...chord,
+      studentId: student.id,
+      updatedAt: new Date().toISOString(),
+    };
+    const sameOwnerAndName = (item) => (item.studentId || "") === student.id && String(item.name || "").trim().toLowerCase() === String(customChord.name || "").trim().toLowerCase();
+    state.customChords = [customChord, ...(state.customChords || []).filter((item) => !sameOwnerAndName(item))];
+    await writeState(env, state);
+    return json({ ok: true, chord: customChord });
+  } catch (error) {
+    return json({ error: "Unable to save custom chord", detail: error.message || String(error) }, 500);
   }
 }
 

@@ -142,8 +142,23 @@ export function mergeState(serverState, incomingState) {
     ...incomingState,
     resourceLibraryUrl: incomingState.resourceLibraryUrl ?? serverState.resourceLibraryUrl ?? "",
     blocks: mergeBlocks(serverState.blocks || [], incomingState.blocks || []),
+    customChords: mergeCustomChords(serverState.customChords || [], incomingState.customChords || []),
     students: mergeStudents(serverState.students || [], incomingState.students || []),
   };
+}
+
+function mergeCustomChords(serverChords = [], incomingChords = []) {
+  const chords = new Map();
+  const keyFor = (chord) => chord.id || `${chord.studentId || "global"}:${String(chord.name || "").trim().toLowerCase()}`;
+  serverChords.forEach((chord) => chords.set(keyFor(chord), chord));
+  incomingChords.forEach((chord) => {
+    const key = keyFor(chord);
+    const existing = chords.get(key);
+    if (!existing || isIncomingNewer(existing, chord)) {
+      chords.set(key, { ...(existing || {}), ...chord });
+    }
+  });
+  return [...chords.values()];
 }
 
 function mergeBlocks(serverBlocks = [], incomingBlocks = []) {
