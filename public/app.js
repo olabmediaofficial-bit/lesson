@@ -198,12 +198,12 @@ const CHORD_CATEGORY_TABS = [
 ];
 const CHORD_CATEGORY_ORDER = CHORD_CATEGORY_TABS.map((tab) => tab.key);
 const GUITAR_STRINGS = [
-  { label: "6번", note: "E", pitch: 4 },
-  { label: "5번", note: "A", pitch: 9 },
-  { label: "4번", note: "D", pitch: 2 },
-  { label: "3번", note: "G", pitch: 7 },
-  { label: "2번", note: "B", pitch: 11 },
-  { label: "1번", note: "E", pitch: 4 },
+  { label: "6", note: "E", pitch: 4 },
+  { label: "5", note: "A", pitch: 9 },
+  { label: "4", note: "D", pitch: 2 },
+  { label: "3", note: "G", pitch: 7 },
+  { label: "2", note: "B", pitch: 11 },
+  { label: "1", note: "E", pitch: 4 },
 ];
 const NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const CURRICULUM_AREAS = [
@@ -446,6 +446,14 @@ function chordCategoryLabel(category) {
   return CHORD_CATEGORY_TABS.find((item) => item.key === category)?.label || "일반";
 }
 
+function chordDisplayCategoryLabel(chord) {
+  if (chord?.category === "custom" && chord.studentId) {
+    const student = state.students.find((item) => item.id === chord.studentId);
+    return `${student?.name || "학생"} 코드표`;
+  }
+  return chordCategoryLabel(chord?.category);
+}
+
 function chordSrcFromFile(fileName) {
   return `./chords/general/${fileName.split("/").map(encodeURIComponent).join("/")}`;
 }
@@ -483,6 +491,7 @@ function customChordSvg(chord) {
   const row = (bottom - top) / 5;
   const col = (right - left) / 4;
   const displayStrings = GUITAR_STRINGS.map((string, index) => ({ ...string, index })).reverse();
+  const frettedStrings = new Set(positions.map((position) => Number(position.string)).filter((value) => !Number.isNaN(value)));
   const stringYs = displayStrings.map((_, index) => top + index * row);
   const fretXs = [0, 1, 2, 3, 4].map((index) => left + index * col);
   const circles = positions
@@ -516,6 +525,7 @@ function customChordSvg(chord) {
           <text x="${left - 38}" y="${y + 5}" text-anchor="middle" font-size="13" font-weight="900" fill="#6f4329">${escapeHTML(string.note)}</text>
         `;
       }
+      if (frettedStrings.has(string.index)) return "";
       return `<text x="${left - 38}" y="${y + 7}" text-anchor="middle" font-size="20" font-weight="900" fill="#8a6951">X</text>`;
     })
     .join("");
@@ -650,6 +660,7 @@ const els = {
   shareStudentPicker: $("#shareStudentPicker"),
   copyPreviewShareLink: $("#copyPreviewShareLink"),
   openPreviewShareLink: $("#openPreviewShareLink"),
+  openActiveShareLink: $("#openActiveShareLink"),
   shareStudentName: $("#shareStudentName"),
   shareResourceLibrary: $("#shareResourceLibrary"),
   shareScheduleLink: $("#shareScheduleLink"),
@@ -1296,7 +1307,7 @@ function renderImageViewerResourceButtons() {
   const hasRhythm = hasScoreContext && rhythmViewerItems(block).length > 0;
   if (els.imageViewerChords) els.imageViewerChords.hidden = !hasChords;
   if (els.imageViewerRhythm) els.imageViewerRhythm.hidden = !hasRhythm;
-  if (els.imageViewerChordBuilder) els.imageViewerChordBuilder.hidden = imageViewer.mode !== "score";
+  if (els.imageViewerChordBuilder) els.imageViewerChordBuilder.hidden = publicShareMode || imageViewer.mode !== "score";
 }
 
 function openImageViewerChords() {
@@ -1696,7 +1707,7 @@ function normalizeChordSearch(value) {
 function normalizeChordName(value) {
   const raw = String(value || "").trim().replace(/♯/g, "#").replace(/＃/g, "#");
   const match = chordDictionary().find((chord) => normalizeChordSearch(chord.name) === normalizeChordSearch(raw) || chord.fileName === raw);
-  return match?.name || raw;
+  return match?.fileName || raw;
 }
 
 function normalizeChordNames(value) {
@@ -2092,7 +2103,7 @@ function renderChordDictionary() {
   const chords = filteredChords();
   renderChordCategoryTabs();
   els.chordGrid.innerHTML = chords.length ? renderChordCards(chords) : `<div class="empty">찾는 코드가 없습니다.</div>`;
-  if (els.openChordBuilder) els.openChordBuilder.hidden = false;
+  if (els.openChordBuilder) els.openChordBuilder.hidden = publicShareMode;
   document.querySelectorAll("[data-share-back-button]").forEach((button) => {
     button.hidden = !publicShareMode;
   });
@@ -2117,7 +2128,7 @@ function renderChordCards(chords, { compact = false } = {}) {
       (chord) => `
         <button class="chord-card ${compact ? "compact" : ""}" type="button" data-view-chord="${escapeHTML(chord.name)}" data-view-chord-file="${escapeHTML(chord.fileName)}">
           <strong>${escapeHTML(chord.name)}</strong>
-          <span class="chord-category-badge">${escapeHTML(chordCategoryLabel(chord.category))}</span>
+          <span class="chord-category-badge">${escapeHTML(chordDisplayCategoryLabel(chord))}</span>
           <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
         </button>
       `,
@@ -2165,7 +2176,7 @@ function renderChordPickerGrid() {
             <button class="chord-card picker-card ${selectedChordSet.has(chord.fileName) ? "selected" : ""}" type="button" data-picker-chord="${escapeHTML(chord.fileName)}">
               <strong>${escapeHTML(chord.name)}</strong>
               <img src="${chord.src}" alt="${escapeHTML(chord.name)} 코드표" loading="lazy" />
-              <span>${escapeHTML(chordCategoryLabel(chord.category))} · ${selectedChordSet.has(chord.fileName) ? "선택됨" : "선택"}</span>
+              <span>${escapeHTML(chordDisplayCategoryLabel(chord))} · ${selectedChordSet.has(chord.fileName) ? "선택됨" : "선택"}</span>
             </button>
           `,
         )
@@ -2237,6 +2248,10 @@ function chordBuilderStudentId() {
 }
 
 function openChordBuilder(options = {}) {
+  if (publicShareMode) {
+    showToast("코드 그리기는 관리자 화면에서만 사용할 수 있습니다.");
+    return;
+  }
   chordBuilder = {
     baseFret: 1,
     positions: [],
@@ -4058,6 +4073,7 @@ els.chordBuilderShowNotes.addEventListener("change", () => {
 });
 els.clearChordBuilder.addEventListener("click", () => {
   chordBuilder.positions = [];
+  chordBuilder.openStrings = [];
   renderChordBuilder();
 });
 els.chordBuilderBoard.addEventListener("click", (event) => {
@@ -4777,6 +4793,10 @@ $("#saveLesson").addEventListener("click", async () => {
 $("#copyShareLink").addEventListener("click", async () => {
   const student = getActiveStudent();
   await copyStudentShareLink(student);
+});
+
+els.openActiveShareLink?.addEventListener("click", () => {
+  openStudentShareLink(getActiveStudent());
 });
 
 els.copyPreviewShareLink.addEventListener("click", async () => {
