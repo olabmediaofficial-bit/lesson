@@ -2158,7 +2158,19 @@ textarea {
   background: #fff;
   color: inherit;
   text-align: left;
+}
+
+.chord-card-main {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   cursor: zoom-in;
+  font: inherit;
+  text-align: left;
 }
 
 .chord-card strong {
@@ -2195,6 +2207,19 @@ textarea {
   box-shadow: 0 8px 18px rgba(185, 130, 85, 0.1);
 }
 
+.chord-edit-button {
+  justify-self: start;
+  padding: 5px 9px;
+  border: 1px solid rgba(185, 130, 85, 0.28);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: #fff8f0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 #chordBuilderDialog {
   width: min(1880px, calc(100vw - 12px));
   max-width: none;
@@ -2216,12 +2241,12 @@ textarea {
   width: 100%;
   height: 100%;
   max-height: none;
-  grid-template-columns: minmax(320px, 420px) 1fr auto;
+  grid-template-columns: minmax(300px, 420px) minmax(180px, 260px) 1fr auto;
   grid-template-areas:
-    "head head head"
-    "name tools actions"
-    "board board board"
-    "fret-controls fret-controls fret-controls";
+    "head head head head"
+    "name folder tools actions"
+    "board board board board"
+    "fret-controls fret-controls fret-controls fret-controls";
   align-items: start;
   gap: 16px 18px;
   border: 1px solid rgba(111, 67, 41, 0.32);
@@ -2240,6 +2265,10 @@ textarea {
   grid-area: name;
 }
 
+.chord-builder-folder-field {
+  grid-area: folder;
+}
+
 .chord-builder-dialog .dialog-head p {
   margin: 4px 0 0;
   color: #7b6d63;
@@ -2253,10 +2282,10 @@ textarea {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(198, 170, 143, 0.72);
+  padding: 0;
+  border: 0;
   border-radius: 8px;
-  background: #fff8f0;
+  background: transparent;
 }
 
 .chord-builder-toolbar strong {
@@ -2985,6 +3014,10 @@ dialog::backdrop {
   min-height: 0;
   overflow: auto;
   padding: 14px 58px;
+}
+
+.image-viewer-scroll[hidden] {
+  display: none !important;
 }
 
 .image-viewer-dialog.chord-only .image-viewer-scroll {
@@ -4164,6 +4197,7 @@ textarea,
     grid-template-areas:
       "head"
       "name"
+      "folder"
       "tools"
       "actions"
       "board"
