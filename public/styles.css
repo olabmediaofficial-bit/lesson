@@ -2491,6 +2491,11 @@ textarea {
   background: #f2dfca;
 }
 
+.chord-builder-open-string.root {
+  border-color: rgba(111, 67, 41, 0.62);
+  background: #ead1b8;
+}
+
 .chord-builder-open-string.active::after {
   display: none;
 }
@@ -2655,6 +2660,10 @@ dialog::backdrop {
 
 .image-viewer-dialog.chord-only .image-viewer-head strong {
   color: var(--ink);
+}
+
+.image-viewer-dialog.chord-grid-mode .image-viewer-head strong {
+  display: none;
 }
 
 .image-viewer-dialog.chord-only .viewer-metronome,

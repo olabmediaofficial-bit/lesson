@@ -205,7 +205,7 @@ const GUITAR_STRINGS = [
   { label: "2", note: "B", pitch: 11 },
   { label: "1", note: "E", pitch: 4 },
 ];
-const NOTE_NAMES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const CURRICULUM_AREAS = [
   {
     key: "left",
@@ -478,11 +478,29 @@ function noteAt(stringIndex, fret) {
   return NOTE_NAMES[(string.pitch + Number(fret || 0)) % NOTE_NAMES.length];
 }
 
+function normalizeOpenStringEntries(value) {
+  if (!Array.isArray(value)) return [];
+  const entries = new Map();
+  value.forEach((item) => {
+    const string = typeof item === "object" && item !== null ? Number(item.string) : Number(item);
+    if (Number.isNaN(string) || string < 0 || string >= GUITAR_STRINGS.length) return;
+    entries.set(string, {
+      string,
+      root: typeof item === "object" && item !== null ? Boolean(item.root) : false,
+    });
+  });
+  return [...entries.values()];
+}
+
+function openStringEntryMap(value) {
+  return new Map(normalizeOpenStringEntries(value).map((entry) => [entry.string, entry]));
+}
+
 function customChordSvg(chord) {
   const name = escapeHTML(chord.name || "Custom");
   const baseFret = Math.max(1, Number(chord.baseFret || 1));
   const positions = Array.isArray(chord.positions) ? chord.positions : [];
-  const openStrings = new Set(Array.isArray(chord.openStrings) ? chord.openStrings.map(Number) : []);
+  const openStrings = openStringEntryMap(chord.openStrings);
   const width = 520;
   const height = 430;
   const left = 112;
@@ -516,18 +534,20 @@ function customChordSvg(chord) {
   const fretLabels = [0, 1, 2, 3]
     .map((index) => `<text x="${left + index * col + col / 2}" y="386" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${baseFret + index}fr</text>`)
     .join("");
-  const stringLabels = displayStrings.map((string, index) => `<text x="${right + 28}" y="${stringYs[index] + 6}" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${string.label}</text>`).join("");
-  const openMarkers = displayStrings
+  const leftIndicators = displayStrings
     .map((string, index) => {
       const y = stringYs[index];
-      if (openStrings.has(string.index)) {
+      const openEntry = openStrings.get(string.index);
+      if (openEntry) {
         return `
-          <circle cx="${left - 48}" cy="${y}" r="17" fill="#fffaf4" stroke="#b98255" stroke-width="3" />
-          <text x="${left - 48}" y="${y + 5}" text-anchor="middle" font-size="13" font-weight="900" fill="#6f4329">${escapeHTML(string.note)}</text>
+          <text x="${left - 54}" y="${y + 7}" text-anchor="middle" font-size="18" font-weight="900" fill="#6f4329">0</text>
+          ${openEntry.root ? `<text x="${left - 28}" y="${y + 6}" text-anchor="middle" font-size="13" font-weight="900" fill="#b98255">R</text>` : ""}
         `;
       }
-      if (frettedStrings.has(string.index)) return "";
-      return `<text x="${left - 48}" y="${y + 7}" text-anchor="middle" font-size="20" font-weight="900" fill="#8a6951">X</text>`;
+      if (frettedStrings.has(string.index)) {
+        return `<text x="${left - 54}" y="${y + 6}" text-anchor="middle" font-size="15" font-weight="900" fill="#9a7a61">${string.label}</text>`;
+      }
+      return `<text x="${left - 54}" y="${y + 7}" text-anchor="middle" font-size="20" font-weight="900" fill="#8a6951">X</text>`;
     })
     .join("");
   const nut = baseFret === 1 ? `<rect x="${left - 8}" y="${top - 7}" width="14" height="${bottom - top + 14}" rx="7" fill="#6f4329" />` : "";
@@ -538,9 +558,8 @@ function customChordSvg(chord) {
       ${stringYs.map((y) => `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#7f6048" stroke-width="2.6" />`).join("")}
       ${fretXs.map((x) => `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#c8a98d" stroke-width="3" />`).join("")}
       ${nut}
-      ${openMarkers}
+      ${leftIndicators}
       ${fretLabels}
-      ${stringLabels}
       ${circles}
     </svg>
   `;
@@ -553,9 +572,7 @@ function normalizeCustomChord(chord = {}) {
     name: String(chord.name || "").trim() || "이름 없는 코드",
     category: "custom",
     baseFret: Math.min(18, Math.max(1, Number(chord.baseFret || 1))),
-    openStrings: Array.isArray(chord.openStrings)
-      ? [...new Set(chord.openStrings.map(Number).filter((value) => !Number.isNaN(value) && value >= 0 && value < GUITAR_STRINGS.length))]
-      : [],
+    openStrings: normalizeOpenStringEntries(chord.openStrings),
     positions: Array.isArray(chord.positions)
       ? chord.positions
           .map((position) => ({
@@ -1216,7 +1233,7 @@ function updateImageViewer() {
   if (isChordGrid) {
     els.imageViewerImage.removeAttribute("src");
     imageViewer.src = "";
-    els.imageViewerTitle.textContent = imageViewer.title || "사용 코드";
+    els.imageViewerTitle.textContent = "";
     renderImageViewerMastery();
     renderImageViewerAudio();
     renderImageViewerResourceButtons();
@@ -2275,17 +2292,18 @@ function renderChordBuilder() {
   els.chordBuilderFretLabel.textContent = `${baseFret}-${baseFret + 3}프렛`;
   els.chordBuilderPrevFret.disabled = baseFret <= 1;
   const positionMap = new Map(chordBuilder.positions.map((position) => [`${position.string}:${position.fret}`, position]));
-  const openSet = new Set(chordBuilder.openStrings || []);
+  const openMap = openStringEntryMap(chordBuilder.openStrings);
   const displayStrings = GUITAR_STRINGS.map((string, index) => ({ ...string, index })).reverse();
   const fretLabels = [0, 1, 2, 3].map((index) => `<span class="chord-builder-fret-label">${baseFret + index}</span>`).join("");
   const stringLabels = displayStrings.map((string) => `<span>${string.label}</span>`).join("");
   const openButtons = displayStrings
     .map((string) => {
-      const isOpen = openSet.has(string.index);
+      const openEntry = openMap.get(string.index);
+      const isOpen = Boolean(openEntry);
       return `
-        <button class="chord-builder-open-string ${isOpen ? "active" : ""}" type="button" data-chord-open-string="${string.index}" aria-label="${string.label} 개방현 ${string.note}">
+        <button class="chord-builder-open-string ${isOpen ? "active" : ""} ${openEntry?.root ? "root" : ""}" type="button" data-chord-open-string="${string.index}" aria-label="${string.label} 개방현 ${string.note}">
           <b>${escapeHTML(string.note)}</b>
-          <span>${isOpen ? "O" : "X"}</span>
+          <span>${isOpen ? `0${openEntry?.root ? " R" : ""}` : "X"}</span>
         </button>
       `;
     })
@@ -2323,26 +2341,30 @@ function renderChordBuilder() {
 function toggleChordBuilderPosition(stringIndex, fret) {
   const index = chordBuilder.positions.findIndex((position) => position.string === stringIndex && position.fret === fret);
   if (index >= 0) {
-    if (chordBuilder.rootMode && !chordBuilder.positions[index].root) {
+    if (!chordBuilder.positions[index].root) {
       chordBuilder.positions[index].root = true;
     } else {
       chordBuilder.positions.splice(index, 1);
     }
   } else {
-    chordBuilder.positions.push({ string: stringIndex, fret, root: chordBuilder.rootMode });
-    chordBuilder.openStrings = (chordBuilder.openStrings || []).filter((item) => item !== stringIndex);
+    chordBuilder.positions.push({ string: stringIndex, fret, root: false });
+    chordBuilder.openStrings = normalizeOpenStringEntries(chordBuilder.openStrings).filter((item) => item.string !== stringIndex);
   }
   renderChordBuilder();
 }
 
 function toggleChordBuilderOpenString(stringIndex) {
-  const openSet = new Set(chordBuilder.openStrings || []);
-  if (openSet.has(stringIndex)) openSet.delete(stringIndex);
-  else {
-    openSet.add(stringIndex);
+  const openEntries = normalizeOpenStringEntries(chordBuilder.openStrings);
+  const index = openEntries.findIndex((entry) => entry.string === stringIndex);
+  if (index < 0) {
+    openEntries.push({ string: stringIndex, root: false });
     chordBuilder.positions = chordBuilder.positions.filter((position) => position.string !== stringIndex);
+  } else if (!openEntries[index].root) {
+    openEntries[index].root = true;
+  } else {
+    openEntries.splice(index, 1);
   }
-  chordBuilder.openStrings = [...openSet];
+  chordBuilder.openStrings = openEntries;
   renderChordBuilder();
 }
 
