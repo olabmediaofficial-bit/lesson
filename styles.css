@@ -2206,6 +2206,11 @@ textarea {
   overflow: hidden;
 }
 
+#chordBuilderDialog::backdrop {
+  background: rgba(25, 18, 13, 0.68);
+  backdrop-filter: blur(2px);
+}
+
 .chord-builder-dialog {
   display: grid;
   width: 100%;
@@ -2219,6 +2224,11 @@ textarea {
     "fret-controls fret-controls fret-controls";
   align-items: start;
   gap: 16px 18px;
+  border: 1px solid rgba(111, 67, 41, 0.32);
+  background: #fff8f0;
+  box-shadow:
+    0 24px 72px rgba(44, 30, 20, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.72) inset;
   overflow: hidden;
 }
 

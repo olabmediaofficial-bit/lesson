@@ -343,6 +343,7 @@ let chordBuilder = {
   showNotes: true,
   rootMode: false,
   studentId: "",
+  blockId: "",
 };
 let pendingBlockIds = new Set();
 let expandedLessonIds = new Set();
@@ -484,7 +485,7 @@ function customChordSvg(chord) {
   const openStrings = new Set(Array.isArray(chord.openStrings) ? chord.openStrings.map(Number) : []);
   const width = 520;
   const height = 430;
-  const left = 98;
+  const left = 112;
   const right = 444;
   const top = 104;
   const bottom = 344;
@@ -515,18 +516,18 @@ function customChordSvg(chord) {
   const fretLabels = [0, 1, 2, 3]
     .map((index) => `<text x="${left + index * col + col / 2}" y="386" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${baseFret + index}fr</text>`)
     .join("");
-  const stringLabels = displayStrings.map((string, index) => `<text x="54" y="${stringYs[index] + 6}" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${string.label}</text>`).join("");
+  const stringLabels = displayStrings.map((string, index) => `<text x="${right + 28}" y="${stringYs[index] + 6}" text-anchor="middle" font-size="15" font-weight="800" fill="#9a7a61">${string.label}</text>`).join("");
   const openMarkers = displayStrings
     .map((string, index) => {
       const y = stringYs[index];
       if (openStrings.has(string.index)) {
         return `
-          <circle cx="${left - 38}" cy="${y}" r="17" fill="#fffaf4" stroke="#b98255" stroke-width="3" />
-          <text x="${left - 38}" y="${y + 5}" text-anchor="middle" font-size="13" font-weight="900" fill="#6f4329">${escapeHTML(string.note)}</text>
+          <circle cx="${left - 48}" cy="${y}" r="17" fill="#fffaf4" stroke="#b98255" stroke-width="3" />
+          <text x="${left - 48}" y="${y + 5}" text-anchor="middle" font-size="13" font-weight="900" fill="#6f4329">${escapeHTML(string.note)}</text>
         `;
       }
       if (frettedStrings.has(string.index)) return "";
-      return `<text x="${left - 38}" y="${y + 7}" text-anchor="middle" font-size="20" font-weight="900" fill="#8a6951">X</text>`;
+      return `<text x="${left - 48}" y="${y + 7}" text-anchor="middle" font-size="20" font-weight="900" fill="#8a6951">X</text>`;
     })
     .join("");
   const nut = baseFret === 1 ? `<rect x="${left - 8}" y="${top - 7}" width="14" height="${bottom - top + 14}" rx="7" fill="#6f4329" />` : "";
@@ -1322,7 +1323,7 @@ function openImageViewerChords() {
       chordName: chord.name,
     }));
   if (!items.length) return;
-  openImageViewerItems(items, 0, { mode: "chord-grid", title: `${block.title} 사용 코드`, pushCurrent: true });
+  openImageViewerItems(items, 0, { mode: "chord-grid", title: "사용 코드", pushCurrent: true });
 }
 
 function rhythmViewerItems(block) {
@@ -2259,6 +2260,7 @@ function openChordBuilder(options = {}) {
     showNotes: true,
     rootMode: false,
     studentId: options.studentId ?? chordBuilderStudentId(),
+    blockId: options.blockId ?? (els.imageViewerDialog?.open && imageViewer.mode === "score" ? currentImageViewerBlock()?.id || "" : ""),
   };
   els.chordBuilderName.value = "";
   els.chordBuilderShowNotes.checked = true;
@@ -2367,6 +2369,11 @@ function saveCustomChordFromBuilder() {
     chord,
     ...(state.customChords || []).filter((item) => !(normalizeChordSearch(item.name) === normalizeChordSearch(chord.name) && (item.studentId || "") === (chord.studentId || ""))),
   ];
+  const sourceBlock = chordBuilder.blockId ? getBlock(chordBuilder.blockId) : null;
+  if (sourceBlock?.kind === "practice") {
+    sourceBlock.chords = normalizeChordNames([...(sourceBlock.chords || []), `custom:${chord.id}`]);
+    sourceBlock.updatedAt = nowIso();
+  }
   activeChordCategory = "custom";
   els.chordBuilderDialog.close();
   render();
