@@ -2326,85 +2326,53 @@ textarea {
   font-size: 13px;
 }
 
-.rhythm-marker-row,
-.rhythm-stroke-row {
-  display: grid;
-  align-items: center;
-  gap: 0;
-}
-
-.rhythm-marker-row {
-  margin-top: -4px;
-}
-
-.rhythm-stroke-row {
-  margin-top: -2px;
-}
-
-.rhythm-notation-preview {
-  overflow: hidden;
+.rhythm-editor-canvas {
+  position: relative;
+  overflow-x: auto;
   border: 1px solid rgba(198, 170, 143, 0.5);
   border-radius: 8px;
   background: #fffaf4;
 }
 
-.rhythm-notation-preview img {
+.rhythm-editor-canvas img {
   display: block;
   width: 100%;
   min-width: 620px;
+  aspect-ratio: var(--rhythm-aspect);
 }
 
-.rhythm-mark-cell,
-.rhythm-stroke-cell {
+.rhythm-overlay-hit,
+.rhythm-overlay-stroke {
+  position: absolute;
   display: grid;
-  min-width: 0;
   place-items: center;
+  padding: 0;
   border: 0;
   background: transparent;
-  color: var(--accent-strong);
-  font: inherit;
-  font-weight: 900;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  touch-action: manipulation;
 }
 
-.rhythm-mark-cell {
-  min-height: 28px;
-  padding: 0;
+.rhythm-overlay-hit {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
 }
 
-.rhythm-mark-cell span {
-  display: block;
-  width: 24px;
-  height: 3px;
-  border-radius: 999px;
-  background: #111;
-}
-
-.rhythm-mark-cell.is-circle span {
-  width: 23px;
-  height: 23px;
-  border: 3px solid #111;
-  background: transparent;
-}
-
-.rhythm-mark-cell:hover span,
-.rhythm-stroke-cell:hover {
-  filter: brightness(1.2);
-}
-
-.rhythm-stroke-cell {
-  min-height: 30px;
+.rhythm-overlay-stroke {
+  width: 32px;
+  height: 30px;
   border-radius: 8px;
-  color: var(--accent);
-  font-size: 22px;
 }
 
-.rhythm-stroke-cell.active {
-  color: var(--accent);
-  background: #fff2e3;
-}
-
-.rhythm-control-spacer {
-  min-width: 0;
+.rhythm-overlay-hit:hover,
+.rhythm-overlay-hit:focus-visible,
+.rhythm-overlay-stroke:hover,
+.rhythm-overlay-stroke:focus-visible {
+  outline: 2px solid rgba(185, 130, 85, 0.52);
+  outline-offset: 1px;
+  background: rgba(185, 130, 85, 0.08);
 }
 
 #chordBuilderDialog {
@@ -2881,6 +2849,8 @@ dialog::backdrop {
 }
 
 .image-viewer-head {
+  position: relative;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2889,6 +2859,7 @@ dialog::backdrop {
   padding: 10px 12px;
   color: #fff;
   background: #111;
+  touch-action: manipulation;
 }
 
 .image-viewer-dialog.chord-only .image-viewer-head {
@@ -3051,6 +3022,7 @@ dialog::backdrop {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.24);
   background: rgba(255, 255, 255, 0.08);
+  touch-action: manipulation;
 }
 
 .viewer-audio-button,
@@ -3070,6 +3042,7 @@ dialog::backdrop {
   font-weight: 900;
   text-decoration: none;
   white-space: nowrap;
+  touch-action: manipulation;
 }
 
 .viewer-resource-button {
@@ -3180,12 +3153,15 @@ dialog::backdrop {
 }
 
 .image-viewer-actions {
+  position: relative;
+  z-index: 40;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
   max-width: 100%;
+  touch-action: manipulation;
 }
 
 .image-viewer-actions .icon-button {
@@ -3193,6 +3169,7 @@ dialog::backdrop {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.24);
   background: rgba(255, 255, 255, 0.08);
+  touch-action: manipulation;
 }
 
 .image-viewer-actions span {
@@ -3212,6 +3189,7 @@ dialog::backdrop {
 
 .image-viewer-stage {
   position: relative;
+  z-index: 1;
   display: grid;
   min-height: 0;
   background: #171717;
@@ -3231,6 +3209,8 @@ dialog::backdrop {
   min-height: 0;
   overflow: auto;
   padding: 14px 58px;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
 
 .image-viewer-scroll[hidden] {
@@ -3394,11 +3374,15 @@ dialog::backdrop {
   .image-viewer-actions {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .viewer-metronome {
     width: auto;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
   }
 }
 
@@ -4463,9 +4447,7 @@ textarea,
     width: min(100vw - 12px, 760px);
   }
 
-  .rhythm-notation-preview,
-  .rhythm-marker-row,
-  .rhythm-stroke-row {
+  .rhythm-editor-canvas {
     overflow-x: auto;
   }
 

@@ -85,7 +85,7 @@
               <button class="active" data-kind-filter="all" type="button">전체</button>
               <button data-kind-filter="theory" type="button">이론</button>
               <button data-kind-filter="practice" type="button">실습</button>
-              <button data-kind-filter="blank" type="button">빈블럭</button>
+              <button data-kind-filter="blank" type="button">만들기</button>
             </div>
             <select id="tagFilter" aria-label="태그 필터">
               <option value="all">전체 태그</option>
@@ -292,6 +292,7 @@
                 <span aria-hidden="true">⌕</span>
                 <input id="chordSearch" type="search" placeholder="예: A, F#m7, Dadd9" />
               </label>
+              <select id="chordStudentFilter" aria-label="나의 코드 학생 선택" hidden></select>
             </div>
             <div class="segmented chord-category-tabs chord-library-tabs" id="chordLibraryTabs" aria-label="코드 대분류 선택"></div>
             <div class="segmented chord-category-tabs" id="chordCategoryTabs" aria-label="코드 종류 선택"></div>
@@ -384,7 +385,7 @@
           <select id="newType">
             <option value="theory">이론</option>
             <option value="practice">실습</option>
-            <option value="blank">빈블럭</option>
+            <option value="blank">만들기</option>
           </select>
         </label>
         <div class="practice-fields" id="practiceFields">

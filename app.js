@@ -335,6 +335,7 @@ let activeStudentId = state.students[0]?.id || "";
 let activeShareStudentId = activeStudentId;
 let activeKindFilter = "all";
 let activeChordLibrary = "dictionary";
+let activeChordStudentFilter = activeStudentId || "";
 let activeChordCategory = "all";
 let activeRhythmCategory = "all";
 let lessonRoomMode = "weekly";
@@ -642,6 +643,16 @@ function chordBelongsToLibrary(chord, library = activeChordLibrary) {
   return library === "mine" ? isCustom : !isCustom;
 }
 
+function activeChordStudentId() {
+  if (publicShareMode) return activeShareStudentId || "";
+  return activeChordStudentFilter || activeStudentId || state.students[0]?.id || "";
+}
+
+function chordBelongsToActiveStudent(chord) {
+  if (!String(chord.fileName || "").startsWith("custom:")) return true;
+  return (chord.studentId || "") === activeChordStudentId();
+}
+
 function rhythmCategoryLabel(category) {
   return RHYTHM_CATEGORY_TABS.find((item) => item.key === category)?.label || "커스텀";
 }
@@ -800,6 +811,7 @@ const els = {
   materialGrid: $("#materialGrid"),
   materialCount: $("#materialCount"),
   chordSearch: $("#chordSearch"),
+  chordStudentFilter: $("#chordStudentFilter"),
   chordLibraryTabs: $("#chordLibraryTabs"),
   chordCategoryTabs: $("#chordCategoryTabs"),
   chordGrid: $("#chordGrid"),
@@ -1293,7 +1305,7 @@ function renderScoreResources(block, mode = "compact") {
 
 function blockKindLabel(kind) {
   if (kind === "theory") return "이론";
-  if (kind === "blank") return "빈블럭";
+  if (kind === "blank") return "만들기";
   return "실습";
 }
 
@@ -2356,14 +2368,16 @@ function filteredChords() {
   const query = normalizeChordSearch(els.chordSearch?.value || "");
   return chordDictionary().filter((chord) => {
     const matchesLibrary = chordBelongsToLibrary(chord);
+    const matchesStudent = activeChordLibrary !== "mine" || chordBelongsToActiveStudent(chord);
     const matchesCategory = activeChordCategory === "all" || chord.category === activeChordCategory;
     const matchesQuery = !query || normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query);
-    return matchesLibrary && matchesCategory && matchesQuery;
+    return matchesLibrary && matchesStudent && matchesCategory && matchesQuery;
   });
 }
 
 function renderChordDictionary() {
   if (!els.chordGrid) return;
+  renderChordStudentFilter();
   const chords = filteredChords();
   renderChordLibraryTabs();
   renderChordCategoryTabs();
@@ -2372,6 +2386,19 @@ function renderChordDictionary() {
   document.querySelectorAll("[data-share-back-button]").forEach((button) => {
     button.hidden = !publicShareMode;
   });
+}
+
+function renderChordStudentFilter() {
+  if (!els.chordStudentFilter) return;
+  const shouldShow = !publicShareMode && activeChordLibrary === "mine";
+  els.chordStudentFilter.hidden = !shouldShow;
+  if (!shouldShow) return;
+  if (!activeChordStudentFilter || !state.students.some((student) => student.id === activeChordStudentFilter)) {
+    activeChordStudentFilter = activeStudentId || state.students[0]?.id || "";
+  }
+  els.chordStudentFilter.innerHTML = state.students
+    .map((student) => `<option value="${escapeHTML(student.id)}" ${student.id === activeChordStudentFilter ? "selected" : ""}>${escapeHTML(student.name)}</option>`)
+    .join("");
 }
 
 function renderChordLibraryTabs() {
@@ -2383,7 +2410,7 @@ function renderChordLibraryTabs() {
   ];
   els.chordLibraryTabs.innerHTML = libraries
     .map((library) => {
-      const count = chords.filter((chord) => chordBelongsToLibrary(chord, library.key)).length;
+      const count = chords.filter((chord) => chordBelongsToLibrary(chord, library.key) && (library.key !== "mine" || chordBelongsToActiveStudent(chord))).length;
       return `
         <button class="${activeChordLibrary === library.key ? "active" : ""}" type="button" data-chord-library="${library.key}">
           ${escapeHTML(library.label)} <span>${count}</span>
@@ -2395,7 +2422,7 @@ function renderChordLibraryTabs() {
 
 function renderChordCategoryTabs() {
   if (!els.chordCategoryTabs) return;
-  const chords = chordDictionary().filter((chord) => chordBelongsToLibrary(chord));
+  const chords = chordDictionary().filter((chord) => chordBelongsToLibrary(chord) && (activeChordLibrary !== "mine" || chordBelongsToActiveStudent(chord)));
   els.chordCategoryTabs.innerHTML = CHORD_CATEGORY_TABS.map((tab) => {
     const count = tab.key === "all" ? chords.length : chords.filter((chord) => chord.category === tab.key).length;
     return `
@@ -2521,40 +2548,44 @@ function renderRhythmBuilder() {
     unit: rhythmBuilder.unit,
     cells: rhythmBuilder.cells,
   });
-  const controlColumns = `112px repeat(${count}, minmax(28px, 1fr)) 48px`;
+  const width = Math.max(720, count * 42 + 190);
+  const height = 196;
+  const left = 136;
+  const right = width - 70;
+  const step = (right - left) / Math.max(1, count - 1);
+  const noteY = 70;
+  const circleY = noteY + 34;
+  const arrowY = noteY + 70;
   els.rhythmBuilderBoard.innerHTML = `
     <div class="rhythm-measure-meta">
       <strong>${escapeHTML(rhythmBuilder.meter)}</strong>
       <span>${escapeHTML(unitLabel)} 기준 · ${count}칸</span>
     </div>
-    <div class="rhythm-notation-preview">
-      <img src="${rhythmSvg(preview, { showTitle: false, showMarks: false, showArrows: false })}" alt="리듬 음표 미리보기" />
-    </div>
-    <div class="rhythm-marker-row" style="grid-template-columns: ${controlColumns}">
-      <span class="rhythm-control-spacer" aria-hidden="true"></span>
+    <div class="rhythm-editor-canvas" style="--rhythm-aspect: ${width} / ${height};">
+      <img src="${rhythmSvg(preview, { showTitle: false })}" alt="리듬 음표 미리보기" />
       ${rhythmBuilder.cells
-        .map(
-          (cell, index) => `
-            <button class="rhythm-mark-cell ${cell.hit === "circle" ? "is-circle" : "is-line"}" type="button" data-rhythm-hit="${index}" aria-label="${index + 1}번째 아래 표시">
-              <span aria-hidden="true"></span>
-            </button>
-          `,
-        )
+        .map((cell, index) => {
+          const x = ((left + index * step) / width) * 100;
+          const markY = (circleY / height) * 100;
+          const strokeY = (arrowY / height) * 100;
+          return `
+            <button
+              class="rhythm-overlay-hit ${cell.hit === "circle" ? "is-circle" : "is-line"}"
+              type="button"
+              style="left:${x}%; top:${markY}%;"
+              data-rhythm-hit="${index}"
+              aria-label="${index + 1}번째 O 또는 대시 바꾸기"
+            ></button>
+            <button
+              class="rhythm-overlay-stroke ${cell.stroke === "down" ? "is-down" : "is-up"}"
+              type="button"
+              style="left:${x}%; top:${strokeY}%;"
+              data-rhythm-stroke="${index}"
+              aria-label="${index + 1}번째 다운 업 바꾸기"
+            ></button>
+          `;
+        })
         .join("")}
-      <span class="rhythm-control-spacer" aria-hidden="true"></span>
-    </div>
-    <div class="rhythm-stroke-row" style="grid-template-columns: ${controlColumns}">
-      <span class="rhythm-control-spacer" aria-hidden="true"></span>
-      ${rhythmBuilder.cells
-        .map(
-          (cell, index) => `
-            <button class="rhythm-stroke-cell ${cell.stroke ? "active" : ""}" type="button" data-rhythm-stroke="${index}" aria-label="${index + 1}번째 스트로크 방향">
-              ${cell.stroke === "down" ? "↓" : cell.stroke === "up" ? "↑" : "·"}
-            </button>
-          `,
-        )
-        .join("")}
-      <span class="rhythm-control-spacer" aria-hidden="true"></span>
     </div>
   `;
 }
@@ -2659,15 +2690,18 @@ function deleteCustomRhythm(rhythmId) {
 
 function ensurePendingBlankBlock() {
   const date = els.lessonDate?.value || today();
-  const existing = [...pendingBlockIds].map(getBlock).find((block) => block?.kind === "blank" && block.lessonDate === date);
+  const student = getActiveStudent();
+  const studentName = student?.name || "학생";
+  const existing = [...pendingBlockIds].map(getBlock).find((block) => block?.kind === "blank" && block.lessonDate === date && block.studentId === student?.id);
   if (existing) return existing;
   const block = {
     id: uid("blk"),
     kind: "blank",
-    title: `${formatDate(date)} 빈 블럭`,
+    title: `${formatDate(date)} ${studentName} 만들기 블럭`,
     summary: "이 날짜에 그린 코드와 리듬을 모아둔 블럭입니다.",
-    tags: ["빈블럭"],
+    tags: ["만들기"],
     lessonDate: date,
+    studentId: student?.id || "",
     chords: [],
     rhythms: [],
     scores: [],
@@ -2894,6 +2928,7 @@ function imageViewerStudentId() {
 function chordBuilderStudentId() {
   if (publicShareMode) return activeShareStudentId || state.students[0]?.id || "";
   if (els.imageViewerDialog?.open && imageViewer.mode === "score") return imageViewerStudentId();
+  if (currentView === "chords" && activeChordLibrary === "mine") return activeChordStudentId();
   if (currentView === "rooms" || currentView === "progress") return activeStudentId || "";
   return "";
 }
@@ -4858,6 +4893,10 @@ els.views.library.addEventListener("drop", async (event) => {
 els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
 els.chordSearch.addEventListener("input", renderChordDictionary);
+els.chordStudentFilter?.addEventListener("change", () => {
+  activeChordStudentFilter = els.chordStudentFilter.value;
+  renderChordDictionary();
+});
 els.rhythmSearch?.addEventListener("input", renderRhythmDictionary);
 els.rhythmPickerSearch?.addEventListener("input", renderRhythmPickerGrid);
 els.openChordBuilder.addEventListener("click", openChordBuilder);
@@ -4958,6 +4997,46 @@ els.imageViewerBack.addEventListener("click", restorePreviousImageViewer);
 els.imageViewerChords.addEventListener("click", openImageViewerChords);
 els.imageViewerRhythm.addEventListener("click", openImageViewerRhythm);
 els.imageViewerChordBuilder.addEventListener("click", () => openChordBuilder({ studentId: imageViewerStudentId() }));
+
+function eventPoint(event) {
+  const touch = event.changedTouches?.[0] || event.touches?.[0];
+  return touch ? { x: touch.clientX, y: touch.clientY } : { x: event.clientX, y: event.clientY };
+}
+
+function viewerButtonAtPoint(event) {
+  if (!els.imageViewerDialog.open) return null;
+  const point = eventPoint(event);
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+  return [...els.imageViewerDialog.querySelectorAll(".image-viewer-actions button:not([hidden]), .image-viewer-actions a:not([hidden])")].find((button) => {
+    const rect = button.getBoundingClientRect();
+    return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+  });
+}
+
+function runViewerButtonAction(button) {
+  if (!button) return false;
+  if (button === els.imageViewerChords) openImageViewerChords();
+  else if (button === els.imageViewerRhythm) openImageViewerRhythm();
+  else if (button === els.imageViewerChordBuilder) openChordBuilder({ studentId: imageViewerStudentId() });
+  else if (button === els.imageViewerZoomOut) changeImageViewerZoom(-0.1);
+  else if (button === els.imageViewerZoomIn) changeImageViewerZoom(0.1);
+  else if (button === els.closeImageViewer) closeImageViewer();
+  else if (button?.dataset?.randomPractice === "viewer") openRandomPracticeScore();
+  else if (button?.tagName === "A" && button.href) window.open(button.href, "_blank", "noopener,noreferrer");
+  else return false;
+  return true;
+}
+
+function handleViewerActionTouch(event) {
+  const button = viewerButtonAtPoint(event);
+  if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
+  runViewerButtonAction(button);
+}
+
+els.imageViewerDialog.addEventListener("touchend", handleViewerActionTouch, { capture: true, passive: false });
+
 function handleViewerRandomPracticeEvent(event) {
   const button = event.target.closest?.(".viewer-random-button");
   if (!button) return;
