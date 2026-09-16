@@ -2345,6 +2345,7 @@ textarea {
 }
 
 .rhythm-hit-cell {
+  position: relative;
   min-height: 94px;
   grid-template-rows: 46px 28px;
   padding: 0;
@@ -2363,14 +2364,50 @@ textarea {
 .rhythm-note::after {
   content: "";
   position: absolute;
-  right: -8px;
-  bottom: 6px;
+  right: -7px;
+  bottom: 7px;
   width: 3px;
   height: 42px;
   border-radius: 999px;
   background: #111;
   transform: rotate(20deg);
   transform-origin: bottom;
+}
+
+.rhythm-hit-cell.has-beam::before,
+.rhythm-hit-cell.has-beam::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 5px;
+  left: calc(50% + 2px);
+  width: calc(100% + 6px);
+  height: 6px;
+  background: #111;
+  transform: translateX(0);
+}
+
+.rhythm-hit-cell.unit-8::after {
+  display: none;
+}
+
+.rhythm-measure.unit-8 .rhythm-hit-cell.has-beam::after {
+  display: none;
+}
+
+.rhythm-measure.unit-16 .rhythm-hit-cell.has-beam::after {
+  top: 15px;
+  height: 4px;
+}
+
+.rhythm-hit-cell.beam-end::before,
+.rhythm-hit-cell.beam-end::after {
+  width: 10px;
+}
+
+.rhythm-hit-cell.beam-start.beam-end::before,
+.rhythm-hit-cell.beam-start.beam-end::after {
+  display: none;
 }
 
 .rhythm-under-mark {
@@ -2936,11 +2973,11 @@ dialog::backdrop {
 }
 
 .viewer-metronome {
-  width: min(390px, 42vw);
-  grid-template-columns: auto auto minmax(132px, 1fr);
+  width: auto;
+  grid-template-columns: auto auto auto;
   align-items: center;
-  gap: 5px;
-  padding: 4px 6px;
+  gap: 3px;
+  padding: 3px 5px;
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.07);
 }
@@ -2998,10 +3035,10 @@ dialog::backdrop {
 }
 
 .viewer-metronome [data-tempo-input] {
-  width: 48px;
-  min-height: 26px;
-  padding: 0 6px;
-  font-size: 12px;
+  width: 38px;
+  min-height: 24px;
+  padding: 0 4px;
+  font-size: 11px;
 }
 
 .viewer-metronome .tempo-unit {
@@ -3009,19 +3046,20 @@ dialog::backdrop {
 }
 
 .viewer-metronome .metro-row {
-  gap: 5px;
+  gap: 3px;
 }
 
 .viewer-metronome .meter-tabs button,
 .viewer-metronome [data-metronome-toggle],
 .viewer-metronome .advanced-metronome-toggle {
-  min-height: 26px;
-  padding: 0 6px;
-  font-size: 11px;
+  min-height: 24px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .viewer-metronome [data-metronome-toggle] {
-  width: 46px;
+  width: 38px;
 }
 
 .viewer-metronome .advanced-metronome-toggle input {
@@ -3032,7 +3070,8 @@ dialog::backdrop {
 .viewer-random-button {
   flex: 0 0 auto;
   width: auto;
-  min-height: 32px;
+  min-height: 28px;
+  padding: 0 8px;
   color: #fff;
   border-color: rgba(255, 255, 255, 0.24);
   background: rgba(255, 255, 255, 0.08);
@@ -3303,6 +3342,14 @@ dialog::backdrop {
     -6px -6px 16px rgba(255, 252, 247, 0.9);
 }
 
+.image-viewer-dialog.rhythm-only {
+  width: min(980px, calc(100vw - 28px));
+}
+
+.image-viewer-dialog.rhythm-only .image-viewer img {
+  width: min(900px, 92vw) !important;
+}
+
 .image-viewer-nav {
   position: absolute;
   top: 50%;
@@ -3374,8 +3421,8 @@ dialog::backdrop {
   }
 
   .viewer-metronome {
-    width: min(100%, 620px);
-    flex: 1 1 520px;
+    width: auto;
+    flex: 0 1 auto;
   }
 }
 

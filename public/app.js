@@ -1349,7 +1349,8 @@ function openImageViewerItems(items, index = 0, options = {}) {
     mode: options.mode || "score",
     title: options.title || "",
   };
-  els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || imageViewer.mode === "chord-grid");
+  els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || imageViewer.mode === "rhythm" || imageViewer.mode === "chord-grid");
+  els.imageViewerDialog.classList.toggle("rhythm-only", imageViewer.mode === "rhythm");
   els.imageViewerDialog.classList.toggle("chord-grid-mode", imageViewer.mode === "chord-grid");
   els.imageViewerDialog.showModal();
   updateImageViewer();
@@ -1358,6 +1359,7 @@ function openImageViewerItems(items, index = 0, options = {}) {
 function closeImageViewer() {
   els.imageViewerDialog.close();
   els.imageViewerDialog.classList.remove("chord-only");
+  els.imageViewerDialog.classList.remove("rhythm-only");
   els.imageViewerDialog.classList.remove("chord-grid-mode");
   imageViewerStack = [];
   els.imageViewerImage.src = "";
@@ -1380,7 +1382,8 @@ function updateImageViewer() {
   }
   const imageScroll = els.imageViewerImage.closest(".image-viewer-scroll");
   if (imageScroll) imageScroll.hidden = isChordGrid;
-  els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || isChordGrid);
+  els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || imageViewer.mode === "rhythm" || isChordGrid);
+  els.imageViewerDialog.classList.toggle("rhythm-only", imageViewer.mode === "rhythm");
   els.imageViewerDialog.classList.toggle("chord-grid-mode", isChordGrid);
 
   if (isChordGrid) {
@@ -2430,20 +2433,33 @@ function renderRhythmBuilder() {
   const count = rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit);
   rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, count);
   const unitLabel = `${rhythmBuilder.unit}분`;
+  const groupSize = rhythmBuilder.unit === 16 ? 4 : rhythmBuilder.unit === 8 ? 2 : 1;
+  const showBeam = rhythmBuilder.unit > 4;
   els.rhythmBuilderBoard.innerHTML = `
     <div class="rhythm-measure-meta">
       <strong>${escapeHTML(rhythmBuilder.meter)}</strong>
       <span>${escapeHTML(unitLabel)} 기준 · ${count}칸</span>
     </div>
-    <div class="rhythm-measure">
+    <div class="rhythm-measure unit-${rhythmBuilder.unit}">
       ${rhythmBuilder.cells
         .map(
-          (cell, index) => `
-            <button class="rhythm-hit-cell ${cell.hit === "circle" ? "is-circle" : "is-line"}" type="button" data-rhythm-hit="${index}" aria-label="${index + 1}번째 음표">
+          (cell, index) => {
+            const inGroup = index % groupSize;
+            const groupEnd = inGroup === groupSize - 1 || index === rhythmBuilder.cells.length - 1;
+            const classNames = [
+              "rhythm-hit-cell",
+              cell.hit === "circle" ? "is-circle" : "is-line",
+              showBeam ? "has-beam" : "",
+              showBeam && inGroup === 0 ? "beam-start" : "",
+              showBeam && groupEnd ? "beam-end" : "",
+            ].filter(Boolean).join(" ");
+            return `
+            <button class="${classNames}" type="button" data-rhythm-hit="${index}" aria-label="${index + 1}번째 음표">
               <span class="rhythm-note" aria-hidden="true"></span>
               <span class="rhythm-under-mark" aria-hidden="true"></span>
             </button>
-          `,
+          `;
+          },
         )
         .join("")}
     </div>
@@ -2489,7 +2505,7 @@ function openRhythmViewer(rhythmId) {
     showToast("리듬표를 찾을 수 없습니다.");
     return;
   }
-  openImageViewerItems([{ src: rhythmSvg(rhythm), title: `${rhythm.name} 리듬표` }], 0, { mode: "chord" });
+  openImageViewerItems([{ src: rhythmSvg(rhythm), title: `${rhythm.name} 리듬표` }], 0, { mode: "rhythm" });
 }
 
 function saveCustomRhythmFromBuilder() {
@@ -4671,6 +4687,13 @@ els.imageViewerBack.addEventListener("click", restorePreviousImageViewer);
 els.imageViewerChords.addEventListener("click", openImageViewerChords);
 els.imageViewerRhythm.addEventListener("click", openImageViewerRhythm);
 els.imageViewerChordBuilder.addEventListener("click", () => openChordBuilder({ studentId: imageViewerStudentId() }));
+document.querySelectorAll(".viewer-random-button").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openRandomPracticeScore();
+  });
+});
 els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
 els.imageViewerDialog.addEventListener(
   "wheel",
