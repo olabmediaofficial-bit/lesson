@@ -334,6 +334,7 @@ let currentView = "library";
 let activeStudentId = state.students[0]?.id || "";
 let activeShareStudentId = activeStudentId;
 let activeKindFilter = "all";
+let activeChordLibrary = "dictionary";
 let activeChordCategory = "all";
 let activeRhythmCategory = "all";
 let lessonRoomMode = "weekly";
@@ -348,6 +349,9 @@ let practiceSortDirection = {
 let selectedBlockIds = new Set();
 let selectedCurriculumSkills = new Set();
 let selectedChordNames = [];
+let selectedRhythmIds = [];
+let editingBlockChordNames = [];
+let editingBlockRhythmIds = [];
 let chordBuilder = {
   id: "",
   baseFret: 1,
@@ -633,6 +637,11 @@ function chordDictionary() {
   );
 }
 
+function chordBelongsToLibrary(chord, library = activeChordLibrary) {
+  const isCustom = String(chord.fileName || "").startsWith("custom:");
+  return library === "mine" ? isCustom : !isCustom;
+}
+
 function rhythmCategoryLabel(category) {
   return RHYTHM_CATEGORY_TABS.find((item) => item.key === category)?.label || "커스텀";
 }
@@ -685,13 +694,14 @@ function rhythmSvg(rhythm, options = {}) {
   const showTitle = options.showTitle !== false;
   const showMarks = options.showMarks !== false;
   const showArrows = options.showArrows !== false;
+  const compact = !showMarks && !showArrows;
   const name = escapeHTML(options.title ?? normalized.name);
   const count = normalized.cells.length;
   const width = Math.max(720, count * 42 + 190);
-  const height = showTitle ? 250 : 196;
+  const height = compact ? 126 : showTitle ? 250 : 196;
   const left = 136;
   const right = width - 70;
-  const titleOffset = showTitle ? 0 : -42;
+  const titleOffset = compact ? -64 : showTitle ? 0 : -42;
   const noteY = 112 + titleOffset;
   const step = (right - left) / Math.max(1, count - 1);
   const beamGroups = rhythmBeamGroupSize(normalized.meter, normalized.unit);
@@ -758,6 +768,15 @@ function rhythmDictionary() {
     );
 }
 
+function normalizeRhythmIds(value) {
+  const items = Array.isArray(value) ? value : String(value || "").split(",");
+  return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
+}
+
+function getRhythmById(id) {
+  return rhythmDictionary().find((rhythm) => rhythm.id === id);
+}
+
 const els = {
   viewTitle: $("#viewTitle"),
   navItems: document.querySelectorAll(".nav-item"),
@@ -781,6 +800,7 @@ const els = {
   materialGrid: $("#materialGrid"),
   materialCount: $("#materialCount"),
   chordSearch: $("#chordSearch"),
+  chordLibraryTabs: $("#chordLibraryTabs"),
   chordCategoryTabs: $("#chordCategoryTabs"),
   chordGrid: $("#chordGrid"),
   openChordBuilder: $("#openChordBuilder"),
@@ -879,6 +899,12 @@ const els = {
   selectedChordOrder: $("#selectedChordOrder"),
   chordPickerGrid: $("#chordPickerGrid"),
   saveChordPicker: $("#saveChordPicker"),
+  rhythmPickerDialog: $("#rhythmPickerDialog"),
+  rhythmPickerBlockId: $("#rhythmPickerBlockId"),
+  rhythmPickerSearch: $("#rhythmPickerSearch"),
+  selectedRhythmOrder: $("#selectedRhythmOrder"),
+  rhythmPickerGrid: $("#rhythmPickerGrid"),
+  saveRhythmPicker: $("#saveRhythmPicker"),
   blockDialogTitle: $("#blockDialogTitle"),
   editingBlockId: $("#editingBlockId"),
   existingScoreList: $("#existingScoreList"),
@@ -891,6 +917,12 @@ const els = {
   practiceKey: $("#practiceKey"),
   practiceBeat: $("#practiceBeat"),
   practiceChords: $("#practiceChords"),
+  blockChordAssetList: $("#blockChordAssetList"),
+  blockRhythmAssetList: $("#blockRhythmAssetList"),
+  editBlockChords: $("#editBlockChords"),
+  drawBlockChord: $("#drawBlockChord"),
+  editBlockRhythms: $("#editBlockRhythms"),
+  drawBlockRhythm: $("#drawBlockRhythm"),
   practiceSkillFields: $("#practiceSkillFields"),
   practiceCategories: document.querySelectorAll('input[name="practiceCategory"]'),
   appShell: $(".app-shell"),
@@ -913,6 +945,7 @@ function migrateState(data) {
     resources: normalizeResources(block),
     audioLink: block.audioLink || "",
     chords: normalizeChordNames(block.chords || []),
+    rhythms: normalizeRhythmIds(block.rhythms || []),
     practice: normalizePractice(block.practice),
     updatedAt: block.updatedAt || "",
   }));
@@ -1259,11 +1292,15 @@ function renderScoreResources(block, mode = "compact") {
 }
 
 function blockKindLabel(kind) {
-  return kind === "theory" ? "이론" : "실습";
+  if (kind === "theory") return "이론";
+  if (kind === "blank") return "빈블럭";
+  return "실습";
 }
 
 function blockKindClass(kind) {
-  return kind === "theory" ? "theory" : "practice";
+  if (kind === "theory") return "theory";
+  if (kind === "blank") return "blank";
+  return "practice";
 }
 
 function uniqueLessonBlocks(student) {
@@ -1489,7 +1526,7 @@ function renderImageViewerAudio() {
 
 function renderImageViewerResourceButtons() {
   const block = currentImageViewerBlock();
-  const hasScoreContext = imageViewer.mode === "score" && block?.kind === "practice";
+  const hasScoreContext = imageViewer.mode === "score" && Boolean(block);
   const hasChords = hasScoreContext && normalizeChordNames(block.chords || []).some((name) => getChordByName(name));
   const hasRhythm = hasScoreContext && rhythmViewerItems(block).length > 0;
   if (els.imageViewerChords) els.imageViewerChords.hidden = !hasChords;
@@ -1515,7 +1552,16 @@ function openImageViewerChords() {
 function rhythmViewerItems(block) {
   if (!block) return [];
   const rhythmPattern = /리듬|rhythm|beat|스트로크|strum|패턴|pattern/i;
-  return normalizeResources(block)
+  const attachedRhythms = normalizeRhythmIds(block.rhythms || [])
+    .map(getRhythmById)
+    .filter(Boolean)
+    .map((rhythm) => ({
+      rhythm,
+      href: rhythmSvg(rhythm),
+      label: `${rhythm.name} 리듬표`,
+      type: "image",
+    }));
+  const resourceRhythms = normalizeResources(block)
     .filter((resource) => rhythmPattern.test(`${resourceLabel(resource)} ${resourceHref(resource)}`))
     .map((resource) => ({
       resource,
@@ -1524,6 +1570,7 @@ function rhythmViewerItems(block) {
       type: resourceType(resource),
     }))
     .filter((item) => item.href);
+  return [...attachedRhythms, ...resourceRhythms];
 }
 
 function openImageViewerRhythm() {
@@ -2308,15 +2355,17 @@ function renderLibraryInsight() {
 function filteredChords() {
   const query = normalizeChordSearch(els.chordSearch?.value || "");
   return chordDictionary().filter((chord) => {
+    const matchesLibrary = chordBelongsToLibrary(chord);
     const matchesCategory = activeChordCategory === "all" || chord.category === activeChordCategory;
     const matchesQuery = !query || normalizeChordSearch(chord.name).includes(query) || normalizeChordSearch(chord.fileName).includes(query);
-    return matchesCategory && matchesQuery;
+    return matchesLibrary && matchesCategory && matchesQuery;
   });
 }
 
 function renderChordDictionary() {
   if (!els.chordGrid) return;
   const chords = filteredChords();
+  renderChordLibraryTabs();
   renderChordCategoryTabs();
   els.chordGrid.innerHTML = chords.length ? renderChordCards(chords) : `<div class="empty">찾는 코드가 없습니다.</div>`;
   if (els.openChordBuilder) els.openChordBuilder.hidden = publicShareMode;
@@ -2325,9 +2374,28 @@ function renderChordDictionary() {
   });
 }
 
+function renderChordLibraryTabs() {
+  if (!els.chordLibraryTabs) return;
+  const chords = chordDictionary();
+  const libraries = [
+    { key: "mine", label: "나의 코드" },
+    { key: "dictionary", label: "코드 사전" },
+  ];
+  els.chordLibraryTabs.innerHTML = libraries
+    .map((library) => {
+      const count = chords.filter((chord) => chordBelongsToLibrary(chord, library.key)).length;
+      return `
+        <button class="${activeChordLibrary === library.key ? "active" : ""}" type="button" data-chord-library="${library.key}">
+          ${escapeHTML(library.label)} <span>${count}</span>
+        </button>
+      `;
+    })
+    .join("");
+}
+
 function renderChordCategoryTabs() {
   if (!els.chordCategoryTabs) return;
-  const chords = chordDictionary();
+  const chords = chordDictionary().filter((chord) => chordBelongsToLibrary(chord));
   els.chordCategoryTabs.innerHTML = CHORD_CATEGORY_TABS.map((tab) => {
     const count = tab.key === "all" ? chords.length : chords.filter((chord) => chord.category === tab.key).length;
     return `
@@ -2427,6 +2495,7 @@ function openRhythmBuilder(options = {}) {
     meter: editRhythm?.meter || "4/4",
     unit: editRhythm?.unit || 16,
     cells: editRhythm?.cells ? structuredClone(editRhythm.cells) : [],
+    blockId: options.blockId || "",
     attachToLesson: Boolean(options.attachToLesson),
   };
   if (!RHYTHM_CATEGORY_TABS.some((tab) => tab.key === rhythmBuilder.category && tab.key !== "all")) rhythmBuilder.category = "strum";
@@ -2541,13 +2610,20 @@ function saveCustomRhythmFromBuilder() {
     ...(state.customRhythms || []).filter((item) => item.id !== rhythm.id),
   ];
   if (rhythmBuilder.attachToLesson) {
-    const block = createGeneratedLessonBlock({
-      title: `${rhythm.name} 리듬 그리기`,
-      summary: `${rhythm.name} 리듬 패턴을 직접 그려 확인했습니다.`,
-      tags: ["리듬표", "리듬 그리기"],
-      resources: [{ name: `${rhythm.name} 리듬표.png`, data: rhythmSvg(rhythm) }],
-    });
+    const block = ensurePendingBlankBlock();
+    block.rhythms = normalizeRhythmIds([...(block.rhythms || []), rhythm.id]);
+    block.updatedAt = nowIso();
     pendingBlockIds.add(block.id);
+  }
+  if (rhythmBuilder.blockId === "__editing__") {
+    editingBlockRhythmIds = normalizeRhythmIds([...editingBlockRhythmIds, rhythm.id]);
+    renderBlockAssetLists();
+  } else if (rhythmBuilder.blockId) {
+    const sourceBlock = getBlock(rhythmBuilder.blockId);
+    if (sourceBlock) {
+      sourceBlock.rhythms = normalizeRhythmIds([...(sourceBlock.rhythms || []), rhythm.id]);
+      sourceBlock.updatedAt = nowIso();
+    }
   }
   activeRhythmCategory = rhythm.category;
   els.rhythmBuilderDialog.close();
@@ -2572,18 +2648,30 @@ function deleteCustomRhythm(rhythmId) {
   }
   if (!window.confirm(`${rhythm.name} 리듬표를 삭제할까요?`)) return;
   state.customRhythms = (state.customRhythms || []).filter((item) => item.id !== rhythm.id);
+  state.blocks = state.blocks.map((block) => ({
+    ...block,
+    rhythms: normalizeRhythmIds(block.rhythms || []).filter((id) => id !== rhythm.id),
+    updatedAt: nowIso(),
+  }));
   render();
   saveStateInBackground({}, `${rhythm.name} 리듬표를 삭제했습니다.`);
 }
 
-function createGeneratedLessonBlock({ title, summary, tags = [], resources = [] }) {
+function ensurePendingBlankBlock() {
+  const date = els.lessonDate?.value || today();
+  const existing = [...pendingBlockIds].map(getBlock).find((block) => block?.kind === "blank" && block.lessonDate === date);
+  if (existing) return existing;
   const block = {
     id: uid("blk"),
-    kind: "theory",
-    title,
-    summary,
-    tags,
-    resources,
+    kind: "blank",
+    title: `${formatDate(date)} 빈 블럭`,
+    summary: "이 날짜에 그린 코드와 리듬을 모아둔 블럭입니다.",
+    tags: ["빈블럭"],
+    lessonDate: date,
+    chords: [],
+    rhythms: [],
+    scores: [],
+    resources: [],
     updatedAt: nowIso(),
   };
   state.blocks = [block, ...state.blocks];
@@ -2591,7 +2679,6 @@ function createGeneratedLessonBlock({ title, summary, tags = [], resources = [] 
 }
 
 function renderBlockChordDictionary(block, { editable = false } = {}) {
-  if (block.kind !== "practice") return "";
   const chordNames = normalizeChordNames(block.chords || []);
   if (!chordNames.length && !editable) return "";
 
@@ -2607,6 +2694,35 @@ function renderBlockChordDictionary(block, { editable = false } = {}) {
         ${chordNames.length ? "" : `<span class="empty-inline">아직 연결된 코드표가 없습니다.</span>`}
         ${foundChords.length ? renderChordCards(foundChords, { compact: true }) : ""}
         ${missingChords.map((name) => `<span class="missing-chord">${escapeHTML(name)}</span>`).join("")}
+      </div>
+    </details>
+  `;
+}
+
+function renderBlockRhythmDictionary(block, { editable = false } = {}) {
+  const rhythmIds = normalizeRhythmIds(block.rhythms || []);
+  if (!rhythmIds.length && !editable) return "";
+  const rhythms = rhythmIds.map(getRhythmById).filter(Boolean);
+  const missing = rhythmIds.filter((id) => !getRhythmById(id));
+  return `
+    <details class="used-chord-panel">
+      <summary>
+        <span>사용 리듬 ${rhythmIds.length}개</span>
+        ${editable ? `<button class="secondary-button mini-button" type="button" data-open-rhythm-picker="${block.id}">리듬표 추가</button>` : ""}
+      </summary>
+      <div class="used-rhythm-grid">
+        ${rhythmIds.length ? "" : `<span class="empty-inline">아직 연결된 리듬표가 없습니다.</span>`}
+        ${rhythms
+          .map(
+            (rhythm) => `
+              <button class="rhythm-card compact" type="button" data-view-rhythm="${escapeHTML(rhythm.id)}">
+                <strong>${escapeHTML(rhythm.name)}</strong>
+                <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
+              </button>
+            `,
+          )
+          .join("")}
+        ${missing.map((id) => `<span class="missing-chord">${escapeHTML(id)}</span>`).join("")}
       </div>
     </details>
   `;
@@ -2661,23 +2777,104 @@ function renderSelectedChordOrder() {
 }
 
 function openChordPicker(blockId) {
-  const block = getBlock(blockId);
-  if (!block || block.kind !== "practice") return;
+  const block = blockId === "__editing__" ? null : getBlock(blockId);
+  if (blockId !== "__editing__" && !block) return;
   els.chordPickerBlockId.value = blockId;
   els.chordPickerSearch.value = "";
-  selectedChordNames = normalizeChordNames(block.chords || []).map((name) => getChordByName(name)?.fileName || name);
+  const chordNames = blockId === "__editing__" ? editingBlockChordNames : block.chords || [];
+  selectedChordNames = normalizeChordNames(chordNames).map((name) => getChordByName(name)?.fileName || name);
   renderChordPickerGrid();
   els.chordPickerDialog.showModal();
 }
 
 function saveChordPickerSelection() {
+  if (els.chordPickerBlockId.value === "__editing__") {
+    editingBlockChordNames = [...selectedChordNames];
+    renderBlockAssetLists();
+    els.chordPickerDialog.close();
+    return;
+  }
   const block = getBlock(els.chordPickerBlockId.value);
-  if (!block || block.kind !== "practice") return;
+  if (!block) return;
   block.chords = [...selectedChordNames];
   block.updatedAt = nowIso();
   els.chordPickerDialog.close();
   render();
   saveStateInBackground({}, "코드표를 연결했습니다.");
+}
+
+function filteredPickerRhythms() {
+  const query = normalizeText(els.rhythmPickerSearch?.value || "");
+  return rhythmDictionary().filter((rhythm) => {
+    const haystack = normalizeText(`${rhythm.name} ${rhythmCategoryLabel(rhythm.category)} ${rhythm.meter} ${rhythm.unit}`);
+    return !query || haystack.includes(query);
+  });
+}
+
+function renderRhythmPickerGrid() {
+  if (!els.rhythmPickerGrid) return;
+  const rhythms = filteredPickerRhythms();
+  const selectedSet = new Set(selectedRhythmIds);
+  els.rhythmPickerGrid.innerHTML = rhythms.length
+    ? rhythms
+        .map(
+          (rhythm) => `
+            <button class="rhythm-card picker-card ${selectedSet.has(rhythm.id) ? "selected" : ""}" type="button" data-picker-rhythm="${escapeHTML(rhythm.id)}">
+              <strong>${escapeHTML(rhythm.name)}</strong>
+              <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
+              <span>${escapeHTML(rhythmCategoryLabel(rhythm.category))} · ${selectedSet.has(rhythm.id) ? "선택됨" : "선택"}</span>
+            </button>
+          `,
+        )
+        .join("")
+    : `<div class="empty">찾는 리듬표가 없습니다.</div>`;
+  renderSelectedRhythmOrder();
+}
+
+function renderSelectedRhythmOrder() {
+  if (!els.selectedRhythmOrder) return;
+  if (!selectedRhythmIds.length) {
+    els.selectedRhythmOrder.innerHTML = `<span class="empty-inline">선택한 리듬표가 없습니다.</span>`;
+    return;
+  }
+  els.selectedRhythmOrder.innerHTML = selectedRhythmIds
+    .map((id) => {
+      const rhythm = getRhythmById(id);
+      const label = rhythm?.name || id;
+      return `
+        <span class="selected-chord-pill">
+          <b>${escapeHTML(label)}</b>
+          <button class="icon-button tiny-button" type="button" data-remove-selected-rhythm="${escapeHTML(id)}" aria-label="${escapeHTML(label)} 제거">×</button>
+        </span>
+      `;
+    })
+    .join("");
+}
+
+function openRhythmPicker(blockId) {
+  const block = blockId === "__editing__" ? null : getBlock(blockId);
+  if (blockId !== "__editing__" && !block) return;
+  els.rhythmPickerBlockId.value = blockId;
+  els.rhythmPickerSearch.value = "";
+  selectedRhythmIds = normalizeRhythmIds(blockId === "__editing__" ? editingBlockRhythmIds : block.rhythms || []);
+  renderRhythmPickerGrid();
+  els.rhythmPickerDialog.showModal();
+}
+
+function saveRhythmPickerSelection() {
+  if (els.rhythmPickerBlockId.value === "__editing__") {
+    editingBlockRhythmIds = [...selectedRhythmIds];
+    renderBlockAssetLists();
+    els.rhythmPickerDialog.close();
+    return;
+  }
+  const block = getBlock(els.rhythmPickerBlockId.value);
+  if (!block) return;
+  block.rhythms = [...selectedRhythmIds];
+  block.updatedAt = nowIso();
+  els.rhythmPickerDialog.close();
+  render();
+  saveStateInBackground({}, "리듬표를 연결했습니다.");
 }
 
 function reorderSelectedChord(fromIndex, toIndex) {
@@ -2751,13 +2948,11 @@ function deleteCustomChord(fileName) {
   if (!window.confirm(`${chord.name} 코드표를 삭제할까요?`)) return;
   state.customChords = (state.customChords || []).filter((item) => item.id !== chord.id);
   state.blocks = state.blocks.map((block) =>
-    block.kind === "practice"
-      ? {
-          ...block,
-          chords: normalizeChordNames(block.chords || []).filter((name) => name !== fileName),
-          updatedAt: nowIso(),
-        }
-      : block,
+    ({
+      ...block,
+      chords: normalizeChordNames(block.chords || []).filter((name) => name !== fileName),
+      updatedAt: nowIso(),
+    }),
   );
   render();
   saveStateInBackground({}, `${chord.name} 코드표를 삭제했습니다.`);
@@ -2870,19 +3065,21 @@ function saveCustomChordFromBuilder() {
     ...(state.customChords || []).filter((item) => item.id !== chord.id && !(normalizeChordSearch(item.name) === normalizeChordSearch(chord.name) && (item.studentId || "") === (chord.studentId || ""))),
   ];
   if (chordBuilder.attachToLesson) {
-    const block = createGeneratedLessonBlock({
-      title: `${chord.name} 코드 그리기`,
-      summary: `${chord.name} 코드 운지를 직접 그려 확인했습니다.`,
-      tags: ["코드표", "코드 그리기"],
-      resources: [{ name: `${chord.name} 코드표.png`, data: customChordEntry(chord).src }],
-    });
+    const block = ensurePendingBlankBlock();
+    block.chords = normalizeChordNames([...(block.chords || []), `custom:${chord.id}`]);
+    block.updatedAt = nowIso();
     pendingBlockIds.add(block.id);
   }
+  if (chordBuilder.blockId === "__editing__") {
+    editingBlockChordNames = normalizeChordNames([...editingBlockChordNames, `custom:${chord.id}`]);
+    renderBlockAssetLists();
+  }
   const sourceBlock = chordBuilder.blockId ? getBlock(chordBuilder.blockId) : null;
-  if (sourceBlock?.kind === "practice") {
+  if (sourceBlock) {
     sourceBlock.chords = normalizeChordNames([...(sourceBlock.chords || []), `custom:${chord.id}`]);
     sourceBlock.updatedAt = nowIso();
   }
+  activeChordLibrary = "mine";
   activeChordCategory = chord.category || "custom";
   els.chordBuilderDialog.close();
   render();
@@ -2909,7 +3106,7 @@ async function saveCustomChord(chord) {
 }
 
 function renderKindGroups(blocks) {
-  return ["theory", "practice"]
+  return ["theory", "practice", "blank"]
     .map((kind) => {
       const group = blocks.filter((block) => block.kind === kind);
       if (!group.length) return "";
@@ -2967,6 +3164,7 @@ function renderBlockViewerContent(block) {
     ${renderPracticeDetails(block)}
     <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("") || `<span class="empty-inline">태그 없음</span>`}</div>
     ${renderBlockChordDictionary(block, { editable: true })}
+    ${renderBlockRhythmDictionary(block, { editable: true })}
     ${renderScoreResources(block, "compact")}
     ${renderResources(block, "compact")}
   `;
@@ -3838,7 +4036,7 @@ function renderLessonPreview(student, blocks) {
     <div class="lesson-preview-line">
       ${blocks
         .map((block) => {
-          const label = block.kind === "practice" ? renderMasteryBadge(student, block, "tiny") : `<span class="mini-kind theory">이론</span>`;
+          const label = block.kind === "practice" ? renderMasteryBadge(student, block, "tiny") : `<span class="mini-kind ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>`;
           return `<span class="lesson-preview-item">${label}<b>${escapeHTML(block.title)}</b></span>`;
         })
         .join("")}
@@ -3976,8 +4174,9 @@ function renderLessonBlock(block, options = {}) {
 function renderLessonResourceChips(block, { editable = false } = {}) {
   const audio = block.audioLink ? renderAudioButton(block.audioLink) : "";
   const chords = renderBlockChordDictionary(block, { editable });
-  if (!audio && !chords) return "";
-  return `<div class="lesson-resource-chips">${audio}${chords}</div>`;
+  const rhythms = renderBlockRhythmDictionary(block, { editable });
+  if (!audio && !chords && !rhythms) return "";
+  return `<div class="lesson-resource-chips">${audio}${chords}${rhythms}</div>`;
 }
 
 function renderMasteryControl(student, block, editable = false) {
@@ -4322,10 +4521,25 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const chordLibraryButton = event.target.closest("[data-chord-library]");
+  if (chordLibraryButton) {
+    activeChordLibrary = chordLibraryButton.dataset.chordLibrary;
+    activeChordCategory = "all";
+    renderChordDictionary();
+    return;
+  }
+
   const chordPickerButton = event.target.closest("[data-open-chord-picker]");
   if (chordPickerButton) {
     event.preventDefault();
     openChordPicker(chordPickerButton.dataset.openChordPicker);
+    return;
+  }
+
+  const rhythmPickerButton = event.target.closest("[data-open-rhythm-picker]");
+  if (rhythmPickerButton) {
+    event.preventDefault();
+    openRhythmPicker(rhythmPickerButton.dataset.openRhythmPicker);
     return;
   }
 
@@ -4344,6 +4558,40 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     selectedChordNames = selectedChordNames.filter((name) => name !== removeSelectedChord.dataset.removeSelectedChord);
     renderChordPickerGrid();
+    return;
+  }
+
+  const pickerRhythm = event.target.closest("[data-picker-rhythm]");
+  if (pickerRhythm) {
+    event.preventDefault();
+    const rhythmId = pickerRhythm.dataset.pickerRhythm;
+    if (selectedRhythmIds.includes(rhythmId)) selectedRhythmIds = selectedRhythmIds.filter((id) => id !== rhythmId);
+    else selectedRhythmIds.push(rhythmId);
+    renderRhythmPickerGrid();
+    return;
+  }
+
+  const removeSelectedRhythm = event.target.closest("[data-remove-selected-rhythm]");
+  if (removeSelectedRhythm) {
+    event.preventDefault();
+    selectedRhythmIds = selectedRhythmIds.filter((id) => id !== removeSelectedRhythm.dataset.removeSelectedRhythm);
+    renderRhythmPickerGrid();
+    return;
+  }
+
+  const removeEditingChord = event.target.closest("[data-remove-editing-chord]");
+  if (removeEditingChord) {
+    event.preventDefault();
+    editingBlockChordNames = editingBlockChordNames.filter((name) => name !== removeEditingChord.dataset.removeEditingChord);
+    renderBlockAssetLists();
+    return;
+  }
+
+  const removeEditingRhythm = event.target.closest("[data-remove-editing-rhythm]");
+  if (removeEditingRhythm) {
+    event.preventDefault();
+    editingBlockRhythmIds = editingBlockRhythmIds.filter((id) => id !== removeEditingRhythm.dataset.removeEditingRhythm);
+    renderBlockAssetLists();
     return;
   }
 
@@ -4611,8 +4859,13 @@ els.librarySearch.addEventListener("input", renderLibrary);
 els.tagFilter.addEventListener("change", renderLibrary);
 els.chordSearch.addEventListener("input", renderChordDictionary);
 els.rhythmSearch?.addEventListener("input", renderRhythmDictionary);
+els.rhythmPickerSearch?.addEventListener("input", renderRhythmPickerGrid);
 els.openChordBuilder.addEventListener("click", openChordBuilder);
 els.openRhythmBuilder?.addEventListener("click", () => openRhythmBuilder());
+els.editBlockChords?.addEventListener("click", () => openChordPicker("__editing__"));
+els.drawBlockChord?.addEventListener("click", () => openChordBuilder({ blockId: "__editing__", studentId: activeStudentId }));
+els.editBlockRhythms?.addEventListener("click", () => openRhythmPicker("__editing__"));
+els.drawBlockRhythm?.addEventListener("click", () => openRhythmBuilder({ blockId: "__editing__" }));
 els.rhythmBuilderCategory?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderMeter?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderUnit?.addEventListener("change", syncRhythmBuilderOptions);
@@ -4633,6 +4886,11 @@ els.rhythmBuilderDialog?.addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
   saveCustomRhythmFromBuilder();
+});
+els.rhythmPickerDialog?.addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  saveRhythmPickerSelection();
 });
 els.chordBuilderPrevFret.addEventListener("click", () => {
   chordBuilder.baseFret = Math.max(1, chordBuilder.baseFret - 1);
@@ -4860,6 +5118,8 @@ $("#openQuickAdd").addEventListener("click", () => openBlockDialog());
 function openBlockDialog(blockId = "") {
   const block = blockId ? getBlock(blockId) : null;
   const practice = normalizePractice(block?.practice);
+  editingBlockChordNames = normalizeChordNames(block?.chords || []);
+  editingBlockRhythmIds = normalizeRhythmIds(block?.rhythms || []);
   els.blockDialogTitle.textContent = block ? "블럭 편집" : "블럭 추가";
   els.editingBlockId.value = block?.id || "";
   $("#newTitle").value = block?.title || "";
@@ -4881,7 +5141,43 @@ function openBlockDialog(blockId = "") {
   els.newFiles.value = "";
   els.newScoreFiles.value = "";
   updatePracticeFieldsVisibility();
+  renderBlockAssetLists();
   els.materialDialog.showModal();
+}
+
+function renderBlockAssetLists() {
+  if (els.blockChordAssetList) {
+    els.blockChordAssetList.innerHTML = editingBlockChordNames.length
+      ? editingBlockChordNames
+          .map((name) => {
+            const chord = getChordByName(name);
+            const label = chord?.name || name;
+            return `
+              <span class="selected-chord-pill">
+                <b>${escapeHTML(label)}</b>
+                <button class="icon-button tiny-button" type="button" data-remove-editing-chord="${escapeHTML(name)}" aria-label="${escapeHTML(label)} 제거">×</button>
+              </span>
+            `;
+          })
+          .join("")
+      : `<span class="empty-inline">연결된 코드표가 없습니다.</span>`;
+  }
+  if (els.blockRhythmAssetList) {
+    els.blockRhythmAssetList.innerHTML = editingBlockRhythmIds.length
+      ? editingBlockRhythmIds
+          .map((id) => {
+            const rhythm = getRhythmById(id);
+            const label = rhythm?.name || id;
+            return `
+              <span class="selected-chord-pill">
+                <b>${escapeHTML(label)}</b>
+                <button class="icon-button tiny-button" type="button" data-remove-editing-rhythm="${escapeHTML(id)}" aria-label="${escapeHTML(label)} 제거">×</button>
+              </span>
+            `;
+          })
+          .join("")
+      : `<span class="empty-inline">연결된 리듬표가 없습니다.</span>`;
+  }
 }
 
 function renderExistingScoreList(block) {
@@ -5029,6 +5325,7 @@ async function createBlocksFromDroppedFiles(files) {
       tags: [],
       audioLink: "",
       chords: [],
+      rhythms: [],
       practice: normalizePractice(),
       scores: kind === "practice" && resourceType(resource) === "image" ? [resource] : [],
       resources: kind === "practice" && resourceType(resource) === "image" ? [] : [resource],
@@ -5068,6 +5365,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
     const fileResources = await Promise.all([...els.newFiles.files].map(readFileAsUploadedResource));
     const kind = $("#newType").value;
     const tags = kind === "practice" ? [...new Set([...parseTags($("#newTags").value), ...selectedPracticeSkillTags()])] : parseTags($("#newTags").value);
+    const editedChords = normalizeChordNames([...editingBlockChordNames, ...normalizeChordNames(els.practiceChords.value)]);
     const block = {
       id: editingId || uid("blk"),
       title: $("#newTitle").value.trim() || "제목 없는 블럭",
@@ -5075,7 +5373,8 @@ $("#materialForm").addEventListener("submit", async (event) => {
       summary: $("#newSummary").value.trim(),
       tags,
       audioLink: els.newAudioLink.value.trim(),
-      chords: kind === "practice" ? normalizeChordNames(els.practiceChords.value) : [],
+      chords: editedChords,
+      rhythms: normalizeRhythmIds(editingBlockRhythmIds),
       updatedAt: nowIso(),
       practice: {
         tempo: els.practiceTempo.value.trim(),

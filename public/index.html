@@ -85,6 +85,7 @@
               <button class="active" data-kind-filter="all" type="button">전체</button>
               <button data-kind-filter="theory" type="button">이론</button>
               <button data-kind-filter="practice" type="button">실습</button>
+              <button data-kind-filter="blank" type="button">빈블럭</button>
             </div>
             <select id="tagFilter" aria-label="태그 필터">
               <option value="all">전체 태그</option>
@@ -292,6 +293,7 @@
                 <input id="chordSearch" type="search" placeholder="예: A, F#m7, Dadd9" />
               </label>
             </div>
+            <div class="segmented chord-category-tabs chord-library-tabs" id="chordLibraryTabs" aria-label="코드 대분류 선택"></div>
             <div class="segmented chord-category-tabs" id="chordCategoryTabs" aria-label="코드 종류 선택"></div>
             <div id="chordGrid" class="chord-grid"></div>
           </section>
@@ -382,6 +384,7 @@
           <select id="newType">
             <option value="theory">이론</option>
             <option value="practice">실습</option>
+            <option value="blank">빈블럭</option>
           </select>
         </label>
         <div class="practice-fields" id="practiceFields">
@@ -429,6 +432,32 @@
             <input id="practiceChords" type="text" placeholder="쉼표로 구분: A, E, F#m7, D" />
           </label>
         </div>
+        <section class="block-asset-panel">
+          <div class="field-head">
+            <strong>코드와 리듬</strong>
+            <span>사전에서 고르거나 직접 그려서 이 블럭에 붙입니다.</span>
+          </div>
+          <div class="block-asset-row">
+            <div>
+              <strong>사용 코드</strong>
+              <div class="block-asset-list" id="blockChordAssetList"></div>
+            </div>
+            <div class="block-asset-actions">
+              <button class="secondary-button mini-button" id="editBlockChords" type="button">코드 사전에서 추가</button>
+              <button class="secondary-button mini-button" id="drawBlockChord" type="button">코드 그리기</button>
+            </div>
+          </div>
+          <div class="block-asset-row">
+            <div>
+              <strong>사용 리듬</strong>
+              <div class="block-asset-list" id="blockRhythmAssetList"></div>
+            </div>
+            <div class="block-asset-actions">
+              <button class="secondary-button mini-button" id="editBlockRhythms" type="button">리듬 사전에서 추가</button>
+              <button class="secondary-button mini-button" id="drawBlockRhythm" type="button">리듬 그리기</button>
+            </div>
+          </div>
+        </section>
         <label>
           설명
           <textarea id="newSummary" rows="3" placeholder="학생에게 보일 핵심 설명이나 연습 포인트"></textarea>
@@ -658,6 +687,31 @@
         <menu>
           <button class="secondary-button" value="cancel" type="submit">취소</button>
           <button class="primary-button" id="saveChordPicker" value="default" type="submit">저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="rhythmPickerDialog">
+      <form class="dialog-card chord-picker-dialog" method="dialog">
+        <div class="chord-picker-sticky">
+          <div class="dialog-head">
+            <div>
+              <strong>리듬표 추가</strong>
+              <p>이 블럭에서 쓸 리듬표를 골라주세요.</p>
+            </div>
+            <button class="icon-button" value="cancel" type="submit">×</button>
+          </div>
+          <input id="rhythmPickerBlockId" type="hidden" />
+          <label class="chord-picker-search">
+            <span aria-hidden="true">⌕</span>
+            <input id="rhythmPickerSearch" type="search" placeholder="리듬 검색: 16비트, 6/8..." />
+          </label>
+          <div class="selected-chord-order" id="selectedRhythmOrder" aria-label="선택한 리듬 순서"></div>
+        </div>
+        <div class="chord-picker-grid" id="rhythmPickerGrid"></div>
+        <menu>
+          <button class="secondary-button" value="cancel" type="submit">취소</button>
+          <button class="primary-button" id="saveRhythmPicker" value="default" type="submit">저장</button>
         </menu>
       </form>
     </dialog>

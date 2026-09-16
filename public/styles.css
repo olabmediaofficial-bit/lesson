@@ -660,6 +660,11 @@ textarea {
   background: #fff8f9;
 }
 
+.block-card.blank {
+  border-color: rgba(139, 113, 92, 0.24);
+  background: #fffdf9;
+}
+
 .block-select-control {
   display: inline-flex;
   min-height: 30px;
@@ -740,6 +745,11 @@ textarea {
 
 .material-type.practice {
   background: var(--rose);
+}
+
+.material-type.blank,
+.mini-kind.blank {
+  background: #8f735d;
 }
 
 .small-segmented {
@@ -2292,7 +2302,7 @@ textarea {
 
 .rhythm-builder-board {
   display: grid;
-  gap: 14px;
+  gap: 6px;
   padding: 20px;
   border: 1px solid rgba(198, 170, 143, 0.72);
   border-radius: 8px;
@@ -2323,6 +2333,14 @@ textarea {
   gap: 0;
 }
 
+.rhythm-marker-row {
+  margin-top: -4px;
+}
+
+.rhythm-stroke-row {
+  margin-top: -2px;
+}
+
 .rhythm-notation-preview {
   overflow: hidden;
   border: 1px solid rgba(198, 170, 143, 0.5);
@@ -2349,7 +2367,7 @@ textarea {
 }
 
 .rhythm-mark-cell {
-  min-height: 34px;
+  min-height: 28px;
   padding: 0;
 }
 
@@ -2374,7 +2392,7 @@ textarea {
 }
 
 .rhythm-stroke-cell {
-  min-height: 36px;
+  min-height: 30px;
   border-radius: 8px;
   color: var(--accent);
   font-size: 22px;
@@ -2740,6 +2758,17 @@ textarea {
 
 .used-chord-grid {
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid rgba(198, 170, 143, 0.48);
+  border-radius: 8px;
+  background: #fffdf9;
+}
+
+.used-rhythm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 8px;
   margin-top: 8px;
   padding: 10px;
@@ -3400,6 +3429,36 @@ dialog::backdrop {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fbfaf7;
+}
+
+.block-asset-panel {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(198, 170, 143, 0.58);
+  border-radius: 8px;
+  background: #fffaf4;
+}
+
+.block-asset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.block-asset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.block-asset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .practice-skill-fields {
