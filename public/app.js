@@ -396,6 +396,7 @@ let rhythmBuilder = {
   unit: 16,
   cells: [],
 };
+let lastViewerRandomAt = 0;
 
 const SCHEDULE_DAYS = [
   { key: "mon", label: "월" },
@@ -673,17 +674,27 @@ function normalizeCustomRhythm(rhythm = {}) {
   };
 }
 
-function rhythmSvg(rhythm) {
+function rhythmBeamGroupSize(meter, unit) {
+  if (Number(unit) === 16) return meter === "6/8" ? 6 : 4;
+  if (Number(unit) === 8) return meter === "6/8" ? 3 : 2;
+  return 1;
+}
+
+function rhythmSvg(rhythm, options = {}) {
   const normalized = normalizeCustomRhythm(rhythm);
-  const name = escapeHTML(normalized.name);
+  const showTitle = options.showTitle !== false;
+  const showMarks = options.showMarks !== false;
+  const showArrows = options.showArrows !== false;
+  const name = escapeHTML(options.title ?? normalized.name);
   const count = normalized.cells.length;
   const width = Math.max(720, count * 42 + 190);
-  const height = 250;
+  const height = showTitle ? 250 : 196;
   const left = 136;
   const right = width - 70;
-  const noteY = 112;
+  const titleOffset = showTitle ? 0 : -42;
+  const noteY = 112 + titleOffset;
   const step = (right - left) / Math.max(1, count - 1);
-  const beamGroups = normalized.unit === 16 ? 4 : normalized.unit === 8 ? 2 : 1;
+  const beamGroups = rhythmBeamGroupSize(normalized.meter, normalized.unit);
   const stemTop = noteY - 58;
   const stemRightOffset = 10;
   const circleY = noteY + 34;
@@ -700,8 +711,8 @@ function rhythmSvg(rhythm) {
       return `
         ${note}
         ${normalized.unit > 4 ? stem : ""}
-        ${mark}
-        <text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>
+        ${showMarks ? mark : ""}
+        ${showArrows ? `<text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
       `;
     })
     .join("");
@@ -722,7 +733,7 @@ function rhythmSvg(rhythm) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" rx="26" fill="#fffaf4" />
-      <text x="${width / 2}" y="38" text-anchor="middle" font-size="22" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
+      ${showTitle ? `<text x="${width / 2}" y="38" text-anchor="middle" font-size="22" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>` : ""}
       <line x1="54" y1="${noteY - 22}" x2="54" y2="${noteY + 22}" stroke="#111" stroke-width="2" />
       <line x1="65" y1="${noteY - 28}" x2="65" y2="${noteY + 28}" stroke="#111" stroke-width="5" />
       <text x="100" y="${noteY - 6}" text-anchor="middle" font-size="36" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${escapeHTML(meter[0] || "4")}</text>
@@ -2433,37 +2444,38 @@ function renderRhythmBuilder() {
   const count = rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit);
   rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, count);
   const unitLabel = `${rhythmBuilder.unit}분`;
-  const groupSize = rhythmBuilder.unit === 16 ? 4 : rhythmBuilder.unit === 8 ? 2 : 1;
-  const showBeam = rhythmBuilder.unit > 4;
+  const preview = normalizeCustomRhythm({
+    id: rhythmBuilder.id || "preview",
+    name: rhythmBuilder.name || "리듬",
+    category: rhythmBuilder.category,
+    meter: rhythmBuilder.meter,
+    unit: rhythmBuilder.unit,
+    cells: rhythmBuilder.cells,
+  });
+  const controlColumns = `112px repeat(${count}, minmax(28px, 1fr)) 48px`;
   els.rhythmBuilderBoard.innerHTML = `
     <div class="rhythm-measure-meta">
       <strong>${escapeHTML(rhythmBuilder.meter)}</strong>
       <span>${escapeHTML(unitLabel)} 기준 · ${count}칸</span>
     </div>
-    <div class="rhythm-measure unit-${rhythmBuilder.unit}">
+    <div class="rhythm-notation-preview">
+      <img src="${rhythmSvg(preview, { showTitle: false, showMarks: false, showArrows: false })}" alt="리듬 음표 미리보기" />
+    </div>
+    <div class="rhythm-marker-row" style="grid-template-columns: ${controlColumns}">
+      <span class="rhythm-control-spacer" aria-hidden="true"></span>
       ${rhythmBuilder.cells
         .map(
-          (cell, index) => {
-            const inGroup = index % groupSize;
-            const groupEnd = inGroup === groupSize - 1 || index === rhythmBuilder.cells.length - 1;
-            const classNames = [
-              "rhythm-hit-cell",
-              cell.hit === "circle" ? "is-circle" : "is-line",
-              showBeam ? "has-beam" : "",
-              showBeam && inGroup === 0 ? "beam-start" : "",
-              showBeam && groupEnd ? "beam-end" : "",
-            ].filter(Boolean).join(" ");
-            return `
-            <button class="${classNames}" type="button" data-rhythm-hit="${index}" aria-label="${index + 1}번째 음표">
-              <span class="rhythm-note" aria-hidden="true"></span>
-              <span class="rhythm-under-mark" aria-hidden="true"></span>
+          (cell, index) => `
+            <button class="rhythm-mark-cell ${cell.hit === "circle" ? "is-circle" : "is-line"}" type="button" data-rhythm-hit="${index}" aria-label="${index + 1}번째 아래 표시">
+              <span aria-hidden="true"></span>
             </button>
-          `;
-          },
+          `,
         )
         .join("")}
+      <span class="rhythm-control-spacer" aria-hidden="true"></span>
     </div>
-    <div class="rhythm-stroke-row">
+    <div class="rhythm-stroke-row" style="grid-template-columns: ${controlColumns}">
+      <span class="rhythm-control-spacer" aria-hidden="true"></span>
       ${rhythmBuilder.cells
         .map(
           (cell, index) => `
@@ -2473,6 +2485,7 @@ function renderRhythmBuilder() {
           `,
         )
         .join("")}
+      <span class="rhythm-control-spacer" aria-hidden="true"></span>
     </div>
   `;
 }
@@ -4687,12 +4700,18 @@ els.imageViewerBack.addEventListener("click", restorePreviousImageViewer);
 els.imageViewerChords.addEventListener("click", openImageViewerChords);
 els.imageViewerRhythm.addEventListener("click", openImageViewerRhythm);
 els.imageViewerChordBuilder.addEventListener("click", () => openChordBuilder({ studentId: imageViewerStudentId() }));
-document.querySelectorAll(".viewer-random-button").forEach((button) => {
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    openRandomPracticeScore();
-  });
+function handleViewerRandomPracticeEvent(event) {
+  const button = event.target.closest?.(".viewer-random-button");
+  if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const now = Date.now();
+  if (now - lastViewerRandomAt < 450) return;
+  lastViewerRandomAt = now;
+  openRandomPracticeScore();
+}
+["pointerdown", "touchend", "click"].forEach((eventName) => {
+  document.addEventListener(eventName, handleViewerRandomPracticeEvent, { capture: true, passive: false });
 });
 els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
 els.imageViewerDialog.addEventListener(

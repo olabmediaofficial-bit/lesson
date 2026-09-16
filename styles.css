@@ -2316,23 +2316,27 @@ textarea {
   font-size: 13px;
 }
 
-.rhythm-measure,
+.rhythm-marker-row,
 .rhythm-stroke-row {
   display: grid;
-  grid-auto-columns: minmax(34px, 1fr);
-  grid-auto-flow: column;
   align-items: center;
-  gap: 6px;
+  gap: 0;
 }
 
-.rhythm-measure {
-  min-height: 124px;
-  padding: 18px 18px 10px;
-  border-inline: 3px solid #111;
-  background: rgba(255, 255, 255, 0.48);
+.rhythm-notation-preview {
+  overflow: hidden;
+  border: 1px solid rgba(198, 170, 143, 0.5);
+  border-radius: 8px;
+  background: #fffaf4;
 }
 
-.rhythm-hit-cell,
+.rhythm-notation-preview img {
+  display: block;
+  width: 100%;
+  min-width: 620px;
+}
+
+.rhythm-mark-cell,
 .rhythm-stroke-cell {
   display: grid;
   min-width: 0;
@@ -2344,73 +2348,12 @@ textarea {
   font-weight: 900;
 }
 
-.rhythm-hit-cell {
-  position: relative;
-  min-height: 94px;
-  grid-template-rows: 46px 28px;
+.rhythm-mark-cell {
+  min-height: 34px;
   padding: 0;
 }
 
-.rhythm-note {
-  position: relative;
-  display: block;
-  width: 20px;
-  height: 15px;
-  border-radius: 999px;
-  background: #111;
-  transform: rotate(-20deg);
-}
-
-.rhythm-note::after {
-  content: "";
-  position: absolute;
-  right: -7px;
-  bottom: 7px;
-  width: 3px;
-  height: 42px;
-  border-radius: 999px;
-  background: #111;
-  transform: rotate(20deg);
-  transform-origin: bottom;
-}
-
-.rhythm-hit-cell.has-beam::before,
-.rhythm-hit-cell.has-beam::after {
-  content: "";
-  position: absolute;
-  z-index: 2;
-  top: 5px;
-  left: calc(50% + 2px);
-  width: calc(100% + 6px);
-  height: 6px;
-  background: #111;
-  transform: translateX(0);
-}
-
-.rhythm-hit-cell.unit-8::after {
-  display: none;
-}
-
-.rhythm-measure.unit-8 .rhythm-hit-cell.has-beam::after {
-  display: none;
-}
-
-.rhythm-measure.unit-16 .rhythm-hit-cell.has-beam::after {
-  top: 15px;
-  height: 4px;
-}
-
-.rhythm-hit-cell.beam-end::before,
-.rhythm-hit-cell.beam-end::after {
-  width: 10px;
-}
-
-.rhythm-hit-cell.beam-start.beam-end::before,
-.rhythm-hit-cell.beam-start.beam-end::after {
-  display: none;
-}
-
-.rhythm-under-mark {
+.rhythm-mark-cell span {
   display: block;
   width: 24px;
   height: 3px;
@@ -2418,14 +2361,14 @@ textarea {
   background: #111;
 }
 
-.rhythm-hit-cell.is-circle .rhythm-under-mark {
+.rhythm-mark-cell.is-circle span {
   width: 23px;
   height: 23px;
   border: 3px solid #111;
   background: transparent;
 }
 
-.rhythm-hit-cell:hover .rhythm-under-mark,
+.rhythm-mark-cell:hover span,
 .rhythm-stroke-cell:hover {
   filter: brightness(1.2);
 }
@@ -2440,6 +2383,10 @@ textarea {
 .rhythm-stroke-cell.active {
   color: var(--accent);
   background: #fff2e3;
+}
+
+.rhythm-control-spacer {
+  min-width: 0;
 }
 
 #chordBuilderDialog {
@@ -4457,10 +4404,10 @@ textarea,
     width: min(100vw - 12px, 760px);
   }
 
-  .rhythm-measure,
+  .rhythm-notation-preview,
+  .rhythm-marker-row,
   .rhythm-stroke-row {
     overflow-x: auto;
-    grid-auto-columns: minmax(34px, 42px);
   }
 
   .image-viewer-chord-grid {
