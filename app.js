@@ -671,9 +671,10 @@ function normalizeRhythmCells(cells, count) {
   const source = Array.isArray(cells) ? cells : [];
   return Array.from({ length: count }, (_, index) => {
     const cell = source[index] || {};
+    const hasStroke = Object.prototype.hasOwnProperty.call(cell, "stroke");
     return {
       hit: cell.hit === "circle" ? "circle" : "line",
-      stroke: ["down", "up"].includes(cell.stroke) ? cell.stroke : index % 2 === 0 ? "down" : "up",
+      stroke: ["down", "up"].includes(cell.stroke) ? cell.stroke : hasStroke ? "none" : index % 2 === 0 ? "down" : "up",
     };
   });
 }
@@ -728,12 +729,12 @@ function rhythmSvg(rhythm, options = {}) {
       const mark = cell.hit === "circle"
         ? `<circle cx="${x}" cy="${circleY}" r="11" fill="none" stroke="#111" stroke-width="3" />`
         : `<line x1="${x - 10}" y1="${circleY}" x2="${x + 10}" y2="${circleY}" stroke="#111" stroke-width="3" stroke-linecap="round" />`;
-      const arrow = cell.stroke === "down" ? "↓" : "↑";
+      const arrow = cell.stroke === "down" ? "↓" : cell.stroke === "up" ? "↑" : "";
       return `
         ${note}
         ${normalized.unit > 4 ? stem : ""}
         ${showMarks ? mark : ""}
-        ${showArrows ? `<text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
+        ${showArrows && arrow ? `<text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
       `;
     })
     .join("");
@@ -908,6 +909,7 @@ const els = {
   chordPickerDialog: $("#chordPickerDialog"),
   chordPickerBlockId: $("#chordPickerBlockId"),
   chordPickerSearch: $("#chordPickerSearch"),
+  drawChordFromPicker: $("#drawChordFromPicker"),
   selectedChordOrder: $("#selectedChordOrder"),
   chordPickerGrid: $("#chordPickerGrid"),
   saveChordPicker: $("#saveChordPicker"),
@@ -2577,7 +2579,7 @@ function renderRhythmBuilder() {
               aria-label="${index + 1}번째 O 또는 대시 바꾸기"
             ></button>
             <button
-              class="rhythm-overlay-stroke ${cell.stroke === "down" ? "is-down" : "is-up"}"
+              class="rhythm-overlay-stroke ${cell.stroke === "down" ? "is-down" : cell.stroke === "up" ? "is-up" : "is-none"}"
               type="button"
               style="left:${x}%; top:${strokeY}%;"
               data-rhythm-stroke="${index}"
@@ -2608,7 +2610,7 @@ function toggleRhythmHit(index) {
 function toggleRhythmStroke(index) {
   const cell = rhythmBuilder.cells[index];
   if (!cell) return;
-  cell.stroke = cell.stroke === "down" ? "up" : "down";
+  cell.stroke = cell.stroke === "down" ? "up" : cell.stroke === "up" ? "none" : "down";
   renderRhythmBuilder();
 }
 
@@ -4901,6 +4903,11 @@ els.rhythmSearch?.addEventListener("input", renderRhythmDictionary);
 els.rhythmPickerSearch?.addEventListener("input", renderRhythmPickerGrid);
 els.openChordBuilder.addEventListener("click", openChordBuilder);
 els.openRhythmBuilder?.addEventListener("click", () => openRhythmBuilder());
+els.drawChordFromPicker?.addEventListener("click", () => {
+  const blockId = els.chordPickerBlockId?.value || "";
+  els.chordPickerDialog.close();
+  openChordBuilder({ blockId: blockId || "__editing__", studentId: activeChordStudentId() || activeStudentId });
+});
 els.editBlockChords?.addEventListener("click", () => openChordPicker("__editing__"));
 els.drawBlockChord?.addEventListener("click", () => openChordBuilder({ blockId: "__editing__", studentId: activeStudentId }));
 els.editBlockRhythms?.addEventListener("click", () => openRhythmPicker("__editing__"));
