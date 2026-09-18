@@ -201,10 +201,6 @@ const RHYTHM_CATEGORY_TABS = [
   { key: "all", label: "전체" },
   { key: "strum", label: "스트로크" },
   { key: "finger", label: "핑거링" },
-  { key: "picking", label: "피킹" },
-  { key: "training", label: "리듬훈련" },
-  { key: "custom", label: "커스텀" },
-  { key: "other", label: "그외" },
 ];
 const RHYTHM_CATEGORY_ORDER = RHYTHM_CATEGORY_TABS.map((tab) => tab.key);
 const GUITAR_STRINGS = [
@@ -401,8 +397,6 @@ let rhythmBuilder = {
   unit: 16,
   cells: [],
 };
-let lastViewerRandomAt = 0;
-
 const SCHEDULE_DAYS = [
   { key: "mon", label: "월" },
   { key: "tue", label: "화" },
@@ -675,6 +669,7 @@ function normalizeRhythmCells(cells, count) {
     return {
       hit: cell.hit === "circle" ? "circle" : "line",
       stroke: ["down", "up"].includes(cell.stroke) ? cell.stroke : hasStroke ? "none" : index % 2 === 0 ? "down" : "up",
+      fingers: [...new Set((Array.isArray(cell.fingers) ? cell.fingers : []).map(Number).filter((finger) => finger >= 1 && finger <= 4))].sort(),
     };
   });
 }
@@ -683,7 +678,7 @@ function normalizeCustomRhythm(rhythm = {}) {
   const meter = ["4/4", "3/4", "6/8"].includes(rhythm.meter) ? rhythm.meter : "4/4";
   const unit = [4, 8, 16].includes(Number(rhythm.unit)) ? Number(rhythm.unit) : 16;
   const count = rhythmSlotCount(meter, unit);
-  const category = RHYTHM_CATEGORY_TABS.some((tab) => tab.key === rhythm.category && tab.key !== "all") ? rhythm.category : "custom";
+  const category = ["strum", "finger"].includes(rhythm.category) ? rhythm.category : "strum";
   return {
     id: rhythm.id || uid("rhythm"),
     name: String(rhythm.name || "").trim() || "이름 없는 리듬",
@@ -721,20 +716,26 @@ function rhythmSvg(rhythm, options = {}) {
   const stemRightOffset = 10;
   const circleY = noteY + 34;
   const arrowY = noteY + 70;
+  const isFinger = normalized.category === "finger";
   const svgCells = normalized.cells
     .map((cell, index) => {
       const x = left + index * step;
       const note = `<ellipse cx="${x}" cy="${noteY}" rx="11" ry="8" fill="#111" transform="rotate(-20 ${x} ${noteY})" />`;
       const stem = `<line x1="${x + stemRightOffset}" y1="${noteY - 5}" x2="${x + stemRightOffset}" y2="${stemTop}" stroke="#111" stroke-width="3" stroke-linecap="round" />`;
-      const mark = cell.hit === "circle"
+      const fingerValues = cell.fingers?.length ? cell.fingers : [];
+      const fingerMark = fingerValues.length
+        ? fingerValues.map((finger, fingerIndex) => `<text x="${x}" y="${circleY - 8 + fingerIndex * 19}" text-anchor="middle" font-size="18" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${finger}</text>`).join("")
+        : `<text x="${x}" y="${circleY + 2}" text-anchor="middle" font-size="20" font-weight="900" fill="#111">−</text>`;
+      const strumMark = cell.hit === "circle"
         ? `<circle cx="${x}" cy="${circleY}" r="11" fill="none" stroke="#111" stroke-width="3" />`
         : `<line x1="${x - 10}" y1="${circleY}" x2="${x + 10}" y2="${circleY}" stroke="#111" stroke-width="3" stroke-linecap="round" />`;
+      const mark = isFinger ? fingerMark : strumMark;
       const arrow = cell.stroke === "down" ? "↓" : cell.stroke === "up" ? "↑" : "";
       return `
         ${note}
-        ${normalized.unit > 4 ? stem : ""}
+        ${stem}
         ${showMarks ? mark : ""}
-        ${showArrows && arrow ? `<text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
+        ${showArrows && !isFinger && arrow ? `<text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
       `;
     })
     .join("");
@@ -2558,6 +2559,7 @@ function renderRhythmBuilder() {
   const noteY = 70;
   const circleY = noteY + 34;
   const arrowY = noteY + 70;
+  const isFinger = rhythmBuilder.category === "finger";
   els.rhythmBuilderBoard.innerHTML = `
     <div class="rhythm-measure-meta">
       <strong>${escapeHTML(rhythmBuilder.meter)}</strong>
@@ -2570,7 +2572,14 @@ function renderRhythmBuilder() {
           const x = ((left + index * step) / width) * 100;
           const markY = (circleY / height) * 100;
           const strokeY = (arrowY / height) * 100;
-          return `
+          return isFinger ? `
+            <div class="rhythm-overlay-fingers" style="left:${x}%; top:${markY}%;" aria-label="${index + 1}번째 핑거링">
+              ${[1, 2, 3, 4].map((finger) => `
+                <button class="${cell.fingers?.includes(finger) ? "active" : ""}" type="button"
+                  data-rhythm-finger="${index}:${finger}" aria-pressed="${cell.fingers?.includes(finger) ? "true" : "false"}">${finger}</button>
+              `).join("")}
+            </div>
+          ` : `
             <button
               class="rhythm-overlay-hit ${cell.hit === "circle" ? "is-circle" : "is-line"}"
               type="button"
@@ -2611,6 +2620,16 @@ function toggleRhythmStroke(index) {
   const cell = rhythmBuilder.cells[index];
   if (!cell) return;
   cell.stroke = cell.stroke === "down" ? "up" : cell.stroke === "up" ? "none" : "down";
+  renderRhythmBuilder();
+}
+
+function toggleRhythmFinger(index, finger) {
+  const cell = rhythmBuilder.cells[index];
+  if (!cell || finger < 1 || finger > 4) return;
+  const fingers = new Set(cell.fingers || []);
+  if (fingers.has(finger)) fingers.delete(finger);
+  else fingers.add(finger);
+  cell.fingers = [...fingers].sort();
   renderRhythmBuilder();
 }
 
@@ -4920,6 +4939,12 @@ els.clearRhythmBuilder?.addEventListener("click", () => {
   renderRhythmBuilder();
 });
 els.rhythmBuilderBoard?.addEventListener("click", (event) => {
+  const finger = event.target.closest("[data-rhythm-finger]");
+  if (finger) {
+    const [index, fingerNumber] = finger.dataset.rhythmFinger.split(":").map(Number);
+    toggleRhythmFinger(index, fingerNumber);
+    return;
+  }
   const hit = event.target.closest("[data-rhythm-hit]");
   if (hit) {
     toggleRhythmHit(Number(hit.dataset.rhythmHit));
@@ -5005,58 +5030,6 @@ els.imageViewerChords.addEventListener("click", openImageViewerChords);
 els.imageViewerRhythm.addEventListener("click", openImageViewerRhythm);
 els.imageViewerChordBuilder.addEventListener("click", () => openChordBuilder({ studentId: imageViewerStudentId() }));
 
-function eventPoint(event) {
-  const touch = event.changedTouches?.[0] || event.touches?.[0];
-  return touch ? { x: touch.clientX, y: touch.clientY } : { x: event.clientX, y: event.clientY };
-}
-
-function viewerButtonAtPoint(event) {
-  if (!els.imageViewerDialog.open) return null;
-  const point = eventPoint(event);
-  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
-  return [...els.imageViewerDialog.querySelectorAll(".image-viewer-actions button:not([hidden]), .image-viewer-actions a:not([hidden])")].find((button) => {
-    const rect = button.getBoundingClientRect();
-    return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
-  });
-}
-
-function runViewerButtonAction(button) {
-  if (!button) return false;
-  if (button === els.imageViewerChords) openImageViewerChords();
-  else if (button === els.imageViewerRhythm) openImageViewerRhythm();
-  else if (button === els.imageViewerChordBuilder) openChordBuilder({ studentId: imageViewerStudentId() });
-  else if (button === els.imageViewerZoomOut) changeImageViewerZoom(-0.1);
-  else if (button === els.imageViewerZoomIn) changeImageViewerZoom(0.1);
-  else if (button === els.closeImageViewer) closeImageViewer();
-  else if (button?.dataset?.randomPractice === "viewer") openRandomPracticeScore();
-  else if (button?.tagName === "A" && button.href) window.open(button.href, "_blank", "noopener,noreferrer");
-  else return false;
-  return true;
-}
-
-function handleViewerActionTouch(event) {
-  const button = viewerButtonAtPoint(event);
-  if (!button) return;
-  event.preventDefault();
-  event.stopPropagation();
-  runViewerButtonAction(button);
-}
-
-els.imageViewerDialog.addEventListener("touchend", handleViewerActionTouch, { capture: true, passive: false });
-
-function handleViewerRandomPracticeEvent(event) {
-  const button = event.target.closest?.(".viewer-random-button");
-  if (!button) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const now = Date.now();
-  if (now - lastViewerRandomAt < 450) return;
-  lastViewerRandomAt = now;
-  openRandomPracticeScore();
-}
-["pointerdown", "touchend", "click"].forEach((eventName) => {
-  document.addEventListener(eventName, handleViewerRandomPracticeEvent, { capture: true, passive: false });
-});
 els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
 els.imageViewerDialog.addEventListener(
   "wheel",
