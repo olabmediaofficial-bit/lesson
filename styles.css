@@ -2359,7 +2359,7 @@ textarea {
   z-index: 3;
   display: grid;
   grid-template-columns: 20px;
-  gap: 2px;
+  gap: 4px;
   transform: translate(-50%, -26%);
 }
 

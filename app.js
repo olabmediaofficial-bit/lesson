@@ -724,7 +724,7 @@ function rhythmSvg(rhythm, options = {}) {
       const stem = `<line x1="${x + stemRightOffset}" y1="${noteY - 5}" x2="${x + stemRightOffset}" y2="${stemTop}" stroke="#111" stroke-width="3" stroke-linecap="round" />`;
       const fingerValues = cell.fingers?.length ? cell.fingers : [];
       const fingerMark = fingerValues.length
-        ? fingerValues.map((finger, fingerIndex) => `<text x="${x}" y="${circleY - 8 + fingerIndex * 19}" text-anchor="middle" font-size="18" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${finger}</text>`).join("")
+        ? fingerValues.map((finger, fingerIndex) => `<text x="${x}" y="${circleY - 10 + fingerIndex * 22}" text-anchor="middle" font-size="18" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${finger}</text>`).join("")
         : `<text x="${x}" y="${circleY + 2}" text-anchor="middle" font-size="20" font-weight="900" fill="#111">−</text>`;
       const strumMark = cell.hit === "circle"
         ? `<circle cx="${x}" cy="${circleY}" r="11" fill="none" stroke="#111" stroke-width="3" />`
@@ -1517,7 +1517,26 @@ function renderImageViewerChordGrid() {
 function restorePreviousImageViewer() {
   const previous = imageViewerStack.pop();
   if (!previous) return;
-  imageViewer = previous;
+  imageViewer = { ...previous, items: [...previous.items], src: "" };
+  updateImageViewer();
+}
+
+function captureImageViewerContext() {
+  if (!els.imageViewerDialog?.open || imageViewer.mode !== "score") return null;
+  return {
+    viewer: { ...imageViewer, items: imageViewer.items.map((item) => ({ ...item })) },
+    stack: imageViewerStack.map((entry) => ({ ...entry, items: entry.items.map((item) => ({ ...item })) })),
+  };
+}
+
+function restoreCapturedImageViewer(context) {
+  if (!context || !els.imageViewerDialog?.open) return;
+  imageViewerStack = context.stack.map((entry) => ({ ...entry, items: entry.items.map((item) => ({ ...item })) }));
+  imageViewer = {
+    ...context.viewer,
+    items: context.viewer.items.map((item) => ({ ...item })),
+    src: "",
+  };
   updateImageViewer();
 }
 
@@ -2527,6 +2546,7 @@ function openRhythmBuilder(options = {}) {
     cells: editRhythm?.cells ? structuredClone(editRhythm.cells) : [],
     blockId: options.blockId || "",
     attachToLesson: Boolean(options.attachToLesson),
+    viewerContext: captureImageViewerContext(),
   };
   if (!RHYTHM_CATEGORY_TABS.some((tab) => tab.key === rhythmBuilder.category && tab.key !== "all")) rhythmBuilder.category = "strum";
   rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit));
@@ -2971,6 +2991,7 @@ function openChordBuilder(options = {}) {
     blockId: options.blockId ?? (els.imageViewerDialog?.open && imageViewer.mode === "score" ? currentImageViewerBlock()?.id || "" : ""),
     attachToLesson: Boolean(options.attachToLesson),
     category: editChord?.category || options.category || "custom",
+    viewerContext: captureImageViewerContext(),
   };
   els.chordBuilderName.value = editChord?.name || "";
   renderChordBuilderCategorySelect();
@@ -4958,6 +4979,11 @@ els.rhythmBuilderDialog?.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCustomRhythmFromBuilder();
 });
+els.rhythmBuilderDialog?.addEventListener("close", () => {
+  const context = rhythmBuilder.viewerContext;
+  rhythmBuilder.viewerContext = null;
+  restoreCapturedImageViewer(context);
+});
 els.rhythmPickerDialog?.addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
@@ -4993,6 +5019,11 @@ els.chordBuilderDialog.addEventListener("submit", (event) => {
   if (event.submitter?.value === "cancel") return;
   event.preventDefault();
   saveCustomChordFromBuilder();
+});
+els.chordBuilderDialog.addEventListener("close", () => {
+  const context = chordBuilder.viewerContext;
+  chordBuilder.viewerContext = null;
+  restoreCapturedImageViewer(context);
 });
 els.applyBulkTags.addEventListener("click", async () => {
   const tags = parseTags(els.bulkTagInput.value);
