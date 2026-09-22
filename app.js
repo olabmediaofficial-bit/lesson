@@ -670,6 +670,7 @@ function normalizeRhythmCells(cells, count) {
       hit: cell.hit === "circle" ? "circle" : "line",
       stroke: ["down", "up"].includes(cell.stroke) ? cell.stroke : hasStroke ? "none" : index % 2 === 0 ? "down" : "up",
       fingers: [...new Set((Array.isArray(cell.fingers) ? cell.fingers : []).map(Number).filter((finger) => finger >= 1 && finger <= 4))].sort(),
+      mute: Boolean(cell.mute),
     };
   });
 }
@@ -722,7 +723,7 @@ function rhythmSvg(rhythm, options = {}) {
       const x = left + index * step;
       const note = `<ellipse cx="${x}" cy="${noteY}" rx="11" ry="8" fill="#111" transform="rotate(-20 ${x} ${noteY})" />`;
       const stem = `<line x1="${x + stemRightOffset}" y1="${noteY - 5}" x2="${x + stemRightOffset}" y2="${stemTop}" stroke="#111" stroke-width="3" stroke-linecap="round" />`;
-      const fingerValues = cell.fingers?.length ? cell.fingers : [];
+      const fingerValues = cell.mute ? ["X"] : cell.fingers?.length ? cell.fingers : [];
       const fingerMark = fingerValues.length
         ? fingerValues.map((finger, fingerIndex) => `<text x="${x}" y="${circleY - 10 + fingerIndex * 22}" text-anchor="middle" font-size="18" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${finger}</text>`).join("")
         : `<text x="${x}" y="${circleY + 2}" text-anchor="middle" font-size="20" font-weight="900" fill="#111">−</text>`;
@@ -2598,6 +2599,8 @@ function renderRhythmBuilder() {
                 <button class="${cell.fingers?.includes(finger) ? "active" : ""}" type="button"
                   data-rhythm-finger="${index}:${finger}" aria-pressed="${cell.fingers?.includes(finger) ? "true" : "false"}">${finger}</button>
               `).join("")}
+              <button class="rhythm-finger-mute ${cell.mute ? "active" : ""}" type="button"
+                data-rhythm-mute="${index}" aria-pressed="${cell.mute ? "true" : "false"}">X</button>
             </div>
           ` : `
             <button
@@ -2648,8 +2651,19 @@ function toggleRhythmFinger(index, finger) {
   if (!cell || finger < 1 || finger > 4) return;
   const fingers = new Set(cell.fingers || []);
   if (fingers.has(finger)) fingers.delete(finger);
-  else fingers.add(finger);
+  else {
+    fingers.add(finger);
+    cell.mute = false;
+  }
   cell.fingers = [...fingers].sort();
+  renderRhythmBuilder();
+}
+
+function toggleRhythmMute(index) {
+  const cell = rhythmBuilder.cells[index];
+  if (!cell) return;
+  cell.mute = !cell.mute;
+  if (cell.mute) cell.fingers = [];
   renderRhythmBuilder();
 }
 
@@ -4225,9 +4239,11 @@ function renderLessonBlock(block, options = {}) {
       <div class="lesson-block-head">
         <span class="material-type ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>
         ${
-          controls
+              controls
             ? `<div class="block-controls">
                 <span class="drag-handle" title="드래그해서 순서 바꾸기">↕</span>
+                <button class="secondary-button mini-button" type="button" data-draw-lesson-block-chord="${block.id}">코드 그리기</button>
+                <button class="secondary-button mini-button" type="button" data-draw-lesson-block-rhythm="${block.id}">리듬 그리기</button>
                 <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
                 <button class="icon-button tiny-button" type="button" data-move-block="${block.id}" data-lesson-id="${lessonId}" data-direction="up" ${index === 0 ? "disabled" : ""} title="위로">↑</button>
                 <button class="icon-button tiny-button" type="button" data-move-block="${block.id}" data-lesson-id="${lessonId}" data-direction="down" ${index === total - 1 ? "disabled" : ""} title="아래로">↓</button>
@@ -4511,6 +4527,18 @@ document.addEventListener("click", (event) => {
   const editBlock = event.target.closest("[data-edit-block]");
   if (editBlock) {
     openBlockDialog(editBlock.dataset.editBlock);
+    return;
+  }
+
+  const drawLessonBlockChord = event.target.closest("[data-draw-lesson-block-chord]");
+  if (drawLessonBlockChord) {
+    openChordBuilder({ blockId: drawLessonBlockChord.dataset.drawLessonBlockChord, studentId: activeStudentId });
+    return;
+  }
+
+  const drawLessonBlockRhythm = event.target.closest("[data-draw-lesson-block-rhythm]");
+  if (drawLessonBlockRhythm) {
+    openRhythmBuilder({ blockId: drawLessonBlockRhythm.dataset.drawLessonBlockRhythm });
     return;
   }
 
@@ -4960,6 +4988,11 @@ els.clearRhythmBuilder?.addEventListener("click", () => {
   renderRhythmBuilder();
 });
 els.rhythmBuilderBoard?.addEventListener("click", (event) => {
+  const mute = event.target.closest("[data-rhythm-mute]");
+  if (mute) {
+    toggleRhythmMute(Number(mute.dataset.rhythmMute));
+    return;
+  }
   const finger = event.target.closest("[data-rhythm-finger]");
   if (finger) {
     const [index, fingerNumber] = finger.dataset.rhythmFinger.split(":").map(Number);
@@ -5057,8 +5090,14 @@ els.imageViewerZoomIn.addEventListener("click", () => changeImageViewerZoom(0.1)
 els.imageViewerPrev.addEventListener("click", () => moveImageViewer(-1));
 els.imageViewerNext.addEventListener("click", () => moveImageViewer(1));
 els.imageViewerBack.addEventListener("click", restorePreviousImageViewer);
-els.imageViewerChords.addEventListener("click", openImageViewerChords);
-els.imageViewerRhythm.addEventListener("click", openImageViewerRhythm);
+els.imageViewerChords.addEventListener("click", (event) => {
+  event.preventDefault();
+  openImageViewerChords();
+});
+els.imageViewerRhythm.addEventListener("click", (event) => {
+  event.preventDefault();
+  openImageViewerRhythm();
+});
 els.imageViewerChordBuilder.addEventListener("click", () => openChordBuilder({ studentId: imageViewerStudentId() }));
 
 els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
@@ -5155,6 +5194,7 @@ document.addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("[data-random-practice]")) {
+    event.preventDefault();
     openRandomPracticeScore();
     return;
   }
@@ -5172,6 +5212,16 @@ document.addEventListener("click", async (event) => {
   if (event.target.closest("[data-apply-bulk-curriculum]")) {
     applyBulkCurriculumTags();
   }
+});
+
+window.addEventListener("hashchange", () => {
+  const action = window.location.hash;
+  if (!action.startsWith("#viewer-")) return;
+  history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  if (!els.imageViewerDialog.open) return;
+  if (action === "#viewer-random") openRandomPracticeScore();
+  if (action === "#viewer-chords") openImageViewerChords();
+  if (action === "#viewer-rhythm") openImageViewerRhythm();
 });
 els.adminLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();

@@ -2387,6 +2387,11 @@ textarea {
   background: #7b4529;
 }
 
+.rhythm-overlay-fingers .rhythm-finger-mute {
+  margin-top: 2px;
+  border-radius: 6px;
+}
+
 .rhythm-overlay-hit {
   width: 34px;
   height: 34px;
@@ -3056,6 +3061,7 @@ dialog::backdrop {
   border-color: rgba(255, 255, 255, 0.24);
   background: rgba(255, 255, 255, 0.08);
   touch-action: manipulation;
+  text-decoration: none;
 }
 
 .viewer-audio-button,
