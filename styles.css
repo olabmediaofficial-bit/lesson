@@ -1243,6 +1243,12 @@ textarea {
   display: none;
 }
 
+.student-tab {
+  width: 78px;
+  min-width: 78px;
+  white-space: nowrap;
+}
+
 .student-tab:hover .student-tab-masked,
 .student-tab:focus-visible .student-tab-masked {
   display: none;
@@ -2356,7 +2362,8 @@ textarea {
 }
 
 .rhythm-overlay-hit,
-.rhythm-overlay-stroke {
+.rhythm-overlay-stroke,
+.rhythm-overlay-accent {
   position: absolute;
   display: grid;
   place-items: center;
@@ -2418,10 +2425,18 @@ textarea {
   border-radius: 8px;
 }
 
+.rhythm-overlay-accent {
+  width: 30px;
+  height: 25px;
+  border-radius: 8px;
+}
+
 .rhythm-overlay-hit:hover,
 .rhythm-overlay-hit:focus-visible,
 .rhythm-overlay-stroke:hover,
-.rhythm-overlay-stroke:focus-visible {
+.rhythm-overlay-stroke:focus-visible,
+.rhythm-overlay-accent:hover,
+.rhythm-overlay-accent:focus-visible {
   outline: 2px solid rgba(185, 130, 85, 0.52);
   outline-offset: 1px;
   background: rgba(185, 130, 85, 0.08);

@@ -670,10 +670,14 @@ function normalizeRhythmCells(cells, count) {
   const source = Array.isArray(cells) ? cells : [];
   return Array.from({ length: count }, (_, index) => {
     const cell = source[index] || {};
-    const hasStroke = Object.prototype.hasOwnProperty.call(cell, "stroke");
+    const hit = cell.hit === "circle" ? "circle" : "line";
+    const strokeManual = Boolean(cell.strokeManual);
+    const savedStroke = ["down", "up", "none"].includes(cell.stroke) ? cell.stroke : "none";
     return {
-      hit: cell.hit === "circle" ? "circle" : "line",
-      stroke: ["down", "up"].includes(cell.stroke) ? cell.stroke : hasStroke ? "none" : index % 2 === 0 ? "down" : "up",
+      hit,
+      stroke: strokeManual ? savedStroke : hit === "circle" ? (savedStroke === "none" ? (index % 2 === 0 ? "down" : "up") : savedStroke) : "none",
+      strokeManual,
+      accent: Boolean(cell.accent),
       fingers: [...new Set((Array.isArray(cell.fingers) ? cell.fingers : []).map(Number).filter((finger) => finger >= 1 && finger <= 4))].sort(),
       mute: Boolean(cell.mute),
     };
@@ -706,7 +710,7 @@ function rhythmBeamGroupSize(meter, unit) {
 
 function rhythmSvg(rhythm, options = {}) {
   const normalized = normalizeCustomRhythm(rhythm);
-  const showTitle = options.showTitle !== false;
+  const showTitle = options.showTitle === true;
   const showMarks = options.showMarks !== false;
   const showArrows = options.showArrows !== false;
   const compact = !showMarks && !showArrows;
@@ -743,9 +747,13 @@ function rhythmSvg(rhythm, options = {}) {
         : `<line x1="${x - 10}" y1="${circleY}" x2="${x + 10}" y2="${circleY}" stroke="#111" stroke-width="3" stroke-linecap="round" />`;
       const mark = isFinger ? fingerMark : strumMark;
       const arrow = cell.stroke === "down" ? "↓" : cell.stroke === "up" ? "↑" : "";
+      const accent = !isFinger && cell.accent
+        ? `<text x="${x}" y="${noteY - 18}" text-anchor="middle" font-size="22" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#7b4529">&gt;</text>`
+        : "";
       return `
         ${note}
         ${stem}
+        ${accent}
         ${showMarks ? mark : ""}
         ${showArrows && !isFinger && arrow ? `<text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
       `;
@@ -2602,6 +2610,7 @@ function renderRhythmBuilder() {
   const right = width - 70;
   const step = (right - left) / Math.max(1, count - 1);
   const noteY = 70;
+  const accentY = noteY - 18;
   const circleY = noteY + 34;
   const arrowY = noteY + 70;
   const isFinger = rhythmBuilder.category === "finger";
@@ -2617,6 +2626,7 @@ function renderRhythmBuilder() {
           const x = ((left + index * step) / width) * 100;
           const markY = (circleY / height) * 100;
           const strokeY = (arrowY / height) * 100;
+          const accentTop = (accentY / height) * 100;
           return isFinger ? `
             <div class="rhythm-overlay-fingers" style="left:${x}%; top:${markY}%;" aria-label="${index + 1}번째 핑거링">
               ${[1, 2, 3, 4].map((finger) => `
@@ -2627,6 +2637,14 @@ function renderRhythmBuilder() {
                 data-rhythm-mute="${index}" aria-pressed="${cell.mute ? "true" : "false"}">X</button>
             </div>
           ` : `
+            <button
+              class="rhythm-overlay-accent ${cell.accent ? "active" : ""}"
+              type="button"
+              style="left:${x}%; top:${accentTop}%;"
+              data-rhythm-accent="${index}"
+              aria-label="${index + 1}번째 악센트 바꾸기"
+              aria-pressed="${cell.accent ? "true" : "false"}"
+            ></button>
             <button
               class="rhythm-overlay-hit ${cell.hit === "circle" ? "is-circle" : "is-line"}"
               type="button"
@@ -2661,6 +2679,8 @@ function toggleRhythmHit(index) {
   const cell = rhythmBuilder.cells[index];
   if (!cell) return;
   cell.hit = cell.hit === "circle" ? "line" : "circle";
+  cell.strokeManual = false;
+  cell.stroke = cell.hit === "circle" ? (index % 2 === 0 ? "down" : "up") : "none";
   renderRhythmBuilder();
 }
 
@@ -2668,6 +2688,14 @@ function toggleRhythmStroke(index) {
   const cell = rhythmBuilder.cells[index];
   if (!cell) return;
   cell.stroke = cell.stroke === "down" ? "up" : cell.stroke === "up" ? "none" : "down";
+  cell.strokeManual = true;
+  renderRhythmBuilder();
+}
+
+function toggleRhythmAccent(index) {
+  const cell = rhythmBuilder.cells[index];
+  if (!cell) return;
+  cell.accent = !cell.accent;
   renderRhythmBuilder();
 }
 
@@ -3347,7 +3375,7 @@ function renderRooms() {
     .map(
       (item) => `
         <button type="button" class="student-tab ${item.id === student.id ? "active" : ""}" data-student-tab="${item.id}" aria-label="${escapeHTML(item.name)} 학생 선택">
-          <span class="student-tab-masked" aria-hidden="true">${escapeHTML(`${[...String(item.name || "학생")][0] || "학"}**`)}</span>
+          <span class="student-tab-masked" aria-hidden="true">${escapeHTML(`${[...String(item.name || "학생")][0] || "학"}OO`)}</span>
           <span class="student-tab-full" aria-hidden="true">${escapeHTML(item.name)}</span>
         </button>
       `,
@@ -5033,6 +5061,11 @@ els.rhythmBuilderBoard?.addEventListener("click", (event) => {
   const hit = event.target.closest("[data-rhythm-hit]");
   if (hit) {
     toggleRhythmHit(Number(hit.dataset.rhythmHit));
+    return;
+  }
+  const accent = event.target.closest("[data-rhythm-accent]");
+  if (accent) {
+    toggleRhythmAccent(Number(accent.dataset.rhythmAccent));
     return;
   }
   const stroke = event.target.closest("[data-rhythm-stroke]");
