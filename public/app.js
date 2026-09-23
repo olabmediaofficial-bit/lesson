@@ -782,7 +782,6 @@ function rhythmSvg(rhythm, options = {}) {
       <text x="100" y="${noteY - 6}" text-anchor="middle" font-size="36" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${escapeHTML(meter[0] || "4")}</text>
       <text x="100" y="${noteY + 32}" text-anchor="middle" font-size="36" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${escapeHTML(meter[1] || "4")}</text>
       <line x1="84" y1="${noteY + 2}" x2="116" y2="${noteY + 2}" stroke="#111" stroke-width="3" />
-      <line x1="${left - 30}" y1="${noteY - 30}" x2="${left - 30}" y2="${noteY + 30}" stroke="#9a7a61" stroke-width="2" />
       ${middleBarX === null ? "" : `<line x1="${middleBarX}" y1="${noteY - 30}" x2="${middleBarX}" y2="${noteY + 30}" stroke="#9a7a61" stroke-width="2" />`}
       <line x1="${right + 28}" y1="${noteY - 30}" x2="${right + 28}" y2="${noteY + 30}" stroke="#9a7a61" stroke-width="2" />
       ${beams}
