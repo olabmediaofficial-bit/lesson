@@ -2299,6 +2299,164 @@ textarea {
   backdrop-filter: blur(2px);
 }
 
+.practice-tools-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.practice-tool-module {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(148, 101, 67, 0.28);
+  border-radius: 8px;
+  background: #fffaf4;
+  box-shadow:
+    8px 8px 18px rgba(89, 55, 35, 0.1),
+    -5px -5px 14px rgba(255, 255, 255, 0.86);
+}
+
+.practice-tool-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.practice-tool-head > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.practice-tool-number {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.practice-tool-head h3,
+.practice-tool-head p {
+  margin: 0;
+}
+
+.practice-tool-head h3 {
+  font-size: 23px;
+}
+
+.practice-tool-head p {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.practice-tool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fretboard-trainer-wrap {
+  overflow-x: auto;
+  padding: 8px 2px 12px;
+}
+
+.fretboard-trainer {
+  display: grid;
+  min-width: 760px;
+  grid-template-columns: 72px repeat(6, minmax(104px, 1fr));
+  grid-template-rows: 36px repeat(6, 58px);
+  align-items: stretch;
+}
+
+.fretboard-trainer-corner,
+.fretboard-trainer-fret-label,
+.fretboard-trainer-string-label {
+  display: grid;
+  place-items: center;
+  color: #8a6951;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.fretboard-trainer-string-label {
+  grid-template-columns: auto auto;
+  gap: 3px;
+  justify-content: end;
+  padding-right: 12px;
+}
+
+.fretboard-trainer-string-label strong {
+  color: var(--accent-strong);
+  font-size: 16px;
+}
+
+.fretboard-trainer-cell {
+  position: relative;
+  display: grid;
+  min-height: 58px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-left: 2px solid rgba(181, 139, 105, 0.58);
+  background: #fffaf4;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.fretboard-trainer-cell:nth-child(7n) {
+  border-right: 2px solid rgba(181, 139, 105, 0.72);
+}
+
+.fretboard-trainer-cell::before {
+  position: absolute;
+  right: -2px;
+  left: -2px;
+  top: 50%;
+  height: 3px;
+  background: #704b35;
+  content: "";
+  transform: translateY(-50%);
+}
+
+.fretboard-trainer-cell.open-string {
+  border-left-width: 7px;
+  background: #f9f0e6;
+}
+
+.fretboard-trainer-cell::after {
+  position: absolute;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(185, 130, 85, 0.15);
+  content: "";
+  opacity: 0;
+  transform: scale(0.82);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.fretboard-trainer-cell:hover::after,
+.fretboard-trainer-cell:focus-visible::after,
+.fretboard-trainer-cell.revealed::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.fretboard-trainer-cell.revealed::after {
+  background: #b98255;
+  box-shadow: 0 4px 10px rgba(111, 67, 41, 0.2);
+}
+
+.fretboard-trainer-cell span {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+}
+
 .rhythm-builder-dialog {
   gap: 18px;
   border: 1px solid rgba(111, 67, 41, 0.32);
@@ -4458,6 +4616,15 @@ textarea,
 }
 
 @media (max-width: 640px) {
+  .practice-tool-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .practice-tool-actions {
+    justify-content: flex-start;
+  }
+
   .topbar,
   .student-header,
   .share-hero {

@@ -398,6 +398,7 @@ let rhythmBuilder = {
   bars: 1,
   cells: [],
 };
+let visibleFretboardNotes = new Set();
 const SCHEDULE_DAYS = [
   { key: "mon", label: "월" },
   { key: "tue", label: "화" },
@@ -820,6 +821,7 @@ const els = {
     schedule: $("#scheduleView"),
     chords: $("#chordsView"),
     rhythms: $("#rhythmsView"),
+    practiceTools: $("#practiceToolsView"),
     share: $("#shareView"),
   },
   librarySearch: $("#librarySearch"),
@@ -850,6 +852,9 @@ const els = {
   rhythmBuilderBars: $("#rhythmBuilderBars"),
   rhythmBuilderBoard: $("#rhythmBuilderBoard"),
   clearRhythmBuilder: $("#clearRhythmBuilder"),
+  fretboardTrainer: $("#fretboardTrainer"),
+  revealFretboardNotes: $("#revealFretboardNotes"),
+  clearFretboardNotes: $("#clearFretboardNotes"),
   chordBuilderDialog: $("#chordBuilderDialog"),
   chordBuilderName: $("#chordBuilderName"),
   chordBuilderTones: $("#chordBuilderTones"),
@@ -1808,6 +1813,7 @@ function switchView(view) {
     schedule: "레슨 시간표",
     chords: "코드사전",
     rhythms: "리듬 사전",
+    practiceTools: "실습 도구",
     share: "공유 화면",
   };
 
@@ -1830,7 +1836,58 @@ function render() {
   renderSchedule();
   renderChordDictionary();
   renderRhythmDictionary();
+  renderFretboardTrainer();
   renderShare();
+}
+
+function fretboardTrainerKey(stringIndex, fret) {
+  return `${stringIndex}:${fret}`;
+}
+
+function renderFretboardTrainer() {
+  if (!els.fretboardTrainer) return;
+  const displayStrings = GUITAR_STRINGS.map((string, index) => ({ ...string, index })).reverse();
+  const fretLabels = ["개방현", "1", "2", "3", "4", "5"];
+  els.fretboardTrainer.innerHTML = `
+    <div class="fretboard-trainer-corner">줄</div>
+    ${fretLabels.map((label) => `<div class="fretboard-trainer-fret-label">${label}</div>`).join("")}
+    ${displayStrings
+      .map((string) => `
+        <div class="fretboard-trainer-string-label">
+          <strong>${escapeHTML(string.label)}</strong>
+          <span>번줄</span>
+        </div>
+        ${[0, 1, 2, 3, 4, 5]
+          .map((fret) => {
+            const key = fretboardTrainerKey(string.index, fret);
+            const note = noteAt(string.index, fret);
+            const revealed = visibleFretboardNotes.has(key);
+            return `
+              <button
+                class="fretboard-trainer-cell ${fret === 0 ? "open-string" : ""} ${revealed ? "revealed" : ""}"
+                type="button"
+                data-fretboard-note="${key}"
+                aria-label="${escapeHTML(string.label)}번줄 ${fret === 0 ? "개방현" : `${fret}프렛`} 음 ${revealed ? note : "확인하기"}"
+                aria-pressed="${revealed ? "true" : "false"}"
+              >
+                <span>${revealed ? escapeHTML(note) : ""}</span>
+              </button>
+            `;
+          })
+          .join("")}
+      `)
+      .join("")}
+  `;
+}
+
+function setAllFretboardNotes(visible) {
+  visibleFretboardNotes = new Set();
+  if (visible) {
+    GUITAR_STRINGS.forEach((_, stringIndex) => {
+      [0, 1, 2, 3, 4, 5].forEach((fret) => visibleFretboardNotes.add(fretboardTrainerKey(stringIndex, fret)));
+    });
+  }
+  renderFretboardTrainer();
 }
 
 function meterBeatCount() {
@@ -4518,6 +4575,15 @@ document.addEventListener("click", (event) => {
   const nav = event.target.closest("[data-view]");
   if (nav) switchView(nav.dataset.view);
 
+  const fretboardNote = event.target.closest("[data-fretboard-note]");
+  if (fretboardNote) {
+    const key = fretboardNote.dataset.fretboardNote;
+    if (visibleFretboardNotes.has(key)) visibleFretboardNotes.delete(key);
+    else visibleFretboardNotes.add(key);
+    renderFretboardTrainer();
+    return;
+  }
+
   const kind = event.target.closest("[data-kind-filter]");
   if (kind) {
     activeKindFilter = kind.dataset.kindFilter;
@@ -5041,6 +5107,8 @@ els.rhythmBuilderCategory?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderMeter?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderUnit?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderBars?.addEventListener("change", syncRhythmBuilderOptions);
+els.revealFretboardNotes?.addEventListener("click", () => setAllFretboardNotes(true));
+els.clearFretboardNotes?.addEventListener("click", () => setAllFretboardNotes(false));
 els.clearRhythmBuilder?.addEventListener("click", () => {
   rhythmBuilder.cells = normalizeRhythmCells([], rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit, rhythmBuilder.bars));
   renderRhythmBuilder();

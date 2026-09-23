@@ -56,6 +56,10 @@
             <span aria-hidden="true">♩</span>
             리듬 사전
           </button>
+          <button class="nav-item" data-view="practiceTools" type="button">
+            <span aria-hidden="true">⌗</span>
+            실습 도구
+          </button>
         </nav>
 
         <div class="sidebar-note">
@@ -320,6 +324,34 @@
             </div>
             <div class="segmented chord-category-tabs" id="rhythmCategoryTabs" aria-label="리듬 종류 선택"></div>
             <div id="rhythmGrid" class="rhythm-grid"></div>
+          </section>
+        </section>
+
+        <section class="view" id="practiceToolsView" aria-label="실습 도구">
+          <section class="panel practice-tools-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Interactive practice tools</p>
+                <h2>실습 도구</h2>
+                <p>기타 원리를 지판에서 직접 확인하고 익힙니다.</p>
+              </div>
+            </div>
+            <article class="practice-tool-module">
+              <div class="practice-tool-head">
+                <div>
+                  <span class="practice-tool-number">01</span>
+                  <h3>기타 지판 음 찾기</h3>
+                  <p>개방현과 프렛을 눌러 해당 위치의 음을 확인해보세요.</p>
+                </div>
+                <div class="practice-tool-actions">
+                  <button class="secondary-button" id="revealFretboardNotes" type="button">전체 음 보기</button>
+                  <button class="secondary-button" id="clearFretboardNotes" type="button">모두 숨기기</button>
+                </div>
+              </div>
+              <div class="fretboard-trainer-wrap">
+                <div id="fretboardTrainer" class="fretboard-trainer" aria-label="개방현부터 5프렛까지 기타 지판 음 찾기"></div>
+              </div>
+            </article>
           </section>
         </section>
 
