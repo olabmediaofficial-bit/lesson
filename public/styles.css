@@ -1239,6 +1239,20 @@ textarea {
   background: var(--accent);
 }
 
+.student-tab .student-tab-full {
+  display: none;
+}
+
+.student-tab:hover .student-tab-masked,
+.student-tab:focus-visible .student-tab-masked {
+  display: none;
+}
+
+.student-tab:hover .student-tab-full,
+.student-tab:focus-visible .student-tab-full {
+  display: inline;
+}
+
 .lesson-composer {
   display: grid;
   gap: 10px;
@@ -2296,7 +2310,7 @@ textarea {
 
 .rhythm-builder-fields {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(140px, 0.8fr));
+  grid-template-columns: minmax(220px, 1.4fr) repeat(4, minmax(120px, 0.72fr));
   gap: 12px;
 }
 

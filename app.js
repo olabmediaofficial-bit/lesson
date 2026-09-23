@@ -395,6 +395,7 @@ let rhythmBuilder = {
   category: "strum",
   meter: "4/4",
   unit: 16,
+  bars: 1,
   cells: [],
 };
 const SCHEDULE_DAYS = [
@@ -654,14 +655,15 @@ function rhythmCategoryLabel(category) {
   return RHYTHM_CATEGORY_TABS.find((item) => item.key === category)?.label || "커스텀";
 }
 
-function rhythmSlotCount(meter = "4/4", unit = 16) {
+function rhythmSlotCount(meter = "4/4", unit = 16, bars = 1) {
   const [beats, denominator] = String(meter || "4/4")
     .split("/")
     .map((part) => Number(part));
   const safeBeats = Number.isFinite(beats) && beats > 0 ? beats : 4;
   const safeDenominator = Number.isFinite(denominator) && denominator > 0 ? denominator : 4;
   const safeUnit = Number(unit) || 16;
-  return Math.max(1, Math.round(safeBeats * (safeUnit / safeDenominator)));
+  const safeBars = Number(bars) === 2 ? 2 : 1;
+  return Math.max(1, Math.round(safeBeats * (safeUnit / safeDenominator)) * safeBars);
 }
 
 function normalizeRhythmCells(cells, count) {
@@ -681,7 +683,8 @@ function normalizeRhythmCells(cells, count) {
 function normalizeCustomRhythm(rhythm = {}) {
   const meter = ["4/4", "3/4", "6/8"].includes(rhythm.meter) ? rhythm.meter : "4/4";
   const unit = [4, 8, 16].includes(Number(rhythm.unit)) ? Number(rhythm.unit) : 16;
-  const count = rhythmSlotCount(meter, unit);
+  const bars = Number(rhythm.bars) === 2 ? 2 : 1;
+  const count = rhythmSlotCount(meter, unit, bars);
   const category = ["strum", "finger"].includes(rhythm.category) ? rhythm.category : "strum";
   return {
     id: rhythm.id || uid("rhythm"),
@@ -689,6 +692,7 @@ function normalizeCustomRhythm(rhythm = {}) {
     category,
     meter,
     unit,
+    bars,
     cells: normalizeRhythmCells(rhythm.cells, count),
     updatedAt: rhythm.updatedAt || nowIso(),
   };
@@ -708,6 +712,7 @@ function rhythmSvg(rhythm, options = {}) {
   const compact = !showMarks && !showArrows;
   const name = escapeHTML(options.title ?? normalized.name);
   const count = normalized.cells.length;
+  const slotsPerBar = rhythmSlotCount(normalized.meter, normalized.unit, 1);
   const width = Math.max(720, count * 42 + 190);
   const height = compact ? 126 : showTitle ? 250 : 196;
   const left = 136;
@@ -715,6 +720,9 @@ function rhythmSvg(rhythm, options = {}) {
   const titleOffset = compact ? -64 : showTitle ? 0 : -42;
   const noteY = 112 + titleOffset;
   const step = (right - left) / Math.max(1, count - 1);
+  const middleBarX = normalized.bars === 2
+    ? left + (slotsPerBar - 0.5) * step
+    : null;
   const beamGroups = rhythmBeamGroupSize(normalized.meter, normalized.unit);
   const stemTop = noteY - 58;
   const stemRightOffset = 10;
@@ -767,6 +775,7 @@ function rhythmSvg(rhythm, options = {}) {
       <text x="100" y="${noteY + 32}" text-anchor="middle" font-size="36" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#111">${escapeHTML(meter[1] || "4")}</text>
       <line x1="84" y1="${noteY + 2}" x2="116" y2="${noteY + 2}" stroke="#111" stroke-width="3" />
       <line x1="${left - 30}" y1="${noteY - 30}" x2="${left - 30}" y2="${noteY + 30}" stroke="#9a7a61" stroke-width="2" />
+      ${middleBarX === null ? "" : `<line x1="${middleBarX}" y1="${noteY - 30}" x2="${middleBarX}" y2="${noteY + 30}" stroke="#9a7a61" stroke-width="2" />`}
       <line x1="${right + 28}" y1="${noteY - 30}" x2="${right + 28}" y2="${noteY + 30}" stroke="#9a7a61" stroke-width="2" />
       ${beams}
       ${svgCells}
@@ -831,6 +840,7 @@ const els = {
   rhythmBuilderCategory: $("#rhythmBuilderCategory"),
   rhythmBuilderMeter: $("#rhythmBuilderMeter"),
   rhythmBuilderUnit: $("#rhythmBuilderUnit"),
+  rhythmBuilderBars: $("#rhythmBuilderBars"),
   rhythmBuilderBoard: $("#rhythmBuilderBoard"),
   clearRhythmBuilder: $("#clearRhythmBuilder"),
   chordBuilderDialog: $("#chordBuilderDialog"),
@@ -2555,16 +2565,18 @@ function openRhythmBuilder(options = {}) {
     category: editRhythm?.category || (activeRhythmCategory !== "all" ? activeRhythmCategory : "strum"),
     meter: editRhythm?.meter || "4/4",
     unit: editRhythm?.unit || 16,
+    bars: editRhythm?.bars || 1,
     cells: editRhythm?.cells ? structuredClone(editRhythm.cells) : [],
     blockId: options.blockId || "",
     attachToLesson: Boolean(options.attachToLesson),
     viewerContext: captureImageViewerContext(),
   };
   if (!RHYTHM_CATEGORY_TABS.some((tab) => tab.key === rhythmBuilder.category && tab.key !== "all")) rhythmBuilder.category = "strum";
-  rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit));
+  rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit, rhythmBuilder.bars));
   els.rhythmBuilderName.value = rhythmBuilder.name;
   els.rhythmBuilderMeter.value = rhythmBuilder.meter;
   els.rhythmBuilderUnit.value = String(rhythmBuilder.unit);
+  els.rhythmBuilderBars.value = String(rhythmBuilder.bars);
   renderRhythmBuilderCategorySelect();
   renderRhythmBuilder();
   els.rhythmBuilderDialog.showModal();
@@ -2572,7 +2584,7 @@ function openRhythmBuilder(options = {}) {
 
 function renderRhythmBuilder() {
   if (!els.rhythmBuilderBoard) return;
-  const count = rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit);
+  const count = rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit, rhythmBuilder.bars);
   rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, count);
   const unitLabel = `${rhythmBuilder.unit}분`;
   const preview = normalizeCustomRhythm({
@@ -2581,6 +2593,7 @@ function renderRhythmBuilder() {
     category: rhythmBuilder.category,
     meter: rhythmBuilder.meter,
     unit: rhythmBuilder.unit,
+    bars: rhythmBuilder.bars,
     cells: rhythmBuilder.cells,
   });
   const width = Math.max(720, count * 42 + 190);
@@ -2594,8 +2607,8 @@ function renderRhythmBuilder() {
   const isFinger = rhythmBuilder.category === "finger";
   els.rhythmBuilderBoard.innerHTML = `
     <div class="rhythm-measure-meta">
-      <strong>${escapeHTML(rhythmBuilder.meter)}</strong>
-      <span>${escapeHTML(unitLabel)} 기준 · ${count}칸</span>
+      <strong>${escapeHTML(rhythmBuilder.meter)} · ${rhythmBuilder.bars}마디</strong>
+      <span>${escapeHTML(unitLabel)} 기준 · 마디당 ${count / rhythmBuilder.bars}칸</span>
     </div>
     <div class="rhythm-editor-canvas" style="--rhythm-aspect: ${width} / ${height};">
       <img src="${rhythmSvg(preview, { showTitle: false })}" alt="리듬 음표 미리보기" />
@@ -2638,8 +2651,9 @@ function renderRhythmBuilder() {
 function syncRhythmBuilderOptions() {
   rhythmBuilder.meter = els.rhythmBuilderMeter.value;
   rhythmBuilder.unit = Number(els.rhythmBuilderUnit.value);
+  rhythmBuilder.bars = Number(els.rhythmBuilderBars.value) === 2 ? 2 : 1;
   rhythmBuilder.category = els.rhythmBuilderCategory.value;
-  rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit));
+  rhythmBuilder.cells = normalizeRhythmCells(rhythmBuilder.cells, rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit, rhythmBuilder.bars));
   renderRhythmBuilder();
 }
 
@@ -2699,6 +2713,7 @@ function saveCustomRhythmFromBuilder() {
     category: els.rhythmBuilderCategory.value || rhythmBuilder.category || "custom",
     meter: els.rhythmBuilderMeter.value || rhythmBuilder.meter,
     unit: Number(els.rhythmBuilderUnit.value || rhythmBuilder.unit),
+    bars: Number(els.rhythmBuilderBars.value) === 2 ? 2 : 1,
     cells: rhythmBuilder.cells,
     updatedAt: nowIso(),
   });
@@ -3331,8 +3346,9 @@ function renderRooms() {
   els.roomTabs.innerHTML = state.students
     .map(
       (item) => `
-        <button type="button" class="${item.id === student.id ? "active" : ""}" data-student-tab="${item.id}">
-          ${item.name}
+        <button type="button" class="student-tab ${item.id === student.id ? "active" : ""}" data-student-tab="${item.id}" aria-label="${escapeHTML(item.name)} 학생 선택">
+          <span class="student-tab-masked" aria-hidden="true">${escapeHTML(`${[...String(item.name || "학생")][0] || "학"}**`)}</span>
+          <span class="student-tab-full" aria-hidden="true">${escapeHTML(item.name)}</span>
         </button>
       `,
     )
@@ -4997,8 +5013,9 @@ els.drawBlockRhythm?.addEventListener("click", () => openRhythmBuilder({ blockId
 els.rhythmBuilderCategory?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderMeter?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderUnit?.addEventListener("change", syncRhythmBuilderOptions);
+els.rhythmBuilderBars?.addEventListener("change", syncRhythmBuilderOptions);
 els.clearRhythmBuilder?.addEventListener("click", () => {
-  rhythmBuilder.cells = normalizeRhythmCells([], rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit));
+  rhythmBuilder.cells = normalizeRhythmCells([], rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit, rhythmBuilder.bars));
   renderRhythmBuilder();
 });
 els.rhythmBuilderBoard?.addEventListener("click", (event) => {
