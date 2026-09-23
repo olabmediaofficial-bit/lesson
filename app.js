@@ -520,6 +520,7 @@ function openStringEntryMap(value) {
 
 function customChordSvg(chord) {
   const name = escapeHTML(chord.name || "Custom");
+  const tones = escapeHTML(chord.tones || "");
   const baseFret = Math.max(1, Number(chord.baseFret || 1));
   const positions = Array.isArray(chord.positions) ? chord.positions : [];
   const openStrings = openStringEntryMap(chord.openStrings);
@@ -576,7 +577,8 @@ function customChordSvg(chord) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" rx="28" fill="#fffaf4" />
-      <text x="260" y="58" text-anchor="middle" font-size="34" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
+      <text x="260" y="50" text-anchor="middle" font-size="34" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#2f241d">${name}</text>
+      ${tones ? `<text x="260" y="78" text-anchor="middle" font-size="15" font-weight="700" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#8a6951">구성음 · ${tones}</text>` : ""}
       ${stringYs.map((y) => `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#7f6048" stroke-width="2.6" />`).join("")}
       ${fretXs.map((x) => `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#c8a98d" stroke-width="3" />`).join("")}
       ${nut}
@@ -592,6 +594,7 @@ function normalizeCustomChord(chord = {}) {
   return {
     id: chord.id || uid("chord"),
     name: String(chord.name || "").trim() || "이름 없는 코드",
+    tones: String(chord.tones || "").trim(),
     category: CHORD_CATEGORY_TABS.some((tab) => tab.key === chord.category && tab.key !== "all") ? chord.category : "custom",
     baseFret: Math.min(18, Math.max(1, Number(chord.baseFret || 1))),
     openStrings: normalizeOpenStringEntries(chord.openStrings),
@@ -832,6 +835,7 @@ const els = {
   clearRhythmBuilder: $("#clearRhythmBuilder"),
   chordBuilderDialog: $("#chordBuilderDialog"),
   chordBuilderName: $("#chordBuilderName"),
+  chordBuilderTones: $("#chordBuilderTones"),
   chordBuilderCategory: $("#chordBuilderCategory"),
   chordBuilderBoard: $("#chordBuilderBoard"),
   chordBuilderFretLabel: $("#chordBuilderFretLabel"),
@@ -1758,14 +1762,21 @@ function openPracticeScoreByBlock(blockId) {
   openImageViewerItems(items, 0, { mode: "score" });
 }
 
-function openChordViewer(chordName, fileName = "") {
+function openChordViewer(chordName, fileName = "", sourceButton = null) {
   const chord = chordDictionary().find((item) => item.fileName === fileName) || getChordByName(chordName);
   if (!chord) {
     showToast("코드표를 찾을 수 없습니다.");
     return;
   }
+  const scope = sourceButton?.closest(".used-chord-grid");
+  const buttons = scope ? [...scope.querySelectorAll("[data-view-chord]")] : [];
+  const items = buttons
+    .map((button) => chordDictionary().find((item) => item.fileName === button.dataset.viewChordFile) || getChordByName(button.dataset.viewChord))
+    .filter(Boolean)
+    .map((item) => ({ src: item.src, title: `${item.name} 코드`, chordName: item.name }));
+  const index = Math.max(0, buttons.indexOf(sourceButton));
   imageViewerStack = [];
-  openImageViewerItems([{ src: chord.src, title: `${chord.name} 코드` }], 0, { mode: "chord" });
+  openImageViewerItems(items.length ? items : [{ src: chord.src, title: `${chord.name} 코드`, chordName: chord.name }], index, { mode: "chord" });
 }
 
 function switchView(view) {
@@ -3005,9 +3016,11 @@ function openChordBuilder(options = {}) {
     blockId: options.blockId ?? (els.imageViewerDialog?.open && imageViewer.mode === "score" ? currentImageViewerBlock()?.id || "" : ""),
     attachToLesson: Boolean(options.attachToLesson),
     category: editChord?.category || options.category || "custom",
+    tones: editChord?.tones || "",
     viewerContext: captureImageViewerContext(),
   };
   els.chordBuilderName.value = editChord?.name || "";
+  els.chordBuilderTones.value = editChord?.tones || "";
   renderChordBuilderCategorySelect();
   renderChordBuilder();
   els.chordBuilderDialog.showModal();
@@ -3144,6 +3157,7 @@ function saveCustomChordFromBuilder() {
   const chord = normalizeCustomChord({
     id: chordBuilder.id || uid("chord"),
     name,
+    tones: els.chordBuilderTones?.value.trim() || "",
     category: els.chordBuilderCategory?.value || chordBuilder.category || "custom",
     baseFret: chordBuilder.baseFret,
     openStrings: chordBuilder.openStrings,
@@ -4594,14 +4608,14 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     const item = imageViewer.items[Number(viewerChordCard.dataset.viewerChordIndex)];
     if (!item) return;
-    openImageViewerItems([item], 0, { mode: "chord", pushCurrent: true });
+    openImageViewerItems(imageViewer.items, Number(viewerChordCard.dataset.viewerChordIndex), { mode: "chord", pushCurrent: true });
     return;
   }
 
   const chordButton = event.target.closest("[data-view-chord]");
   if (chordButton) {
     event.preventDefault();
-    openChordViewer(chordButton.dataset.viewChord, chordButton.dataset.viewChordFile);
+    openChordViewer(chordButton.dataset.viewChord, chordButton.dataset.viewChordFile, chordButton);
     return;
   }
 

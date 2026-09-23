@@ -2434,12 +2434,12 @@ textarea {
   width: 100%;
   height: 100%;
   max-height: none;
-  grid-template-columns: minmax(300px, 420px) minmax(180px, 260px) 1fr auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(180px, 240px) 1fr auto;
   grid-template-areas:
-    "head head head head"
-    "name folder tools actions"
-    "board board board board"
-    "fret-controls fret-controls fret-controls fret-controls";
+    "head head head head head"
+    "name tones folder tools actions"
+    "board board board board board"
+    "fret-controls fret-controls fret-controls fret-controls fret-controls";
   align-items: start;
   gap: 16px 18px;
   border: 1px solid rgba(111, 67, 41, 0.32);
@@ -2456,6 +2456,10 @@ textarea {
 
 .chord-builder-name-field {
   grid-area: name;
+}
+
+.chord-builder-tones-field {
+  grid-area: tones;
 }
 
 .chord-builder-folder-field {
@@ -4441,21 +4445,55 @@ textarea,
   }
 
   .room-session-bar {
-    margin: 12px 0 14px;
+    top: 4px;
+    margin: 8px 0 10px;
     padding: 0;
   }
 
   .compact-metronome {
-    grid-template-columns: 1fr;
+    display: flex;
+    width: 100%;
     max-width: none;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 4px;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
   }
 
   .compact-metronome .metro-row {
-    width: 100%;
+    flex: 0 0 auto;
+    width: auto;
+    gap: 4px;
   }
 
   .compact-metronome [data-tempo-slider] {
-    flex: 1;
+    display: none;
+  }
+
+  .compact-metronome .metronome-display {
+    min-width: 34px;
+    min-height: 28px;
+    padding: 3px 5px;
+  }
+
+  .compact-metronome .metronome-display strong,
+  .compact-metronome .tempo-unit {
+    display: none;
+  }
+
+  .compact-metronome [data-tempo-input] {
+    width: 42px;
+    min-height: 28px;
+    padding: 2px 5px;
+  }
+
+  .compact-metronome button,
+  .compact-metronome .advanced-metronome-toggle {
+    min-height: 28px;
+    padding: 0 7px;
+    font-size: 11px;
   }
 
   .nav-item {
@@ -4523,6 +4561,7 @@ textarea,
     grid-template-areas:
       "head"
       "name"
+      "tones"
       "folder"
       "tools"
       "actions"
