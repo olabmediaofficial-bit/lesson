@@ -2364,12 +2364,13 @@ textarea {
 .fretboard-trainer {
   display: grid;
   min-width: 760px;
-  grid-template-columns: 72px repeat(6, minmax(104px, 1fr));
+  grid-template-columns: 64px 48px repeat(5, minmax(104px, 1fr));
   grid-template-rows: 36px repeat(6, 58px);
   align-items: stretch;
 }
 
 .fretboard-trainer-corner,
+.fretboard-trainer-open-label,
 .fretboard-trainer-fret-label,
 .fretboard-trainer-string-label {
   display: grid;
@@ -2380,10 +2381,7 @@ textarea {
 }
 
 .fretboard-trainer-string-label {
-  grid-template-columns: auto auto;
-  gap: 3px;
-  justify-content: end;
-  padding-right: 12px;
+  justify-content: center;
 }
 
 .fretboard-trainer-string-label strong {
@@ -2420,9 +2418,12 @@ textarea {
 }
 
 .fretboard-trainer-cell.open-string {
-  margin-right: 18px;
   border-left: 0;
   background: transparent;
+}
+
+.fretboard-trainer-cell.open-string::before {
+  display: none;
 }
 
 .fretboard-trainer-cell::after {
@@ -2544,22 +2545,6 @@ textarea {
   background: #f3dfc9;
 }
 
-.piano-white-key.active::after {
-  position: absolute;
-  bottom: 7px;
-  width: 34px;
-  height: 34px;
-  border: 2px solid #b98255;
-  border-radius: 50%;
-  content: "";
-}
-
-.piano-white-key.active {
-  padding-bottom: 15px;
-  color: #6f4329;
-  z-index: 1;
-}
-
 .piano-black-key {
   position: absolute;
   z-index: 3;
@@ -2578,8 +2563,7 @@ textarea {
 }
 
 .piano-black-key.active {
-  color: #fff;
-  background: #9a603d;
+  background: #9d6f50;
 }
 
 .diatonic-staff {
@@ -2587,7 +2571,7 @@ textarea {
   align-items: center;
 }
 
-.diatonic-staff svg {
+.diatonic-staff img {
   display: block;
   width: 100%;
   height: auto;
@@ -2648,28 +2632,11 @@ textarea {
   text-align: center;
 }
 
-.diatonic-practice-table input.correct {
-  border-color: #659779;
-  background: #e8f4eb;
-}
-
-.diatonic-practice-table input.incorrect {
-  border-color: #c98282;
-  background: #fff0ef;
-}
-
 .diatonic-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.diatonic-actions span {
-  margin-right: auto;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 800;
 }
 
 .rhythm-builder-dialog {

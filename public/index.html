@@ -366,7 +366,9 @@
               </div>
               <div class="diatonic-reference">
                 <div id="diatonicKeyboard" class="diatonic-keyboard" aria-label="선택한 스케일의 피아노 건반"></div>
-                <div id="diatonicStaff" class="diatonic-staff" aria-label="선택한 스케일의 오선 악보"></div>
+                <div class="diatonic-staff">
+                  <img id="diatonicStaffImage" alt="" />
+                </div>
               </div>
               <div class="diatonic-table-wrap">
                 <table class="diatonic-practice-table">
@@ -386,9 +388,7 @@
                 </table>
               </div>
               <div class="diatonic-actions">
-                <span id="diatonicFeedback" aria-live="polite"></span>
                 <button class="secondary-button" id="clearDiatonicPractice" type="button">입력 지우기</button>
-                <button class="primary-button" id="checkDiatonicPractice" type="button">정답 확인</button>
               </div>
             </article>
           </section>

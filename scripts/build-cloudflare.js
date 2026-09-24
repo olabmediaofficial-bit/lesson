@@ -4,7 +4,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "public");
 const files = ["index.html", "app.js", "styles.css", "somun-paradise.png"];
-const directories = ["chords"];
+const directories = ["chords", "scale-staffs"];
 
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
