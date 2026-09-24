@@ -352,6 +352,45 @@
                 <div id="fretboardTrainer" class="fretboard-trainer" aria-label="개방현부터 5프렛까지 기타 지판 음 찾기"></div>
               </div>
             </article>
+            <article class="practice-tool-module diatonic-practice-module">
+              <div class="practice-tool-head">
+                <div>
+                  <span class="practice-tool-number">02</span>
+                  <h3>다이어토닉 코드 실습</h3>
+                  <p>선택한 메이저 스케일을 보고 음계와 다이어토닉 코드를 직접 완성해보세요.</p>
+                </div>
+                <label class="diatonic-key-select">
+                  Key
+                  <select id="diatonicKey" aria-label="다이어토닉 실습 키 선택"></select>
+                </label>
+              </div>
+              <div class="diatonic-reference">
+                <div id="diatonicKeyboard" class="diatonic-keyboard" aria-label="선택한 스케일의 피아노 건반"></div>
+                <div id="diatonicStaff" class="diatonic-staff" aria-label="선택한 스케일의 오선 악보"></div>
+              </div>
+              <div class="diatonic-table-wrap">
+                <table class="diatonic-practice-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">구분</th>
+                      <th scope="col">I</th>
+                      <th scope="col">II</th>
+                      <th scope="col">III</th>
+                      <th scope="col">IV</th>
+                      <th scope="col">V</th>
+                      <th scope="col">VI</th>
+                      <th scope="col">VII</th>
+                    </tr>
+                  </thead>
+                  <tbody id="diatonicPracticeBody"></tbody>
+                </table>
+              </div>
+              <div class="diatonic-actions">
+                <span id="diatonicFeedback" aria-live="polite"></span>
+                <button class="secondary-button" id="clearDiatonicPractice" type="button">입력 지우기</button>
+                <button class="primary-button" id="checkDiatonicPractice" type="button">정답 확인</button>
+              </div>
+            </article>
           </section>
         </section>
 

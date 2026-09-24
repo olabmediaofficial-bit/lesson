@@ -212,6 +212,20 @@ const GUITAR_STRINGS = [
   { label: "1", note: "E", pitch: 4 },
 ];
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const MAJOR_SCALE_KEYS = [
+  { key: "C", notes: ["C", "D", "E", "F", "G", "A", "B"] },
+  { key: "Db", notes: ["Db", "Eb", "F", "Gb", "Ab", "Bb", "C"] },
+  { key: "D", notes: ["D", "E", "F#", "G", "A", "B", "C#"] },
+  { key: "Eb", notes: ["Eb", "F", "G", "Ab", "Bb", "C", "D"] },
+  { key: "E", notes: ["E", "F#", "G#", "A", "B", "C#", "D#"] },
+  { key: "F", notes: ["F", "G", "A", "Bb", "C", "D", "E"] },
+  { key: "F#", notes: ["F#", "G#", "A#", "B", "C#", "D#", "E#"] },
+  { key: "G", notes: ["G", "A", "B", "C", "D", "E", "F#"] },
+  { key: "Ab", notes: ["Ab", "Bb", "C", "Db", "Eb", "F", "G"] },
+  { key: "A", notes: ["A", "B", "C#", "D", "E", "F#", "G#"] },
+  { key: "Bb", notes: ["Bb", "C", "D", "Eb", "F", "G", "A"] },
+  { key: "B", notes: ["B", "C#", "D#", "E", "F#", "G#", "A#"] },
+];
 const CURRICULUM_AREAS = [
   {
     key: "left",
@@ -399,6 +413,8 @@ let rhythmBuilder = {
   cells: [],
 };
 let visibleFretboardNotes = new Set();
+let activeDiatonicKey = "C";
+const diatonicPracticeDrafts = new Map();
 const SCHEDULE_DAYS = [
   { key: "mon", label: "월" },
   { key: "tue", label: "화" },
@@ -855,6 +871,13 @@ const els = {
   fretboardTrainer: $("#fretboardTrainer"),
   revealFretboardNotes: $("#revealFretboardNotes"),
   clearFretboardNotes: $("#clearFretboardNotes"),
+  diatonicKey: $("#diatonicKey"),
+  diatonicKeyboard: $("#diatonicKeyboard"),
+  diatonicStaff: $("#diatonicStaff"),
+  diatonicPracticeBody: $("#diatonicPracticeBody"),
+  diatonicFeedback: $("#diatonicFeedback"),
+  clearDiatonicPractice: $("#clearDiatonicPractice"),
+  checkDiatonicPractice: $("#checkDiatonicPractice"),
   chordBuilderDialog: $("#chordBuilderDialog"),
   chordBuilderName: $("#chordBuilderName"),
   chordBuilderTones: $("#chordBuilderTones"),
@@ -1837,6 +1860,7 @@ function render() {
   renderChordDictionary();
   renderRhythmDictionary();
   renderFretboardTrainer();
+  renderDiatonicPractice();
   renderShare();
 }
 
@@ -1847,7 +1871,7 @@ function fretboardTrainerKey(stringIndex, fret) {
 function renderFretboardTrainer() {
   if (!els.fretboardTrainer) return;
   const displayStrings = GUITAR_STRINGS.map((string, index) => ({ ...string, index })).reverse();
-  const fretLabels = ["개방현", "1", "2", "3", "4", "5"];
+  const fretLabels = ["", "1", "2", "3", "4", "5"];
   els.fretboardTrainer.innerHTML = `
     <div class="fretboard-trainer-corner">줄</div>
     ${fretLabels.map((label) => `<div class="fretboard-trainer-fret-label">${label}</div>`).join("")}
@@ -1888,6 +1912,138 @@ function setAllFretboardNotes(visible) {
     });
   }
   renderFretboardTrainer();
+}
+
+function notePitchClass(note) {
+  const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[String(note || "")[0]];
+  if (!Number.isFinite(base)) return 0;
+  const accidental = String(note || "").slice(1);
+  return (base + (accidental === "#" ? 1 : accidental === "b" ? -1 : 0) + 12) % 12;
+}
+
+function activeMajorScale() {
+  return MAJOR_SCALE_KEYS.find((scale) => scale.key === activeDiatonicKey) || MAJOR_SCALE_KEYS[0];
+}
+
+function diatonicAnswers(scale = activeMajorScale()) {
+  const triadSuffixes = ["", "m", "m", "", "", "m", "dim"];
+  const seventhSuffixes = ["maj7", "m7", "m7", "maj7", "7", "m7", "m7b5"];
+  return {
+    scale: [...scale.notes],
+    triad: scale.notes.map((note, index) => `${note}${triadSuffixes[index]}`),
+    seventh: scale.notes.map((note, index) => `${note}${seventhSuffixes[index]}`),
+  };
+}
+
+function currentDiatonicDraft() {
+  if (!diatonicPracticeDrafts.has(activeDiatonicKey)) {
+    diatonicPracticeDrafts.set(activeDiatonicKey, {
+      scale: Array(7).fill(""),
+      triad: Array(7).fill(""),
+      seventh: Array(7).fill(""),
+      checked: false,
+    });
+  }
+  return diatonicPracticeDrafts.get(activeDiatonicKey);
+}
+
+function normalizeMusicAnswer(value) {
+  return String(value || "")
+    .trim()
+    .replace(/♯/g, "#")
+    .replace(/♭/g, "b")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+}
+
+function renderDiatonicKeyboard(scale) {
+  if (!els.diatonicKeyboard) return;
+  const noteByPitch = new Map(scale.notes.map((note) => [notePitchClass(note), note]));
+  const whiteKeys = [
+    { note: "C", pitch: 0 }, { note: "D", pitch: 2 }, { note: "E", pitch: 4 }, { note: "F", pitch: 5 },
+    { note: "G", pitch: 7 }, { note: "A", pitch: 9 }, { note: "B", pitch: 11 }, { note: "C", pitch: 0 },
+  ];
+  const blackKeys = [
+    { pitch: 1, left: 12.5 }, { pitch: 3, left: 25 }, { pitch: 6, left: 50 }, { pitch: 8, left: 62.5 }, { pitch: 10, left: 75 },
+  ];
+  els.diatonicKeyboard.innerHTML = `
+    <strong>${escapeHTML(scale.key)} Major Scale</strong>
+    <div class="piano-keys" aria-hidden="true">
+      ${whiteKeys.map((key) => `<div class="piano-white-key ${noteByPitch.has(key.pitch) ? "active" : ""}">${noteByPitch.get(key.pitch) || ""}</div>`).join("")}
+      ${blackKeys.map((key) => `<div class="piano-black-key ${noteByPitch.has(key.pitch) ? "active" : ""}" style="left:${key.left}%">${noteByPitch.get(key.pitch) || ""}</div>`).join("")}
+    </div>
+  `;
+}
+
+function renderDiatonicStaff(scale) {
+  if (!els.diatonicStaff) return;
+  const notes = [...scale.notes, scale.notes[0]];
+  const noteSvg = notes
+    .map((note, index) => {
+      const x = 92 + index * 67;
+      const y = 106 - index * 7;
+      return `
+        <ellipse cx="${x}" cy="${y}" rx="11" ry="8" fill="#2f241d" transform="rotate(-18 ${x} ${y})" />
+        <line x1="${x + 10}" y1="${y - 4}" x2="${x + 10}" y2="${y - 43}" stroke="#2f241d" stroke-width="3" />
+        <text x="${x}" y="145" text-anchor="middle" font-size="14" font-weight="800" fill="#6f4329">${escapeHTML(note)}</text>
+      `;
+    })
+    .join("");
+  els.diatonicStaff.innerHTML = `
+    <svg viewBox="0 0 650 166" role="img" aria-label="${escapeHTML(scale.key)} 메이저 스케일 오선">
+      ${[54, 68, 82, 96, 110].map((y) => `<line x1="48" y1="${y}" x2="625" y2="${y}" stroke="#8a6951" stroke-width="1.7" />`).join("")}
+      <text x="24" y="105" font-size="70" font-family="serif" fill="#2f241d">𝄞</text>
+      ${noteSvg}
+    </svg>
+  `;
+}
+
+function renderDiatonicPractice() {
+  if (!els.diatonicPracticeBody) return;
+  const scale = activeMajorScale();
+  const draft = currentDiatonicDraft();
+  const answers = diatonicAnswers(scale);
+  if (els.diatonicKey) {
+    els.diatonicKey.innerHTML = MAJOR_SCALE_KEYS.map((item) => `<option value="${escapeHTML(item.key)}" ${item.key === activeDiatonicKey ? "selected" : ""}>${escapeHTML(item.key)} Major</option>`).join("");
+  }
+  renderDiatonicKeyboard(scale);
+  renderDiatonicStaff(scale);
+  const rows = [
+    { key: "scale", label: "음계" },
+    { key: "triad", label: "3화음" },
+    { key: "seventh", label: "4화음" },
+  ];
+  els.diatonicPracticeBody.innerHTML = rows.map((row) => `
+    <tr>
+      <th scope="row">${row.label}</th>
+      ${draft[row.key].map((value, index) => {
+        const correct = normalizeMusicAnswer(value) === normalizeMusicAnswer(answers[row.key][index]);
+        const stateClass = draft.checked ? (correct ? "correct" : "incorrect") : "";
+        return `<td><input class="${stateClass}" data-diatonic-row="${row.key}" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${row.label} ${index + 1}도" autocomplete="off" /></td>`;
+      }).join("")}
+    </tr>
+  `).join("");
+  if (els.diatonicFeedback) {
+    if (!draft.checked) els.diatonicFeedback.textContent = `${scale.key} 메이저 · 직접 표를 완성해보세요.`;
+    else {
+      const total = 21;
+      const correctCount = ["scale", "triad", "seventh"].reduce(
+        (sum, row) => sum + draft[row].filter((value, index) => normalizeMusicAnswer(value) === normalizeMusicAnswer(answers[row][index])).length,
+        0,
+      );
+      els.diatonicFeedback.textContent = `${correctCount} / ${total} 정답`;
+    }
+  }
+}
+
+function checkDiatonicPractice() {
+  currentDiatonicDraft().checked = true;
+  renderDiatonicPractice();
+}
+
+function clearDiatonicPractice() {
+  diatonicPracticeDrafts.delete(activeDiatonicKey);
+  renderDiatonicPractice();
 }
 
 function meterBeatCount() {
@@ -4890,6 +5046,19 @@ document.addEventListener("click", (event) => {
   }
 });
 
+document.addEventListener("input", (event) => {
+  const input = event.target.closest("[data-diatonic-row]");
+  if (!input) return;
+  const row = input.dataset.diatonicRow;
+  const index = Number(input.dataset.diatonicIndex);
+  const draft = currentDiatonicDraft();
+  if (!Array.isArray(draft[row]) || !Number.isInteger(index) || index < 0 || index > 6) return;
+  draft[row][index] = input.value;
+  draft.checked = false;
+  input.classList.remove("correct", "incorrect");
+  if (els.diatonicFeedback) els.diatonicFeedback.textContent = `${activeDiatonicKey} 메이저 · 직접 표를 완성해보세요.`;
+});
+
 document.addEventListener("change", (event) => {
   const checkbox = event.target.closest("[data-block-check]");
   if (checkbox) {
@@ -5109,6 +5278,12 @@ els.rhythmBuilderUnit?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderBars?.addEventListener("change", syncRhythmBuilderOptions);
 els.revealFretboardNotes?.addEventListener("click", () => setAllFretboardNotes(true));
 els.clearFretboardNotes?.addEventListener("click", () => setAllFretboardNotes(false));
+els.diatonicKey?.addEventListener("change", () => {
+  activeDiatonicKey = els.diatonicKey.value;
+  renderDiatonicPractice();
+});
+els.checkDiatonicPractice?.addEventListener("click", checkDiatonicPractice);
+els.clearDiatonicPractice?.addEventListener("click", clearDiatonicPractice);
 els.clearRhythmBuilder?.addEventListener("click", () => {
   rhythmBuilder.cells = normalizeRhythmCells([], rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit, rhythmBuilder.bars));
   renderRhythmBuilder();

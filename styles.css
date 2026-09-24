@@ -2420,8 +2420,9 @@ textarea {
 }
 
 .fretboard-trainer-cell.open-string {
-  border-left-width: 7px;
-  background: #f9f0e6;
+  margin-right: 18px;
+  border-left: 0;
+  background: transparent;
 }
 
 .fretboard-trainer-cell::after {
@@ -2449,12 +2450,226 @@ textarea {
   box-shadow: 0 4px 10px rgba(111, 67, 41, 0.2);
 }
 
+.fretboard-trainer-cell.open-string::after {
+  border: 2px solid #b98255;
+  background: #fffaf4;
+  opacity: 1;
+  transform: scale(0.86);
+}
+
+.fretboard-trainer-cell.open-string:hover::after,
+.fretboard-trainer-cell.open-string:focus-visible::after {
+  background: #f3e2d2;
+  transform: scale(1);
+}
+
+.fretboard-trainer-cell.open-string.revealed::after {
+  background: #b98255;
+  transform: scale(1);
+}
+
 .fretboard-trainer-cell span {
   position: relative;
   z-index: 2;
   color: #fff;
   font-size: 15px;
   font-weight: 900;
+}
+
+.diatonic-practice-module {
+  margin-top: 2px;
+}
+
+.diatonic-key-select {
+  display: grid;
+  min-width: 180px;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.diatonic-reference {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 16px;
+}
+
+.diatonic-keyboard,
+.diatonic-staff {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(181, 139, 105, 0.3);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.diatonic-keyboard {
+  display: grid;
+  gap: 12px;
+}
+
+.diatonic-keyboard > strong {
+  color: var(--accent-strong);
+  font-size: 16px;
+  text-align: center;
+}
+
+.piano-keys {
+  position: relative;
+  display: flex;
+  height: 156px;
+}
+
+.piano-white-key {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12px;
+  border: 1px solid #6f625a;
+  border-right: 0;
+  color: #5f4b3d;
+  background: #fffdf9;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.piano-white-key:last-of-type {
+  border-right: 1px solid #6f625a;
+}
+
+.piano-white-key.active {
+  background: #f3dfc9;
+}
+
+.piano-white-key.active::after {
+  position: absolute;
+  bottom: 7px;
+  width: 34px;
+  height: 34px;
+  border: 2px solid #b98255;
+  border-radius: 50%;
+  content: "";
+}
+
+.piano-white-key.active {
+  padding-bottom: 15px;
+  color: #6f4329;
+  z-index: 1;
+}
+
+.piano-black-key {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  display: flex;
+  width: 8%;
+  height: 94px;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 9px;
+  color: transparent;
+  background: #2f2a27;
+  font-size: 11px;
+  font-weight: 900;
+  transform: translateX(-50%);
+}
+
+.piano-black-key.active {
+  color: #fff;
+  background: #9a603d;
+}
+
+.diatonic-staff {
+  display: grid;
+  align-items: center;
+}
+
+.diatonic-staff svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.diatonic-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(181, 139, 105, 0.36);
+  border-radius: 8px;
+}
+
+.diatonic-practice-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.diatonic-practice-table th,
+.diatonic-practice-table td {
+  padding: 8px;
+  border-right: 1px solid rgba(181, 139, 105, 0.3);
+  border-bottom: 1px solid rgba(181, 139, 105, 0.3);
+  text-align: center;
+}
+
+.diatonic-practice-table tr:last-child th,
+.diatonic-practice-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.diatonic-practice-table th:last-child,
+.diatonic-practice-table td:last-child {
+  border-right: 0;
+}
+
+.diatonic-practice-table thead th,
+.diatonic-practice-table tbody th {
+  color: var(--accent-strong);
+  background: #f5e8db;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.diatonic-practice-table th:first-child {
+  width: 96px;
+}
+
+.diatonic-practice-table input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 6px;
+  border-color: rgba(181, 139, 105, 0.36);
+  border-radius: 6px;
+  background: #fffdf9;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.diatonic-practice-table input.correct {
+  border-color: #659779;
+  background: #e8f4eb;
+}
+
+.diatonic-practice-table input.incorrect {
+  border-color: #c98282;
+  background: #fff0ef;
+}
+
+.diatonic-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.diatonic-actions span {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .rhythm-builder-dialog {
@@ -4623,6 +4838,32 @@ textarea,
 
   .practice-tool-actions {
     justify-content: flex-start;
+  }
+
+  .diatonic-key-select {
+    width: 100%;
+  }
+
+  .diatonic-reference {
+    grid-template-columns: 1fr;
+  }
+
+  .diatonic-keyboard,
+  .diatonic-staff {
+    min-width: 620px;
+  }
+
+  .diatonic-reference {
+    overflow-x: auto;
+  }
+
+  .diatonic-actions {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .diatonic-actions span {
+    width: 100%;
   }
 
   .topbar,
