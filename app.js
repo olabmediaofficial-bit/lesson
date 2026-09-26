@@ -1413,6 +1413,55 @@ function showToast(message, timeout = 2200) {
   showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), timeout);
 }
 
+function openLearningResourceWindow(items, { title = "학습 자료", kind = "resource" } = {}) {
+  const visibleItems = (items || []).filter((item) => item?.src);
+  if (!visibleItems.length) return false;
+  const resourceWindow = window.open("", `lesson-${kind}-reference`, "popup=yes,width=920,height=760,resizable=yes,scrollbars=yes");
+  if (!resourceWindow) {
+    showToast("팝업이 차단되었습니다. 이 사이트의 팝업을 허용해주세요.");
+    return false;
+  }
+  resourceWindow.opener = null;
+  const cards = visibleItems
+    .map(
+      (item) => `
+        <figure>
+          <img src="${escapeHTML(new URL(item.src, location.href).href)}" alt="${escapeHTML(item.title || title)}" />
+          <figcaption>${escapeHTML(item.title || title)}</figcaption>
+        </figure>
+      `,
+    )
+    .join("");
+  resourceWindow.document.open();
+  resourceWindow.document.write(`<!doctype html>
+    <html lang="ko">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>${escapeHTML(title)}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body { margin: 0; padding: 22px; color: #2f241d; background: #f6eee5; font-family: "Gmarket Sans", "Pretendard", sans-serif; }
+          header { position: sticky; z-index: 2; top: 0; display: flex; align-items: center; justify-content: space-between; margin: -22px -22px 18px; padding: 15px 22px; border-bottom: 1px solid #d8bfa9; background: rgba(255, 250, 244, .96); }
+          h1 { margin: 0; font-size: 20px; }
+          main { display: grid; grid-template-columns: repeat(auto-fit, minmax(${kind === "chords" ? "220px" : "min(100%, 560px)"}, 1fr)); gap: 16px; align-items: start; }
+          figure { margin: 0; padding: 12px; border: 1px solid #d8bfa9; border-radius: 8px; background: #fffaf4; box-shadow: 0 8px 22px rgba(76, 49, 31, .11); }
+          img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: #fff; }
+          figcaption { margin-top: 9px; font-size: 14px; font-weight: 700; text-align: center; }
+          button { padding: 7px 12px; border: 1px solid #c9aa91; border-radius: 7px; color: #513521; background: #fffaf4; font: inherit; font-weight: 700; cursor: pointer; }
+          @media (max-width: 560px) { body { padding: 12px; } header { margin: -12px -12px 12px; padding: 12px; } main { grid-template-columns: 1fr; } }
+        </style>
+      </head>
+      <body>
+        <header><h1>${escapeHTML(title)}</h1><button type="button" onclick="window.close()">닫기</button></header>
+        <main>${cards}</main>
+      </body>
+    </html>`);
+  resourceWindow.document.close();
+  resourceWindow.focus();
+  return true;
+}
+
 function collectViewerImages(clickedButton) {
   const activeView = clickedButton.closest(".view.active") || document;
   const buttons = [...activeView.querySelectorAll("[data-view-image]")];
@@ -1628,7 +1677,7 @@ function openImageViewerChords() {
       chordName: chord.name,
     }));
   if (!items.length) return;
-  openImageViewerItems(items, 0, { mode: "chord-grid", title: "사용 코드", pushCurrent: true });
+  openLearningResourceWindow(items, { title: `${block.title} · 사용 코드`, kind: "chords" });
 }
 
 function rhythmViewerItems(block) {
@@ -1666,7 +1715,7 @@ function openImageViewerRhythm() {
       title: item.label || "리듬표",
     }));
   if (images.length) {
-    openImageViewerItems(images, 0, { mode: "chord", pushCurrent: true });
+    openLearningResourceWindow(images, { title: `${block.title} · 사용 리듬`, kind: "rhythms" });
     return;
   }
   window.open(resources[0].href, "_blank", "noreferrer");
@@ -1818,6 +1867,11 @@ function openChordViewer(chordName, fileName = "", sourceButton = null) {
     .filter(Boolean)
     .map((item) => ({ src: item.src, title: `${item.name} 코드`, chordName: item.name }));
   const index = Math.max(0, buttons.indexOf(sourceButton));
+  if (sourceButton?.closest("#roomsView, #shareView, .lesson-resource-chips")) {
+    const learningItems = items.length ? items : [{ src: chord.src, title: `${chord.name} 코드`, chordName: chord.name }];
+    openLearningResourceWindow(learningItems, { title: "사용 코드", kind: "chords" });
+    return;
+  }
   imageViewerStack = [];
   openImageViewerItems(items.length ? items : [{ src: chord.src, title: `${chord.name} 코드`, chordName: chord.name }], index, { mode: "chord" });
 }
@@ -4709,7 +4763,12 @@ document.addEventListener("click", (event) => {
 
   const viewRhythm = event.target.closest("[data-view-rhythm]");
   if (viewRhythm) {
-    openRhythmViewer(viewRhythm.dataset.viewRhythm);
+    const rhythm = getRhythmById(viewRhythm.dataset.viewRhythm);
+    if (rhythm && viewRhythm.closest("#roomsView, #shareView, .lesson-resource-chips")) {
+      openLearningResourceWindow([{ src: rhythmSvg(rhythm), title: `${rhythm.name} 리듬표` }], { title: "사용 리듬", kind: "rhythms" });
+    } else {
+      openRhythmViewer(viewRhythm.dataset.viewRhythm);
+    }
     return;
   }
 

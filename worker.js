@@ -95,10 +95,13 @@ async function handleRoom(request, env) {
     const blockIds = new Set(student.lessons.flatMap((lesson) => lesson.blockIds || []));
     const blocks = state.blocks.filter((block) => blockIds.has(block.id));
     const customChords = (state.customChords || []).filter((chord) => !chord.studentId || chord.studentId === student.id);
+    const rhythmIds = new Set(blocks.flatMap((block) => block.rhythms || []));
+    const customRhythms = (state.customRhythms || []).filter((rhythm) => rhythmIds.has(rhythm.id));
     return json({
       blocks,
       students: [student],
       customChords,
+      customRhythms,
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
     });

@@ -329,6 +329,7 @@ function mergeState(serverState, incomingState) {
     resourceLibraryUrl: incomingState.resourceLibraryUrl ?? serverState.resourceLibraryUrl ?? "",
     blocks: mergeBlocks(serverState.blocks || [], incomingState.blocks || []),
     customChords: mergeCustomChords(serverState.customChords || [], incomingState.customChords || []),
+    customRhythms: mergeCustomRhythms(serverState.customRhythms || [], incomingState.customRhythms || []),
     students: mergeStudents(serverState.students || [], incomingState.students || []),
   };
 }
@@ -345,6 +346,15 @@ function mergeCustomChords(serverChords = [], incomingChords = []) {
     }
   });
   return [...chords.values()];
+}
+
+function mergeCustomRhythms(serverRhythms = [], incomingRhythms = []) {
+  const rhythms = new Map(serverRhythms.map((rhythm) => [rhythm.id, rhythm]));
+  incomingRhythms.forEach((rhythm) => {
+    const existing = rhythms.get(rhythm.id);
+    if (!existing || isIncomingNewer(existing, rhythm)) rhythms.set(rhythm.id, { ...(existing || {}), ...rhythm });
+  });
+  return [...rhythms.values()];
 }
 
 function isAuthorized(request) {
@@ -498,6 +508,8 @@ async function handlePublicRoom(request, response) {
   const blockIds = new Set(student.lessons.flatMap((lesson) => lesson.blockIds || []));
   const blocks = state.blocks.filter((block) => blockIds.has(block.id));
   const customChords = (state.customChords || []).filter((chord) => !chord.studentId || chord.studentId === student.id);
+  const rhythmIds = new Set(blocks.flatMap((block) => block.rhythms || []));
+  const customRhythms = (state.customRhythms || []).filter((rhythm) => rhythmIds.has(rhythm.id));
   send(
     response,
     200,
@@ -505,6 +517,7 @@ async function handlePublicRoom(request, response) {
       blocks,
       students: [student],
       customChords,
+      customRhythms,
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
     }),
