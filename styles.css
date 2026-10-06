@@ -2807,6 +2807,7 @@ textarea {
   grid-template-areas:
     "head head head head head"
     "name tones folder tools actions"
+    "piano piano piano piano piano"
     "board board board board board"
     "fret-controls fret-controls fret-controls fret-controls fret-controls";
   align-items: start;
@@ -2871,6 +2872,71 @@ textarea {
   font-size: 13px;
   font-weight: 900;
 }
+
+.chord-builder-piano {
+  grid-area: piano;
+  width: min(350px, 100%);
+  margin-left: 2px;
+}
+
+.chord-builder-piano-title {
+  display: block;
+  margin: 0 0 6px 2px;
+  color: #765640;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.chord-builder-piano-keys {
+  position: relative;
+  display: grid;
+  height: 82px;
+  grid-template-columns: repeat(7, 1fr);
+  overflow: hidden;
+  border: 2px solid #654630;
+  border-radius: 5px;
+  background: #fffdf9;
+  box-shadow: 3px 4px 10px rgba(78, 52, 34, 0.13);
+}
+
+.chord-piano-white-key {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  border-right: 1px solid #7d5a40;
+  color: #765640;
+  background: #fffdf9;
+  font-size: 10px;
+}
+
+.chord-piano-white-key:nth-child(7) {
+  border-right: 0;
+}
+
+.chord-piano-black-key {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  width: 9.5%;
+  height: 52px;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 5px;
+  border-radius: 0 0 3px 3px;
+  color: #fff8f0;
+  background: #3b2a20;
+  font-size: 8px;
+  box-shadow: 1px 3px 4px rgba(36, 24, 16, 0.3);
+}
+
+.chord-black-c-sharp { left: 9.55%; }
+.chord-black-d-sharp { left: 23.85%; }
+.chord-black-f-sharp { left: 52.4%; }
+.chord-black-g-sharp { left: 66.7%; }
+.chord-black-a-sharp { left: 81%; }
 
 .chord-builder-board {
   display: grid;
@@ -4969,6 +5035,7 @@ textarea,
       "folder"
       "tools"
       "actions"
+      "piano"
       "board"
       "fret-controls";
     overflow: hidden;
@@ -4978,6 +5045,19 @@ textarea,
     grid-template-columns: 36px 52px minmax(0, 1fr);
     min-height: auto;
     padding: 10px;
+  }
+
+  .chord-builder-piano {
+    width: min(320px, 100%);
+    margin-left: 0;
+  }
+
+  .chord-builder-piano-keys {
+    height: 70px;
+  }
+
+  .chord-piano-black-key {
+    height: 44px;
   }
 
   .chord-builder-string-labels {
