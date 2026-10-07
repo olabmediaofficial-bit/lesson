@@ -359,6 +359,7 @@ let practiceSortDirection = {
 };
 let selectedBlockIds = new Set();
 let selectedCurriculumSkills = new Set();
+let libraryCurriculumFilters = new Set();
 let selectedChordNames = [];
 let selectedRhythmIds = [];
 let editingBlockChordNames = [];
@@ -842,6 +843,8 @@ const els = {
   },
   librarySearch: $("#librarySearch"),
   tagFilter: $("#tagFilter"),
+  curriculumFinder: $("#curriculumFinder"),
+  curriculumFinderResult: $("#curriculumFinderResult"),
   bulkTagInput: $("#bulkTagInput"),
   applyBulkTags: $("#applyBulkTags"),
   deleteSelectedBlocks: $("#deleteSelectedBlocks"),
@@ -2205,9 +2208,9 @@ function restartMetronome() {
 
 function renderTagFilter() {
   const selected = els.tagFilter.value || "all";
-  const tags = [...new Set(state.blocks.flatMap((block) => block.tags))].sort();
+  const tags = [...new Set(state.blocks.flatMap((block) => block.tags).filter((tag) => !isCurriculumSkillTag(tag)))].sort();
   els.tagFilter.innerHTML = [
-    `<option value="all">전체 태그</option>`,
+    `<option value="all">기타 태그 전체</option>`,
     ...tags.map((tag) => `<option value="${tag}">${tag}</option>`),
   ].join("");
   els.tagFilter.value = tags.includes(selected) ? selected : "all";
@@ -2334,8 +2337,61 @@ function filteredBlocks() {
     const matchesQuery = !query || haystack.includes(query);
     const matchesTag = tag === "all" || block.tags.includes(tag);
     const matchesKind = activeKindFilter === "all" || block.kind === activeKindFilter;
-    return matchesQuery && matchesTag && matchesKind;
+    const skillSet = blockSkillSet(block);
+    const matchesCurriculum =
+      !libraryCurriculumFilters.size ||
+      (block.kind === "practice" && [...libraryCurriculumFilters].every((skill) => skillSet.has(skill)));
+    return matchesQuery && matchesTag && matchesKind && matchesCurriculum;
   });
+}
+
+function curriculumSkillBlockCount(skill) {
+  return state.blocks.filter((block) => block.kind === "practice" && blockSkillSet(block).has(skill)).length;
+}
+
+function renderCurriculumFinder() {
+  if (!els.curriculumFinder || !els.curriculumFinderResult) return;
+  els.curriculumFinder.innerHTML = CURRICULUM_AREAS.map(
+    (area) => `
+      <section class="curriculum-finder-group" data-curriculum-area="${area.key}">
+        <div class="curriculum-finder-group-title">
+          <strong>${escapeHTML(area.label)}</strong>
+          <span>${escapeHTML(area.description)}</span>
+        </div>
+        <div class="curriculum-finder-skills">
+          ${area.skills
+            .map((skill) => {
+              const count = curriculumSkillBlockCount(skill);
+              const active = libraryCurriculumFilters.has(skill);
+              return `
+                <button
+                  class="curriculum-filter-chip ${active ? "active" : ""}"
+                  type="button"
+                  data-library-curriculum-filter="${escapeHTML(skill)}"
+                  aria-pressed="${active}"
+                >
+                  <span>${escapeHTML(skill)}</span>
+                  <b>${count}</b>
+                </button>
+              `;
+            })
+            .join("")}
+        </div>
+      </section>
+    `,
+  ).join("");
+
+  const selected = [...libraryCurriculumFilters];
+  const resultCount = filteredBlocks().length;
+  els.curriculumFinderResult.innerHTML = selected.length
+    ? `
+        <div class="curriculum-filter-selection">
+          <span><b>${selected.map(escapeHTML).join(" + ")}</b> 모두 포함</span>
+          <strong>${resultCount}곡</strong>
+          <button class="secondary-button mini-button" type="button" data-clear-library-curriculum>초기화</button>
+        </div>
+      `
+    : `<span>항목을 선택해 보세요</span>`;
 }
 
 function normalizeSkillText(value) {
@@ -2556,6 +2612,7 @@ function renderLibrary() {
     button.classList.toggle("active", button.dataset.kindFilter === activeKindFilter);
   });
 
+  renderCurriculumFinder();
   renderBulkCurriculumPanel();
   renderLibraryInsight();
   const blocks = filteredBlocks();
@@ -4752,6 +4809,22 @@ document.addEventListener("click", (event) => {
   if (kind) {
     activeKindFilter = kind.dataset.kindFilter;
     renderLibrary();
+  }
+
+  const curriculumFilter = event.target.closest("[data-library-curriculum-filter]");
+  if (curriculumFilter) {
+    const skill = curriculumFilter.dataset.libraryCurriculumFilter;
+    if (libraryCurriculumFilters.has(skill)) libraryCurriculumFilters.delete(skill);
+    else libraryCurriculumFilters.add(skill);
+    if (libraryCurriculumFilters.size) activeKindFilter = "practice";
+    renderLibrary();
+    return;
+  }
+
+  if (event.target.closest("[data-clear-library-curriculum]")) {
+    libraryCurriculumFilters.clear();
+    renderLibrary();
+    return;
   }
 
   const rhythmCategory = event.target.closest("[data-rhythm-category]");
