@@ -416,6 +416,14 @@ let rhythmBuilder = {
 let visibleFretboardNotes = new Set();
 let activeDiatonicKey = "C";
 const diatonicPracticeDrafts = new Map();
+let activePracticeTool = "";
+let scalePractice = {
+  key: "C",
+  type: "major",
+  signature: "none",
+  accidental: "natural",
+  notes: [],
+};
 const SCHEDULE_DAYS = [
   { key: "mon", label: "월" },
   { key: "tue", label: "화" },
@@ -838,7 +846,7 @@ const els = {
     schedule: $("#scheduleView"),
     chords: $("#chordsView"),
     rhythms: $("#rhythmsView"),
-    practiceTools: $("#practiceToolsView"),
+  practiceTools: $("#practiceToolsView"),
     share: $("#shareView"),
   },
   librarySearch: $("#librarySearch"),
@@ -879,6 +887,19 @@ const els = {
   diatonicStaffImage: $("#diatonicStaffImage"),
   diatonicPracticeBody: $("#diatonicPracticeBody"),
   clearDiatonicPractice: $("#clearDiatonicPractice"),
+  practiceToolPicker: $("#practiceToolPicker"),
+  practiceToolSavebar: $("#practiceToolSavebar"),
+  practiceToolStudent: $("#practiceToolStudent"),
+  practiceToolDate: $("#practiceToolDate"),
+  savePracticeToolResult: $("#savePracticeToolResult"),
+  scalePracticeKey: $("#scalePracticeKey"),
+  scalePracticeType: $("#scalePracticeType"),
+  scalePracticeSignature: $("#scalePracticeSignature"),
+  scaleAccidentalTabs: $("#scaleAccidentalTabs"),
+  scalePracticeProgress: $("#scalePracticeProgress"),
+  scaleStaffEditor: $("#scaleStaffEditor"),
+  undoScalePracticeNote: $("#undoScalePracticeNote"),
+  clearScalePractice: $("#clearScalePractice"),
   chordBuilderDialog: $("#chordBuilderDialog"),
   chordBuilderName: $("#chordBuilderName"),
   chordBuilderTones: $("#chordBuilderTones"),
@@ -1916,7 +1937,31 @@ function render() {
   renderRhythmDictionary();
   renderFretboardTrainer();
   renderDiatonicPractice();
+  renderPracticeToolWorkspace();
+  renderScalePractice();
   renderShare();
+}
+
+const PRACTICE_TOOL_INFO = {
+  fretboard: { label: "기타 지판 음 찾기", tag: "지판" },
+  diatonic: { label: "다이어토닉 코드 실습", tag: "다이어토닉" },
+  scale: { label: "스케일 그리기", tag: "스케일" },
+};
+
+function renderPracticeToolWorkspace() {
+  if (!els.practiceToolPicker) return;
+  els.practiceToolPicker.hidden = Boolean(activePracticeTool);
+  if (els.practiceToolSavebar) els.practiceToolSavebar.hidden = !activePracticeTool;
+  document.querySelectorAll("[data-practice-tool-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.practiceToolPanel !== activePracticeTool;
+  });
+  if (els.practiceToolStudent) {
+    const selected = els.practiceToolStudent.value || activeStudentId || state.students[0]?.id || "";
+    els.practiceToolStudent.innerHTML = state.students
+      .map((student) => `<option value="${escapeHTML(student.id)}" ${student.id === selected ? "selected" : ""}>${escapeHTML(student.name)}</option>`)
+      .join("");
+  }
+  if (els.practiceToolDate && !els.practiceToolDate.value) els.practiceToolDate.value = today();
 }
 
 function fretboardTrainerKey(stringIndex, fret) {
@@ -2055,6 +2100,180 @@ function renderDiatonicPractice() {
 function clearDiatonicPractice() {
   diatonicPracticeDrafts.delete(activeDiatonicKey);
   renderDiatonicPractice();
+}
+
+const SCALE_STAFF_STEPS = [
+  "C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5",
+  "D5", "E5", "F5", "G5", "A5", "B5", "C6", "D6",
+];
+
+function scaleSignatureOptions() {
+  return [
+    { value: "none", label: "없음" },
+    ...Array.from({ length: 7 }, (_, index) => ({ value: `sharp-${index + 1}`, label: `♯ ${index + 1}개` })),
+    ...Array.from({ length: 7 }, (_, index) => ({ value: `flat-${index + 1}`, label: `♭ ${index + 1}개` })),
+  ];
+}
+
+function scaleNoteLabel(note) {
+  if (!note) return "";
+  const base = SCALE_STAFF_STEPS[note.step] || "";
+  const letter = base.replace(/\d/g, "");
+  const mark = note.accidental === "sharp" ? "#" : note.accidental === "flat" ? "b" : "";
+  return `${letter}${mark}`;
+}
+
+function scaleSignatureMarks(signature) {
+  if (!signature || signature === "none") return [];
+  const [kind, countText] = signature.split("-");
+  const count = Math.max(0, Math.min(7, Number(countText || 0)));
+  const sharpSteps = [10, 7, 11, 8, 5, 9, 6];
+  const flatSteps = [6, 9, 5, 8, 4, 7, 3];
+  const steps = kind === "flat" ? flatSteps : sharpSteps;
+  return steps.slice(0, count).map((step, index) => ({
+    symbol: kind === "flat" ? "♭" : "♯",
+    step,
+    x: 126 + index * 15,
+  }));
+}
+
+function scaleStaffSvg({ interactive = true } = {}) {
+  const width = 1040;
+  const height = 330;
+  const staffLeft = 82;
+  const staffRight = 1000;
+  const noteStart = 260;
+  const noteGap = 92;
+  const stepY = (step) => 238 - step * 10;
+  const lines = Array.from({ length: 5 }, (_, index) => {
+    const y = stepY(2 + index * 2);
+    return `<line x1="${staffLeft}" y1="${y}" x2="${staffRight}" y2="${y}" stroke="#6f4a33" stroke-width="2" />`;
+  }).join("");
+  const signatures = scaleSignatureMarks(scalePractice.signature)
+    .map((mark) => `<text x="${mark.x}" y="${stepY(mark.step) + 9}" font-size="30" font-family="serif" fill="#3d2a1e">${mark.symbol}</text>`)
+    .join("");
+  const notes = scalePractice.notes
+    .map((note, index) => {
+      const x = noteStart + index * noteGap;
+      const y = stepY(note.step);
+      const accidental = note.accidental === "sharp" ? "♯" : note.accidental === "flat" ? "♭" : "";
+      const ledger = note.step < 2
+        ? `<line x1="${x - 21}" y1="${stepY(0)}" x2="${x + 21}" y2="${stepY(0)}" stroke="#6f4a33" stroke-width="2" />`
+        : note.step > 10
+          ? Array.from({ length: Math.floor((note.step - 10 + 1) / 2) }, (_, ledgerIndex) => {
+              const ledgerStep = 12 + ledgerIndex * 2;
+              return `<line x1="${x - 21}" y1="${stepY(ledgerStep)}" x2="${x + 21}" y2="${stepY(ledgerStep)}" stroke="#6f4a33" stroke-width="2" />`;
+            }).join("")
+          : "";
+      return `
+        ${ledger}
+        ${accidental ? `<text x="${x - 29}" y="${y + 9}" font-size="25" font-family="serif" fill="#2f241d">${accidental}</text>` : ""}
+        <ellipse cx="${x}" cy="${y}" rx="14" ry="10" fill="#fffaf4" stroke="#241a14" stroke-width="4" transform="rotate(-14 ${x} ${y})" />
+        <text x="${x}" y="286" text-anchor="middle" font-size="17" font-weight="800" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#765640">${escapeHTML(scaleNoteLabel(note))}</text>
+      `;
+    })
+    .join("");
+  const nextIndex = scalePractice.notes.length;
+  const candidates = interactive && nextIndex < 8
+    ? SCALE_STAFF_STEPS.map((_, step) => {
+        const x = noteStart + nextIndex * noteGap;
+        const y = stepY(step);
+        return `
+          <g class="scale-note-candidate">
+            <rect class="scale-note-hit" x="${x - 24}" y="${y - 4.5}" width="48" height="9" rx="4" data-scale-note-step="${step}" />
+            <ellipse class="scale-note-preview" cx="${x}" cy="${y}" rx="14" ry="10" transform="rotate(-14 ${x} ${y})" />
+          </g>
+        `;
+      }).join("")
+    : "";
+  const title = `${scalePractice.key} ${scalePractice.type === "major" ? "Major" : scalePractice.type === "harmonic-minor" ? "Harmonic Minor" : "Natural Minor"}`;
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHTML(title)} 스케일 오선지">
+      <rect width="100%" height="100%" rx="18" fill="#fffaf4" />
+      <text x="28" y="35" font-size="18" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#5a3927">${escapeHTML(title)}</text>
+      ${lines}
+      <text x="88" y="224" font-size="108" font-family="serif" fill="#302119">𝄞</text>
+      ${signatures}
+      ${notes}
+      ${candidates}
+      <line x1="${staffRight}" y1="${stepY(10)}" x2="${staffRight}" y2="${stepY(2)}" stroke="#6f4a33" stroke-width="2" />
+    </svg>
+  `;
+}
+
+function renderScalePractice() {
+  if (!els.scaleStaffEditor) return;
+  els.scalePracticeKey.innerHTML = NOTE_NAMES.map((note) => `<option value="${note}" ${scalePractice.key === note ? "selected" : ""}>${note}</option>`).join("");
+  els.scalePracticeType.value = scalePractice.type;
+  els.scalePracticeSignature.innerHTML = scaleSignatureOptions()
+    .map((option) => `<option value="${option.value}" ${scalePractice.signature === option.value ? "selected" : ""}>${option.label}</option>`)
+    .join("");
+  els.scaleAccidentalTabs.querySelectorAll("[data-scale-accidental]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.scaleAccidental === scalePractice.accidental);
+  });
+  els.scalePracticeProgress.textContent = `${scalePractice.notes.length} / 8`;
+  els.undoScalePracticeNote.disabled = !scalePractice.notes.length;
+  els.clearScalePractice.disabled = !scalePractice.notes.length;
+  els.scaleStaffEditor.innerHTML = scaleStaffSvg();
+}
+
+function scaleStaffDataUrl() {
+  const svg = scaleStaffSvg({ interactive: false });
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function practiceToolResultSummary(tool) {
+  if (tool === "fretboard") {
+    const positions = [...visibleFretboardNotes]
+      .map((key) => {
+        const [stringIndex, fret] = key.split(":").map(Number);
+        return `${GUITAR_STRINGS[stringIndex]?.label || "?"}번줄 ${fret ? `${fret}프렛` : "개방현"} ${noteAt(stringIndex, fret)}`;
+      })
+      .sort();
+    return positions.length ? `확인한 음: ${positions.join(", ")}` : "지판에서 아직 표시한 음이 없습니다.";
+  }
+  if (tool === "diatonic") {
+    const draft = currentDiatonicDraft();
+    const row = (label, values) => `${label}: ${values.map((value) => value || "-").join(" · ")}`;
+    return [`${activeDiatonicKey} Major`, row("음계", draft.scale), row("3화음", draft.triad), row("4화음", draft.seventh)].join("\n");
+  }
+  return `${scalePractice.key} ${scalePractice.type === "major" ? "Major" : scalePractice.type === "harmonic-minor" ? "Harmonic Minor" : "Natural Minor"}\n그린 음: ${scalePractice.notes.map(scaleNoteLabel).join(" - ") || "없음"}`;
+}
+
+function savePracticeToolResult() {
+  const tool = activePracticeTool;
+  const info = PRACTICE_TOOL_INFO[tool];
+  const student = state.students.find((item) => item.id === els.practiceToolStudent?.value);
+  const date = els.practiceToolDate?.value || today();
+  if (!info || !student) {
+    showToast("저장할 학생을 선택해주세요.");
+    return;
+  }
+  if (tool === "scale" && scalePractice.notes.length !== 8) {
+    showToast("스케일 음 8개를 모두 그려주세요.");
+    return;
+  }
+  const image = tool === "scale"
+    ? [{ name: `${scalePractice.key}-${scalePractice.type}-scale.svg`, data: scaleStaffDataUrl() }]
+    : [];
+  const block = {
+    id: uid("blk"),
+    kind: "blank",
+    title: `${formatDate(date)} ${student.name} - ${info.label}`,
+    summary: practiceToolResultSummary(tool),
+    tags: ["실습도구", info.tag],
+    studentId: student.id,
+    lessonDate: date,
+    chords: [],
+    rhythms: [],
+    scores: [],
+    resources: image,
+    updatedAt: nowIso(),
+  };
+  state.blocks = [block, ...state.blocks];
+  upsertLesson(student, date, [block.id]);
+  render();
+  saveStateInBackground({}, `${student.name}의 ${formatDate(date)} 일지에 ${info.label} 결과를 저장했습니다.`);
 }
 
 function meterBeatCount() {
@@ -4796,6 +5015,37 @@ document.addEventListener("click", (event) => {
   const nav = event.target.closest("[data-view]");
   if (nav) switchView(nav.dataset.view);
 
+  const openPracticeTool = event.target.closest("[data-open-practice-tool]");
+  if (openPracticeTool) {
+    activePracticeTool = openPracticeTool.dataset.openPracticeTool;
+    renderPracticeToolWorkspace();
+    if (activePracticeTool === "scale") renderScalePractice();
+    return;
+  }
+
+  if (event.target.closest("[data-close-practice-tool]")) {
+    activePracticeTool = "";
+    renderPracticeToolWorkspace();
+    return;
+  }
+
+  const scaleAccidental = event.target.closest("[data-scale-accidental]");
+  if (scaleAccidental) {
+    scalePractice.accidental = scaleAccidental.dataset.scaleAccidental;
+    renderScalePractice();
+    return;
+  }
+
+  const scaleNote = event.target.closest("[data-scale-note-step]");
+  if (scaleNote && scalePractice.notes.length < 8) {
+    scalePractice.notes.push({
+      step: Number(scaleNote.dataset.scaleNoteStep),
+      accidental: scalePractice.accidental,
+    });
+    renderScalePractice();
+    return;
+  }
+
   const fretboardNote = event.target.closest("[data-fretboard-note]");
   if (fretboardNote) {
     const key = fretboardNote.dataset.fretboardNote;
@@ -5366,6 +5616,27 @@ els.diatonicKey?.addEventListener("change", () => {
   renderDiatonicPractice();
 });
 els.clearDiatonicPractice?.addEventListener("click", clearDiatonicPractice);
+els.scalePracticeKey?.addEventListener("change", () => {
+  scalePractice.key = els.scalePracticeKey.value;
+  renderScalePractice();
+});
+els.scalePracticeType?.addEventListener("change", () => {
+  scalePractice.type = els.scalePracticeType.value;
+  renderScalePractice();
+});
+els.scalePracticeSignature?.addEventListener("change", () => {
+  scalePractice.signature = els.scalePracticeSignature.value;
+  renderScalePractice();
+});
+els.undoScalePracticeNote?.addEventListener("click", () => {
+  scalePractice.notes.pop();
+  renderScalePractice();
+});
+els.clearScalePractice?.addEventListener("click", () => {
+  scalePractice.notes = [];
+  renderScalePractice();
+});
+els.savePracticeToolResult?.addEventListener("click", savePracticeToolResult);
 els.clearRhythmBuilder?.addEventListener("click", () => {
   rhythmBuilder.cells = normalizeRhythmCells([], rhythmSlotCount(rhythmBuilder.meter, rhythmBuilder.unit, rhythmBuilder.bars));
   renderRhythmBuilder();

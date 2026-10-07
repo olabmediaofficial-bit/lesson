@@ -2441,6 +2441,79 @@ textarea {
   gap: 18px;
 }
 
+.practice-tool-picker[hidden],
+.practice-tool-savebar[hidden],
+[data-practice-tool-panel][hidden] {
+  display: none !important;
+}
+
+.practice-tool-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px;
+}
+
+.practice-tool-picker button {
+  display: grid;
+  min-height: 150px;
+  align-content: center;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid rgba(148, 101, 67, 0.3);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fffaf4;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 7px 7px 16px rgba(89, 55, 35, 0.09), -4px -4px 12px rgba(255, 255, 255, 0.85);
+}
+
+.practice-tool-picker button:hover {
+  border-color: rgba(148, 101, 67, 0.58);
+  background: #fbf0e4;
+  transform: translateY(-1px);
+}
+
+.practice-tool-picker span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.practice-tool-picker strong {
+  font-size: 19px;
+}
+
+.practice-tool-picker small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.practice-tool-savebar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #fbf0e4;
+}
+
+.practice-tool-savebar label {
+  display: grid;
+  min-width: 170px;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.practice-tool-savebar #savePracticeToolResult {
+  margin-left: auto;
+}
+
 .practice-tool-module {
   display: grid;
   gap: 18px;
@@ -2774,6 +2847,89 @@ textarea {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.scale-practice-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.scale-practice-controls label {
+  display: grid;
+  min-width: 116px;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.scale-note-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(181, 139, 105, 0.3);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.scale-note-toolbar > span {
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.scale-note-toolbar #scalePracticeProgress {
+  margin-left: auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f4e5d5;
+}
+
+.scale-staff-editor-wrap {
+  overflow-x: auto;
+  padding: 4px 0 8px;
+}
+
+.scale-staff-editor {
+  min-width: 820px;
+  border: 1px solid rgba(181, 139, 105, 0.32);
+  border-radius: 8px;
+  background: #fffaf4;
+  box-shadow: inset 2px 2px 8px rgba(117, 82, 55, 0.06);
+}
+
+.scale-staff-editor svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.scale-note-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.scale-note-preview {
+  fill: rgba(185, 130, 85, 0.2);
+  stroke: rgba(111, 67, 41, 0.45);
+  stroke-width: 2;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scale-note-candidate:hover .scale-note-preview,
+.scale-note-candidate:focus-within .scale-note-preview {
+  opacity: 1;
+}
+
+.scale-practice-help {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .rhythm-builder-dialog {
@@ -5008,6 +5164,23 @@ textarea,
   .curriculum-recommendations {
     grid-template-columns: 1fr;
   }
+
+  .practice-tool-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-tool-picker button {
+    min-height: 110px;
+  }
+
+  .practice-tool-savebar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .practice-tool-savebar #savePracticeToolResult {
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 640px) {
@@ -5027,6 +5200,23 @@ textarea,
 
   .practice-tool-actions {
     justify-content: flex-start;
+  }
+
+  .practice-tool-savebar,
+  .scale-note-toolbar,
+  .scale-practice-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .practice-tool-savebar label,
+  .scale-practice-controls label {
+    width: 100%;
+  }
+
+  .scale-note-toolbar #scalePracticeProgress {
+    margin-left: 0;
+    align-self: flex-start;
   }
 
   .diatonic-key-select {

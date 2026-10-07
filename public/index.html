@@ -345,10 +345,39 @@
               <div>
                 <p class="eyebrow">Interactive practice tools</p>
                 <h2>실습 도구</h2>
-                <p>기타 원리를 지판에서 직접 확인하고 익힙니다.</p>
+                <p>연습할 도구를 고르고, 수업 결과를 학생 일지에 남깁니다.</p>
               </div>
             </div>
-            <article class="practice-tool-module">
+            <div class="practice-tool-picker" id="practiceToolPicker">
+              <button type="button" data-open-practice-tool="fretboard">
+                <span>01</span>
+                <strong>기타 지판 음 찾기</strong>
+                <small>지판의 음을 직접 찾아봅니다.</small>
+              </button>
+              <button type="button" data-open-practice-tool="diatonic">
+                <span>02</span>
+                <strong>다이어토닉 코드 실습</strong>
+                <small>음계와 다이어토닉 코드를 채웁니다.</small>
+              </button>
+              <button type="button" data-open-practice-tool="scale">
+                <span>03</span>
+                <strong>스케일 그리기</strong>
+                <small>오선지에 스케일을 직접 그립니다.</small>
+              </button>
+            </div>
+            <div class="practice-tool-savebar" id="practiceToolSavebar" hidden>
+              <button class="secondary-button" type="button" data-close-practice-tool>← 도구 선택</button>
+              <label>
+                학생
+                <select id="practiceToolStudent" aria-label="실습 기록 학생 선택"></select>
+              </label>
+              <label>
+                날짜
+                <input id="practiceToolDate" type="date" aria-label="실습 기록 날짜" />
+              </label>
+              <button class="primary-button" id="savePracticeToolResult" type="button">학생 일지에 저장</button>
+            </div>
+            <article class="practice-tool-module" data-practice-tool-panel="fretboard" hidden>
               <div class="practice-tool-head">
                 <div>
                   <span class="practice-tool-number">01</span>
@@ -364,7 +393,7 @@
                 <div id="fretboardTrainer" class="fretboard-trainer" aria-label="개방현부터 5프렛까지 기타 지판 음 찾기"></div>
               </div>
             </article>
-            <article class="practice-tool-module diatonic-practice-module">
+            <article class="practice-tool-module diatonic-practice-module" data-practice-tool-panel="diatonic" hidden>
               <div class="practice-tool-head">
                 <div>
                   <span class="practice-tool-number">02</span>
@@ -402,6 +431,39 @@
               <div class="diatonic-actions">
                 <button class="secondary-button" id="clearDiatonicPractice" type="button">입력 지우기</button>
               </div>
+            </article>
+            <article class="practice-tool-module scale-practice-module" data-practice-tool-panel="scale" hidden>
+              <div class="practice-tool-head">
+                <div>
+                  <span class="practice-tool-number">03</span>
+                  <h3>스케일 그리기</h3>
+                  <p>조표와 임시표를 고른 뒤 오선지의 여덟 자리에 음을 직접 놓아보세요.</p>
+                </div>
+                <div class="scale-practice-controls">
+                  <label>Key<select id="scalePracticeKey" aria-label="스케일 키"></select></label>
+                  <label>종류<select id="scalePracticeType" aria-label="스케일 종류">
+                    <option value="major">Major</option>
+                    <option value="natural-minor">Natural Minor</option>
+                    <option value="harmonic-minor">Harmonic Minor</option>
+                  </select></label>
+                  <label>조표<select id="scalePracticeSignature" aria-label="조표 선택"></select></label>
+                </div>
+              </div>
+              <div class="scale-note-toolbar" aria-label="음표 임시표 선택">
+                <span>찍을 음</span>
+                <div class="segmented small-segmented" id="scaleAccidentalTabs">
+                  <button data-scale-accidental="flat" type="button">♭</button>
+                  <button class="active" data-scale-accidental="natural" type="button">♮</button>
+                  <button data-scale-accidental="sharp" type="button">♯</button>
+                </div>
+                <span id="scalePracticeProgress">0 / 8</span>
+                <button class="secondary-button mini-button" id="undoScalePracticeNote" type="button">되돌리기</button>
+                <button class="secondary-button mini-button" id="clearScalePractice" type="button">모두 지우기</button>
+              </div>
+              <div class="scale-staff-editor-wrap">
+                <div id="scaleStaffEditor" class="scale-staff-editor" aria-label="스케일 오선지 그리기"></div>
+              </div>
+              <p class="scale-practice-help">빈 자리에 마우스를 올리면 음표가 나타납니다. 아래부터 위로 반음이 아닌 오선의 줄과 칸을 고르고, ♭·♮·♯으로 음높이를 완성합니다.</p>
             </article>
           </section>
         </section>
