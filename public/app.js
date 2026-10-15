@@ -393,6 +393,11 @@ let imageViewer = {
   title: "",
 };
 let imageViewerStack = [];
+let imageMarkup = {
+  active: false,
+  tool: "pen",
+  drawing: null,
+};
 let metronome = {
   audioContext: null,
   timer: null,
@@ -969,6 +974,16 @@ const els = {
   imageViewerChords: $("#imageViewerChords"),
   imageViewerRhythm: $("#imageViewerRhythm"),
   imageViewerChordBuilder: $("#imageViewerChordBuilder"),
+  imageViewerMarkup: $("#imageViewerMarkup"),
+  imageMarkupToolbar: $("#imageMarkupToolbar"),
+  imageMarkupPen: $("#imageMarkupPen"),
+  imageMarkupText: $("#imageMarkupText"),
+  imageMarkupUndo: $("#imageMarkupUndo"),
+  imageMarkupClear: $("#imageMarkupClear"),
+  imageMarkupDone: $("#imageMarkupDone"),
+  imageMarkupCanvas: $("#imageMarkupCanvas"),
+  imageMarkupLayer: $("#imageMarkupLayer"),
+  imageMarkupTextLayer: $("#imageMarkupTextLayer"),
   imageViewerBack: $("#imageViewerBack"),
   imageViewerChordGrid: $("#imageViewerChordGrid"),
   imageViewerImage: $("#imageViewerImage"),
@@ -1050,6 +1065,7 @@ function migrateState(data) {
       lessons: student.lessons.map((lesson) => ({
         ...lesson,
         blockIds: lesson.blockIds || lesson.materialIds || [],
+        scoreMarkups: lesson.scoreMarkups && typeof lesson.scoreMarkups === "object" ? lesson.scoreMarkups : {},
         updatedAt: lesson.updatedAt || "",
       })),
     };
@@ -1344,7 +1360,7 @@ function renderResources(block, mode = "compact") {
   `;
 }
 
-function renderScoreResources(block, mode = "compact") {
+function renderScoreResources(block, mode = "compact", context = {}) {
   const scores = normalizeScores(block);
   if (!scores.length) return "";
 
@@ -1362,7 +1378,7 @@ function renderScoreResources(block, mode = "compact") {
             const viewerTitle = escapeHTML(block.title || resourceLabel(score));
             return `
               <figure class="score-preview">
-                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" data-view-image-block-id="${escapeHTML(block.id)}" data-view-image-score-index="${index}" aria-label="${viewerTitle} 크게 보기">
+                <button class="score-image-button" type="button" data-view-image="${href}" data-view-image-title="${viewerTitle}" data-view-image-block-id="${escapeHTML(block.id)}" data-view-image-score-index="${index}" ${context.studentId ? `data-view-image-student-id="${escapeHTML(context.studentId)}"` : ""} ${context.lessonId ? `data-view-image-lesson-id="${escapeHTML(context.lessonId)}"` : ""} aria-label="${viewerTitle} 크게 보기">
                   <img src="${href}" alt="${label}" loading="lazy" />
                 </button>
                 <figcaption>
@@ -1493,7 +1509,9 @@ function collectViewerImages(clickedButton) {
     src: button.dataset.viewImage,
     title: button.dataset.viewImageTitle || "악보 이미지",
     blockId: button.dataset.viewImageBlockId || "",
-    studentId: currentPracticeStudent()?.id || "",
+    studentId: button.dataset.viewImageStudentId || currentPracticeStudent()?.id || "",
+    lessonId: button.dataset.viewImageLessonId || "",
+    scoreIndex: Number(button.dataset.viewImageScoreIndex || 0),
     audioLink: getBlock(button.dataset.viewImageBlockId || "")?.audioLink || "",
   }));
   const index = Math.max(0, buttons.indexOf(clickedButton));
@@ -1506,6 +1524,8 @@ function collectViewerImages(clickedButton) {
             title: clickedButton.dataset.viewImageTitle || "악보 이미지",
             blockId: clickedButton.dataset.viewImageBlockId || "",
             studentId: currentPracticeStudent()?.id || "",
+            lessonId: clickedButton.dataset.viewImageLessonId || "",
+            scoreIndex: Number(clickedButton.dataset.viewImageScoreIndex || 0),
             audioLink: getBlock(clickedButton.dataset.viewImageBlockId || "")?.audioLink || "",
           },
         ],
@@ -1541,6 +1561,7 @@ function openImageViewerItems(items, index = 0, options = {}) {
 }
 
 function closeImageViewer() {
+  setImageMarkupActive(false);
   els.imageViewerDialog.close();
   els.imageViewerDialog.classList.remove("chord-only");
   els.imageViewerDialog.classList.remove("rhythm-only");
@@ -1596,6 +1617,7 @@ function updateImageViewer() {
   renderImageViewerMastery();
   renderImageViewerAudio();
   renderImageViewerResourceButtons();
+  renderImageMarkup();
   fitImageViewerToScreen();
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
@@ -1687,6 +1709,119 @@ function renderImageViewerResourceButtons() {
   if (els.imageViewerChords) els.imageViewerChords.hidden = !hasChords;
   if (els.imageViewerRhythm) els.imageViewerRhythm.hidden = !hasRhythm;
   if (els.imageViewerChordBuilder) els.imageViewerChordBuilder.hidden = publicShareMode || imageViewer.mode !== "score";
+  const markupContext = imageViewerMarkupContext();
+  if (els.imageViewerMarkup) els.imageViewerMarkup.hidden = publicShareMode || !markupContext;
+  if (!markupContext && imageMarkup.active) setImageMarkupActive(false);
+}
+
+function imageViewerMarkupContext() {
+  const item = imageViewer.items[imageViewer.index];
+  if (!item || imageViewer.mode !== "score" || !item.studentId || !item.lessonId || !item.blockId) return null;
+  const student = state.students.find((entry) => entry.id === item.studentId);
+  const lesson = student?.lessons.find((entry) => entry.id === item.lessonId);
+  if (!student || !lesson) return null;
+  const scoreIndex = Number.isInteger(Number(item.scoreIndex)) ? Number(item.scoreIndex) : 0;
+  return { item, student, lesson, blockId: item.blockId, scoreIndex };
+}
+
+function currentScoreMarkup(create = false) {
+  const context = imageViewerMarkupContext();
+  if (!context) return null;
+  const lesson = context.lesson;
+  if (!lesson.scoreMarkups || typeof lesson.scoreMarkups !== "object") {
+    if (!create) return { actions: [] };
+    lesson.scoreMarkups = {};
+  }
+  if (!lesson.scoreMarkups[context.blockId]) {
+    if (!create) return { actions: [] };
+    lesson.scoreMarkups[context.blockId] = {};
+  }
+  const key = String(context.scoreIndex);
+  if (!lesson.scoreMarkups[context.blockId][key]) {
+    if (!create) return { actions: [] };
+    lesson.scoreMarkups[context.blockId][key] = { actions: [] };
+  }
+  const markup = lesson.scoreMarkups[context.blockId][key];
+  if (!Array.isArray(markup.actions)) markup.actions = [];
+  return markup;
+}
+
+function setImageMarkupActive(active) {
+  imageMarkup.active = Boolean(active && imageViewerMarkupContext() && !publicShareMode);
+  imageMarkup.drawing = null;
+  if (els.imageMarkupToolbar) els.imageMarkupToolbar.hidden = !imageMarkup.active;
+  if (els.imageViewerMarkup) els.imageViewerMarkup.classList.toggle("active", imageMarkup.active);
+  if (els.imageMarkupCanvas) els.imageMarkupCanvas.classList.toggle("editing", imageMarkup.active);
+  renderImageMarkup();
+}
+
+function setImageMarkupTool(tool) {
+  imageMarkup.tool = tool === "text" ? "text" : "pen";
+  els.imageMarkupPen?.classList.toggle("active", imageMarkup.tool === "pen");
+  els.imageMarkupText?.classList.toggle("active", imageMarkup.tool === "text");
+  els.imageMarkupCanvas?.classList.toggle("text-tool", imageMarkup.tool === "text");
+}
+
+function renderImageMarkup() {
+  if (!els.imageMarkupLayer || !els.imageMarkupTextLayer) return;
+  const markup = currentScoreMarkup(false) || { actions: [] };
+  const strokes = markup.actions.filter((action) => action.type === "stroke" && Array.isArray(action.points));
+  const texts = markup.actions.filter((action) => action.type === "text" && action.text);
+  els.imageMarkupLayer.innerHTML = strokes
+    .map((stroke) => {
+      const points = stroke.points.map((point) => `${Number(point.x).toFixed(1)},${Number(point.y).toFixed(1)}`).join(" ");
+      return `<polyline points="${points}" fill="none" stroke="#d82f2f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>`;
+    })
+    .join("");
+  els.imageMarkupTextLayer.innerHTML = texts
+    .map((action) => `<div class="image-markup-text" style="left:${Math.max(0, Math.min(100, action.x))}%;top:${Math.max(0, Math.min(100, action.y))}%">${escapeHTML(action.text)}</div>`)
+    .join("");
+  els.imageMarkupCanvas?.classList.toggle("has-markup", markup.actions.length > 0);
+  if (els.imageMarkupToolbar) els.imageMarkupToolbar.hidden = !imageMarkup.active;
+}
+
+function markupPoint(event) {
+  const rect = els.imageMarkupCanvas.getBoundingClientRect();
+  return {
+    x: Math.max(0, Math.min(1000, ((event.clientX - rect.left) / rect.width) * 1000)),
+    y: Math.max(0, Math.min(1000, ((event.clientY - rect.top) / rect.height) * 1000)),
+  };
+}
+
+function saveImageMarkup(message = "필기를 저장했습니다.") {
+  const context = imageViewerMarkupContext();
+  if (!context) return;
+  context.lesson.updatedAt = nowIso();
+  saveStateInBackground({}, message);
+}
+
+function addImageMarkupText(event) {
+  const rect = els.imageMarkupCanvas.getBoundingClientRect();
+  const x = Math.max(0, Math.min(94, ((event.clientX - rect.left) / rect.width) * 100));
+  const y = Math.max(0, Math.min(94, ((event.clientY - rect.top) / rect.height) * 100));
+  const editor = document.createElement("textarea");
+  editor.className = "image-markup-text-editor";
+  editor.placeholder = "메모 입력";
+  editor.style.left = `${x}%`;
+  editor.style.top = `${y}%`;
+  els.imageMarkupTextLayer.append(editor);
+  editor.focus();
+  const finish = () => {
+    const text = editor.value.trim();
+    editor.remove();
+    if (!text) return;
+    currentScoreMarkup(true).actions.push({ type: "text", id: crypto.randomUUID?.() || `${Date.now()}`, x, y, text });
+    renderImageMarkup();
+    saveImageMarkup("텍스트 필기를 저장했습니다.");
+  };
+  editor.addEventListener("blur", finish, { once: true });
+  editor.addEventListener("keydown", (keyEvent) => {
+    if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key === "Enter") editor.blur();
+    if (keyEvent.key === "Escape") {
+      editor.value = "";
+      editor.blur();
+    }
+  });
 }
 
 function openImageViewerChords() {
@@ -1815,6 +1950,7 @@ function moveImageViewer(direction) {
   if (imageViewer.items.length < 2) return;
   imageViewer.index = (imageViewer.index + direction + imageViewer.items.length) % imageViewer.items.length;
   imageViewer.zoom = 1;
+  imageMarkup.drawing = null;
   updateImageViewer();
 }
 
@@ -1829,11 +1965,13 @@ function lessonRoomImageItems(student) {
         .filter((block) => block?.kind === "practice" && masteryLevel(student, block.id) < 4)
         .flatMap((block) =>
           normalizeScores(block)
-            .map((resource) => ({
+            .map((resource, scoreIndex) => ({
               src: resourceHref(resource),
               title: block.title || resourceLabel(resource),
               blockId: block.id,
               studentId: student.id,
+              lessonId: lesson.id,
+              scoreIndex,
               audioLink: block.audioLink || "",
               lessonDate: lesson.date,
               mastery: masteryLevel(student, block.id),
@@ -1862,12 +2000,16 @@ function openRandomPracticeScore() {
 function openPracticeScoreByBlock(blockId) {
   const block = getBlock(blockId);
   if (!block) return;
+  const student = currentPracticeStudent();
+  const lesson = [...(student?.lessons || [])].sort((a, b) => b.date.localeCompare(a.date)).find((entry) => entry.blockIds.includes(block.id));
   const items = normalizeScores(block)
-    .map((resource) => ({
+    .map((resource, scoreIndex) => ({
       src: resourceHref(resource),
       title: block.title || resourceLabel(resource),
       blockId: block.id,
-      studentId: currentPracticeStudent()?.id || "",
+      studentId: student?.id || "",
+      lessonId: lesson?.id || "",
+      scoreIndex,
       audioLink: block.audioLink || "",
     }))
     .filter((item) => item.src);
@@ -4812,7 +4954,7 @@ function renderLessonBlock(block, options = {}) {
       ${renderPracticeMeta(block)}
       <p>${escapeHTML(block.summary)}</p>
       ${renderPracticeDetails(block)}
-      ${renderScoreResources(block, "expanded")}
+      ${renderScoreResources(block, "expanded", { studentId: student?.id || "", lessonId })}
       ${renderResources(block, "expanded")}
     </div>
   `;
@@ -5758,12 +5900,63 @@ els.imageViewerRhythm.addEventListener("click", (event) => {
   openImageViewerRhythm();
 });
 els.imageViewerChordBuilder.addEventListener("click", () => openChordBuilder({ studentId: imageViewerStudentId() }));
+els.imageViewerMarkup.addEventListener("click", () => setImageMarkupActive(!imageMarkup.active));
+els.imageMarkupPen.addEventListener("click", () => setImageMarkupTool("pen"));
+els.imageMarkupText.addEventListener("click", () => setImageMarkupTool("text"));
+els.imageMarkupDone.addEventListener("click", () => setImageMarkupActive(false));
+els.imageMarkupUndo.addEventListener("click", () => {
+  const markup = currentScoreMarkup(true);
+  if (!markup.actions.length) return;
+  markup.actions.pop();
+  renderImageMarkup();
+  saveImageMarkup("마지막 필기를 취소했습니다.");
+});
+els.imageMarkupClear.addEventListener("click", () => {
+  const markup = currentScoreMarkup(true);
+  if (!markup.actions.length || !window.confirm("이 악보의 필기를 모두 지울까요?")) return;
+  markup.actions = [];
+  renderImageMarkup();
+  saveImageMarkup("악보 필기를 모두 지웠습니다.");
+});
+els.imageMarkupCanvas.addEventListener("pointerdown", (event) => {
+  if (!imageMarkup.active || event.button > 0) return;
+  if (event.target.closest?.(".image-markup-text-editor")) return;
+  event.preventDefault();
+  if (imageMarkup.tool === "text") {
+    addImageMarkupText(event);
+    return;
+  }
+  els.imageMarkupCanvas.setPointerCapture(event.pointerId);
+  imageMarkup.drawing = { type: "stroke", points: [markupPoint(event)] };
+  currentScoreMarkup(true).actions.push(imageMarkup.drawing);
+  renderImageMarkup();
+});
+els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
+  if (!imageMarkup.active || !imageMarkup.drawing) return;
+  event.preventDefault();
+  const point = markupPoint(event);
+  const previous = imageMarkup.drawing.points[imageMarkup.drawing.points.length - 1];
+  if (Math.hypot(point.x - previous.x, point.y - previous.y) < 2) return;
+  imageMarkup.drawing.points.push(point);
+  renderImageMarkup();
+});
+const finishImageMarkupStroke = (event) => {
+  if (!imageMarkup.drawing) return;
+  if (els.imageMarkupCanvas.hasPointerCapture?.(event.pointerId)) els.imageMarkupCanvas.releasePointerCapture(event.pointerId);
+  imageMarkup.drawing = null;
+  saveImageMarkup("펜 필기를 저장했습니다.");
+};
+els.imageMarkupCanvas.addEventListener("pointerup", finishImageMarkupStroke);
+els.imageMarkupCanvas.addEventListener("pointercancel", finishImageMarkupStroke);
 
-els.imageViewerImage.addEventListener("load", fitImageViewerToScreen);
+els.imageViewerImage.addEventListener("load", () => {
+  fitImageViewerToScreen();
+  renderImageMarkup();
+});
 els.imageViewerDialog.addEventListener(
   "wheel",
   (event) => {
-    if (!els.imageViewerDialog.open || !event.ctrlKey) return;
+    if (!els.imageViewerDialog.open || imageMarkup.active || !event.ctrlKey) return;
     const delta = event.deltaY < 0 ? 0.08 : -0.08;
     zoomImageViewerFromPointer(event, delta);
   },
@@ -5772,7 +5965,7 @@ els.imageViewerDialog.addEventListener(
 els.imageViewerDialog.addEventListener(
   "gesturestart",
   (event) => {
-    if (!els.imageViewerDialog.open) return;
+    if (!els.imageViewerDialog.open || imageMarkup.active) return;
     event.preventDefault();
     imageViewer.gestureScale = event.scale || 1;
   },
@@ -5781,7 +5974,7 @@ els.imageViewerDialog.addEventListener(
 els.imageViewerDialog.addEventListener(
   "gesturechange",
   (event) => {
-    if (!els.imageViewerDialog.open) return;
+    if (!els.imageViewerDialog.open || imageMarkup.active) return;
     event.preventDefault();
     const nextScale = event.scale || 1;
     const delta = nextScale - imageViewer.gestureScale;

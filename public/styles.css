@@ -3601,7 +3601,7 @@ dialog::backdrop {
   display: grid;
   height: calc(100vh - 24px);
   max-height: calc(100vh - 24px);
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
 .image-viewer-dialog.chord-only .image-viewer {
@@ -3973,6 +3973,53 @@ dialog::backdrop {
   background: #171717;
 }
 
+.image-markup-toolbar {
+  position: relative;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 8px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  background: #24211f;
+}
+
+.image-markup-toolbar[hidden] {
+  display: none !important;
+}
+
+.image-markup-toolbar button {
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 7px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.image-markup-toolbar button.active {
+  border-color: #ff8a82;
+  background: #c93636;
+}
+
+.image-markup-toolbar .primary-button {
+  margin-left: auto;
+  border-color: #fff;
+  background: #fff;
+  color: #35251c;
+}
+
+.image-markup-toolbar span {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .image-viewer-dialog.chord-only .image-viewer-stage {
   background: #fff8f0;
 }
@@ -3989,6 +4036,76 @@ dialog::backdrop {
   padding: 14px 58px;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
+}
+
+.image-markup-canvas {
+  position: relative;
+  width: max-content;
+  margin: auto;
+  line-height: 0;
+}
+
+.image-markup-canvas > img {
+  margin: 0;
+}
+
+.image-markup-canvas > svg,
+.image-markup-text-layer {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.image-markup-canvas.editing {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.image-markup-canvas.editing.text-tool {
+  cursor: text;
+}
+
+.image-markup-canvas.editing > svg,
+.image-markup-canvas.editing .image-markup-text-layer {
+  pointer-events: none;
+}
+
+.image-markup-text {
+  position: absolute;
+  max-width: 46%;
+  padding: 3px 5px;
+  border: 1px solid rgba(216, 47, 47, 0.28);
+  border-radius: 3px;
+  color: #c51f28;
+  background: rgba(255, 255, 255, 0.84);
+  font-size: clamp(11px, 1.6vw, 20px);
+  font-weight: 900;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  transform: translateY(-10%);
+}
+
+.image-markup-text-editor {
+  position: absolute;
+  z-index: 5;
+  width: min(240px, 42%);
+  min-height: 64px;
+  padding: 7px;
+  border: 2px solid #d82f2f;
+  border-radius: 5px;
+  outline: none;
+  color: #b51e25;
+  background: rgba(255, 255, 255, 0.96);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  resize: both;
+  pointer-events: auto;
 }
 
 .image-viewer-scroll[hidden] {
@@ -4074,6 +4191,27 @@ dialog::backdrop {
   box-shadow:
     8px 8px 18px rgba(68, 43, 29, 0.16),
     -6px -6px 16px rgba(255, 252, 247, 0.9);
+}
+
+.image-viewer-dialog.chord-only .image-markup-canvas {
+  width: auto;
+}
+
+@media (max-width: 760px) {
+  .image-markup-toolbar {
+    gap: 5px;
+    padding: 6px 8px;
+  }
+
+  .image-markup-toolbar button {
+    min-height: 30px;
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+
+  .image-markup-toolbar span {
+    display: none;
+  }
 }
 
 .image-viewer-dialog.rhythm-only {
