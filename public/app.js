@@ -3354,6 +3354,50 @@ function playRhythmClick(cell) {
   oscillator.stop(now + 0.12);
 }
 
+function playRhythmMetronomeClick(isDownbeat, delaySeconds = 0) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+  if (!rhythmPlayback.audioContext) rhythmPlayback.audioContext = new AudioContextClass();
+  const context = rhythmPlayback.audioContext;
+  if (context.state === "suspended") context.resume();
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  const now = context.currentTime + Math.max(0, delaySeconds);
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(isDownbeat ? 1320 : 880, now);
+  gain.gain.setValueAtTime(isDownbeat ? 0.22 : 0.14, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.06);
+}
+
+function rhythmPlaybackBeatInfo(index) {
+  const [beats, denominator] = String(rhythmBuilder.meter || "4/4").split("/").map(Number);
+  const safeBeats = Number.isFinite(beats) && beats > 0 ? beats : 4;
+  const safeDenominator = Number.isFinite(denominator) && denominator > 0 ? denominator : 4;
+  const subdivisionsPerBeat = rhythmBuilder.unit / safeDenominator;
+  if (subdivisionsPerBeat < 1) {
+    const beatsPerSlot = Math.max(1, Math.round(1 / subdivisionsPerBeat));
+    const beatAtSlot = index * beatsPerSlot;
+    return {
+      clicks: Array.from({ length: beatsPerSlot }, (_, offset) => ({
+        isDownbeat: (beatAtSlot + offset) % safeBeats === 0,
+        offsetRatio: offset / beatsPerSlot,
+      })),
+      denominator: safeDenominator,
+    };
+  }
+  const safeSubdivisions = Math.max(1, Math.round(subdivisionsPerBeat));
+  const slotsPerBar = safeBeats * safeSubdivisions;
+  const indexInBar = index % slotsPerBar;
+  return {
+    clicks: indexInBar % safeSubdivisions === 0 ? [{ isDownbeat: indexInBar === 0, offsetRatio: 0 }] : [],
+    denominator: safeDenominator,
+  };
+}
+
 function highlightRhythmPlaybackSlot(index = -1) {
   els.rhythmBuilderBoard?.querySelectorAll("[data-rhythm-slot]").forEach((element) => {
     element.classList.toggle("is-playing", Number(element.dataset.rhythmSlot) === index);
@@ -3364,11 +3408,12 @@ function rhythmPlaybackStep() {
   if (!rhythmPlayback.playing || !rhythmBuilder.cells.length) return;
   const index = rhythmPlayback.index % rhythmBuilder.cells.length;
   const cell = rhythmBuilder.cells[index];
+  const beat = rhythmPlaybackBeatInfo(index);
+  const slotMs = (60000 / rhythmPlaybackTempo()) * (beat.denominator / rhythmBuilder.unit);
   highlightRhythmPlaybackSlot(index);
+  beat.clicks.forEach((click) => playRhythmMetronomeClick(click.isDownbeat, (slotMs / 1000) * click.offsetRatio));
   if (rhythmCellSounds(cell)) playRhythmClick(cell);
   rhythmPlayback.index = (index + 1) % rhythmBuilder.cells.length;
-  const denominator = Number(String(rhythmBuilder.meter || "4/4").split("/")[1]) || 4;
-  const slotMs = (60000 / rhythmPlaybackTempo()) * (denominator / rhythmBuilder.unit);
   rhythmPlayback.timer = window.setTimeout(rhythmPlaybackStep, slotMs);
 }
 
