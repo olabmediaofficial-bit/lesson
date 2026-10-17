@@ -844,6 +844,18 @@
             </select>
           </label>
         </div>
+        <div class="rhythm-playback-bar" aria-label="그린 리듬 들어보기">
+          <div>
+            <strong>리듬 들어보기</strong>
+            <span>O 표시가 있는 박자만 소리가 납니다.</span>
+          </div>
+          <label>
+            템포
+            <input id="rhythmPlaybackTempo" type="number" inputmode="numeric" min="40" max="220" step="1" value="90" />
+          </label>
+          <input id="rhythmPlaybackTempoRange" type="range" min="40" max="220" step="1" value="90" aria-label="리듬 재생 템포" />
+          <button class="primary-button" id="toggleRhythmPlayback" type="button">재생</button>
+        </div>
         <div id="rhythmBuilderBoard" class="rhythm-builder-board" aria-label="리듬 그리기 보드"></div>
         <menu>
           <button class="secondary-button" id="clearRhythmBuilder" type="button">지우기</button>

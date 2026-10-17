@@ -2953,6 +2953,62 @@ textarea {
   gap: 12px;
 }
 
+.rhythm-playback-bar {
+  display: grid;
+  grid-template-columns: minmax(190px, auto) auto minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid rgba(198, 170, 143, 0.72);
+  border-radius: 8px;
+  background: #fffaf4;
+  box-shadow:
+    4px 4px 12px rgba(91, 62, 43, 0.08),
+    -4px -4px 12px rgba(255, 255, 255, 0.82);
+}
+
+.rhythm-playback-bar > div {
+  display: grid;
+  gap: 2px;
+}
+
+.rhythm-playback-bar strong {
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
+.rhythm-playback-bar span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rhythm-playback-bar label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rhythm-playback-bar input[type="number"] {
+  width: 72px;
+  min-height: 36px;
+  padding: 5px 8px;
+  text-align: center;
+}
+
+.rhythm-playback-bar input[type="range"] {
+  width: 100%;
+  min-width: 120px;
+  accent-color: var(--accent);
+}
+
+.rhythm-playback-bar .primary-button {
+  min-width: 70px;
+}
+
 .rhythm-builder-board {
   display: grid;
   gap: 6px;
@@ -3039,6 +3095,16 @@ textarea {
   border-color: #7b4529;
   color: #fff;
   background: #7b4529;
+}
+
+.rhythm-overlay-hit.is-playing,
+.rhythm-overlay-fingers.is-playing {
+  filter: drop-shadow(0 0 6px rgba(191, 112, 57, 0.82));
+}
+
+.rhythm-overlay-hit.is-playing {
+  outline: 3px solid rgba(191, 112, 57, 0.45);
+  background: rgba(231, 180, 132, 0.22);
 }
 
 .rhythm-overlay-fingers .rhythm-finger-mute {
@@ -5483,6 +5549,15 @@ textarea,
   .rhythm-grid,
   .rhythm-builder-fields {
     grid-template-columns: 1fr;
+  }
+
+  .rhythm-playback-bar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .rhythm-playback-bar input[type="range"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   #rhythmBuilderDialog {

@@ -418,6 +418,13 @@ let rhythmBuilder = {
   bars: 1,
   cells: [],
 };
+let rhythmPlayback = {
+  audioContext: null,
+  timer: null,
+  playing: false,
+  index: 0,
+  tempo: 90,
+};
 let visibleFretboardNotes = new Set();
 let activeDiatonicKey = "C";
 const diatonicPracticeDrafts = new Map();
@@ -883,6 +890,9 @@ const els = {
   rhythmBuilderUnit: $("#rhythmBuilderUnit"),
   rhythmBuilderBars: $("#rhythmBuilderBars"),
   rhythmBuilderBoard: $("#rhythmBuilderBoard"),
+  rhythmPlaybackTempo: $("#rhythmPlaybackTempo"),
+  rhythmPlaybackTempoRange: $("#rhythmPlaybackTempoRange"),
+  toggleRhythmPlayback: $("#toggleRhythmPlayback"),
   clearRhythmBuilder: $("#clearRhythmBuilder"),
   fretboardTrainer: $("#fretboardTrainer"),
   revealFretboardNotes: $("#revealFretboardNotes"),
@@ -3204,6 +3214,7 @@ function renderRhythmBuilderCategorySelect() {
 }
 
 function openRhythmBuilder(options = {}) {
+  stopRhythmPlayback();
   const editRhythm = options.editRhythm ? normalizeCustomRhythm(options.editRhythm) : null;
   rhythmBuilder = {
     id: editRhythm?.id || "",
@@ -3225,6 +3236,7 @@ function openRhythmBuilder(options = {}) {
   els.rhythmBuilderBars.value = String(rhythmBuilder.bars);
   renderRhythmBuilderCategorySelect();
   renderRhythmBuilder();
+  syncRhythmPlaybackControls();
   els.rhythmBuilderDialog.showModal();
 }
 
@@ -3266,7 +3278,7 @@ function renderRhythmBuilder() {
           const strokeY = (arrowY / height) * 100;
           const accentTop = (accentY / height) * 100;
           return isFinger ? `
-            <div class="rhythm-overlay-fingers" style="left:${x}%; top:${markY}%;" aria-label="${index + 1}번째 핑거링">
+            <div class="rhythm-overlay-fingers" data-rhythm-slot="${index}" style="left:${x}%; top:${markY}%;" aria-label="${index + 1}번째 핑거링">
               ${[1, 2, 3, 4].map((finger) => `
                 <button class="${cell.fingers?.includes(finger) ? "active" : ""}" type="button"
                   data-rhythm-finger="${index}:${finger}" aria-pressed="${cell.fingers?.includes(finger) ? "true" : "false"}">${finger}</button>
@@ -3288,6 +3300,7 @@ function renderRhythmBuilder() {
               type="button"
               style="left:${x}%; top:${markY}%;"
               data-rhythm-hit="${index}"
+              data-rhythm-slot="${index}"
               aria-label="${index + 1}번째 O 또는 대시 바꾸기"
             ></button>
             <button
@@ -3304,7 +3317,86 @@ function renderRhythmBuilder() {
   `;
 }
 
+function rhythmPlaybackTempo() {
+  const value = Number(els.rhythmPlaybackTempo?.value || rhythmPlayback.tempo || 90);
+  return Math.min(220, Math.max(40, Number.isFinite(value) ? value : 90));
+}
+
+function syncRhythmPlaybackControls(value = rhythmPlayback.tempo) {
+  rhythmPlayback.tempo = Math.min(220, Math.max(40, Number(value) || 90));
+  if (els.rhythmPlaybackTempo) els.rhythmPlaybackTempo.value = String(rhythmPlayback.tempo);
+  if (els.rhythmPlaybackTempoRange) els.rhythmPlaybackTempoRange.value = String(rhythmPlayback.tempo);
+  if (els.toggleRhythmPlayback) els.toggleRhythmPlayback.textContent = rhythmPlayback.playing ? "정지" : "재생";
+}
+
+function rhythmCellSounds(cell) {
+  if (rhythmBuilder.category === "finger") return Boolean(cell?.mute || cell?.fingers?.length);
+  return cell?.hit === "circle";
+}
+
+function playRhythmClick(cell) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return;
+  if (!rhythmPlayback.audioContext) rhythmPlayback.audioContext = new AudioContextClass();
+  const context = rhythmPlayback.audioContext;
+  if (context.state === "suspended") context.resume();
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  const now = context.currentTime;
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(cell?.accent ? 760 : 520, now);
+  oscillator.frequency.exponentialRampToValueAtTime(cell?.accent ? 470 : 320, now + 0.07);
+  gain.gain.setValueAtTime(cell?.accent ? 0.34 : 0.22, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.12);
+}
+
+function highlightRhythmPlaybackSlot(index = -1) {
+  els.rhythmBuilderBoard?.querySelectorAll("[data-rhythm-slot]").forEach((element) => {
+    element.classList.toggle("is-playing", Number(element.dataset.rhythmSlot) === index);
+  });
+}
+
+function rhythmPlaybackStep() {
+  if (!rhythmPlayback.playing || !rhythmBuilder.cells.length) return;
+  const index = rhythmPlayback.index % rhythmBuilder.cells.length;
+  const cell = rhythmBuilder.cells[index];
+  highlightRhythmPlaybackSlot(index);
+  if (rhythmCellSounds(cell)) playRhythmClick(cell);
+  rhythmPlayback.index = (index + 1) % rhythmBuilder.cells.length;
+  const denominator = Number(String(rhythmBuilder.meter || "4/4").split("/")[1]) || 4;
+  const slotMs = (60000 / rhythmPlaybackTempo()) * (denominator / rhythmBuilder.unit);
+  rhythmPlayback.timer = window.setTimeout(rhythmPlaybackStep, slotMs);
+}
+
+function startRhythmPlayback() {
+  if (!rhythmBuilder.cells.length) return;
+  rhythmPlayback.tempo = rhythmPlaybackTempo();
+  rhythmPlayback.playing = true;
+  rhythmPlayback.index = 0;
+  syncRhythmPlaybackControls();
+  rhythmPlaybackStep();
+}
+
+function stopRhythmPlayback() {
+  rhythmPlayback.playing = false;
+  rhythmPlayback.index = 0;
+  window.clearTimeout(rhythmPlayback.timer);
+  rhythmPlayback.timer = null;
+  highlightRhythmPlaybackSlot(-1);
+  syncRhythmPlaybackControls();
+}
+
+function toggleRhythmPlayback() {
+  if (rhythmPlayback.playing) stopRhythmPlayback();
+  else startRhythmPlayback();
+}
+
 function syncRhythmBuilderOptions() {
+  stopRhythmPlayback();
   rhythmBuilder.meter = els.rhythmBuilderMeter.value;
   rhythmBuilder.unit = Number(els.rhythmBuilderUnit.value);
   rhythmBuilder.bars = Number(els.rhythmBuilderBars.value) === 2 ? 2 : 1;
@@ -5751,6 +5843,13 @@ els.rhythmBuilderCategory?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderMeter?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderUnit?.addEventListener("change", syncRhythmBuilderOptions);
 els.rhythmBuilderBars?.addEventListener("change", syncRhythmBuilderOptions);
+els.toggleRhythmPlayback?.addEventListener("click", toggleRhythmPlayback);
+els.rhythmPlaybackTempo?.addEventListener("input", () => {
+  syncRhythmPlaybackControls(els.rhythmPlaybackTempo.value);
+});
+els.rhythmPlaybackTempoRange?.addEventListener("input", () => {
+  syncRhythmPlaybackControls(els.rhythmPlaybackTempoRange.value);
+});
 els.revealFretboardNotes?.addEventListener("click", () => setAllFretboardNotes(true));
 els.clearFretboardNotes?.addEventListener("click", () => setAllFretboardNotes(false));
 els.diatonicKey?.addEventListener("change", () => {
@@ -5814,6 +5913,7 @@ els.rhythmBuilderDialog?.addEventListener("submit", (event) => {
   saveCustomRhythmFromBuilder();
 });
 els.rhythmBuilderDialog?.addEventListener("close", () => {
+  stopRhythmPlayback();
   const context = rhythmBuilder.viewerContext;
   rhythmBuilder.viewerContext = null;
   restoreCapturedImageViewer(context);
