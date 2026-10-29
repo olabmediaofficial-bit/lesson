@@ -453,6 +453,7 @@ let selectedCurriculumSkills = new Set();
 let libraryCurriculumFilters = new Set();
 let editingCurriculumSkills = new Set();
 let activeBlockCurriculumArea = "left";
+let activeProgressCurriculumArea = "left";
 let blockCurriculumSearch = "";
 let bulkCurriculumSearch = "";
 let selectedChordNames = [];
@@ -1165,6 +1166,27 @@ function normalizeCurriculum(curriculum = {}) {
   return result;
 }
 
+function studentManualCurriculum(student) {
+  if (!student) return emptyCurriculum();
+  student.manualCurriculum = normalizeCurriculum(student.manualCurriculum);
+  return student.manualCurriculum;
+}
+
+function studentManualCurriculumSet(student) {
+  const curriculum = studentManualCurriculum(student);
+  return new Set(CURRICULUM_AREAS.flatMap((area) => curriculum[area.key] || []));
+}
+
+function setStudentManualCurriculum(student, skillId, checked) {
+  const area = CURRICULUM_AREAS.find((entry) => entry.skills.some((item) => item.id === skillId));
+  if (!student || !area) return false;
+  const curriculum = studentManualCurriculum(student);
+  if (checked && !curriculum[area.key].includes(skillId)) curriculum[area.key].push(skillId);
+  if (!checked) curriculum[area.key] = curriculum[area.key].filter((id) => id !== skillId);
+  student.updatedAt = nowIso();
+  return true;
+}
+
 function migrateBlockCurriculum(block) {
   if (Number(block.curriculumVersion) >= 2) return normalizeCurriculum(block.curriculum);
   const result = emptyCurriculum();
@@ -1240,6 +1262,7 @@ function migrateState(data) {
     return {
       ...student,
       practiceProgress,
+      manualCurriculum: normalizeCurriculum(student.manualCurriculum),
       lessons: student.lessons.map((lesson) => ({
         ...lesson,
         blockIds: lesson.blockIds || lesson.materialIds || [],
@@ -4375,6 +4398,78 @@ function renderRooms() {
   renderLessonList(student);
 }
 
+function studentAutomaticCurriculum(student) {
+  const blocksBySkill = new Map(allCurriculumSkills().map((item) => [item.id, []]));
+  uniqueLessonBlocks(student).forEach((block) => {
+    blockSkillSet(block).forEach((skillId) => {
+      if (!blocksBySkill.has(skillId)) blocksBySkill.set(skillId, []);
+      blocksBySkill.get(skillId).push(block);
+    });
+  });
+  return blocksBySkill;
+}
+
+function renderStudentCurriculumChecklist(student) {
+  const manual = studentManualCurriculumSet(student);
+  const automatic = studentAutomaticCurriculum(student);
+  const activeArea = CURRICULUM_AREAS.find((area) => area.key === activeProgressCurriculumArea) || CURRICULUM_AREAS[0];
+  const manualTotal = manual.size;
+  const automaticTotal = [...automatic.values()].filter((blocks) => blocks.length).length;
+  return `
+    <section class="student-curriculum-panel">
+      <div class="student-curriculum-head">
+        <div>
+          <strong>학습 항목 점검</strong>
+          <span>직접 확인한 진도와 수업 블럭을 통해 학습한 기록을 함께 봅니다.</span>
+        </div>
+        <div class="student-curriculum-totals">
+          <span class="manual"><b>${manualTotal}</b> 직접 확인</span>
+          <span class="automatic"><b>${automaticTotal}</b> 블럭 학습</span>
+        </div>
+      </div>
+      <div class="student-curriculum-legend">
+        <span class="manual">✓ 직접 확인</span>
+        <span class="automatic">● 블럭에서 학습</span>
+      </div>
+      <div class="curriculum-area-tabs student-progress-tabs">
+        ${CURRICULUM_AREAS.map((area) => {
+          const manualCount = area.skills.filter((item) => manual.has(item.id)).length;
+          const automaticCount = area.skills.filter((item) => automatic.get(item.id)?.length).length;
+          return `<button class="${area.key === activeArea.key ? "active" : ""}" type="button" data-progress-curriculum-area="${area.key}"><span>${area.label}</span><b>${manualCount} / ${automaticCount}</b></button>`;
+        }).join("")}
+      </div>
+      <div class="student-curriculum-area-head">
+        <div><strong>${activeArea.label}</strong><span>${activeArea.description}</span></div>
+        <small>직접 확인 / 블럭 학습</small>
+      </div>
+      <div class="student-curriculum-groups">
+        ${activeArea.groups.map((item, index) => {
+          const hasProgress = item.skills.some((entry) => manual.has(entry.id) || automatic.get(entry.id)?.length);
+          return `
+            <details ${index === 0 || hasProgress ? "open" : ""}>
+              <summary>${escapeHTML(item.label)}<span>${item.skills.filter((entry) => manual.has(entry.id)).length} / ${item.skills.filter((entry) => automatic.get(entry.id)?.length).length}</span></summary>
+              <div class="student-curriculum-list">
+                ${item.skills.map((entry) => {
+                  const blocks = automatic.get(entry.id) || [];
+                  const checked = manual.has(entry.id);
+                  return `
+                    <label class="student-curriculum-row ${checked ? "manual-checked" : ""} ${blocks.length ? "auto-learned" : ""}">
+                      <input type="checkbox" data-student-manual-curriculum="${escapeHTML(entry.id)}" ${checked ? "checked" : ""} />
+                      <span>${escapeHTML(entry.label)}</span>
+                      <em class="manual-status">${checked ? "직접 확인" : "미확인"}</em>
+                      <em class="automatic-status" title="${escapeHTML(blocks.map((block) => block.title).join(", "))}">${blocks.length ? `블럭 ${blocks.length}개` : "기록 없음"}</em>
+                    </label>
+                  `;
+                }).join("")}
+              </div>
+            </details>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderProgress() {
   const student = getActiveStudent() || state.students[0];
   if (!student) {
@@ -4391,12 +4486,22 @@ function renderProgress() {
   const completedBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) === 4);
   const inProgressBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) < 4);
   const analysis = analyzeCurriculumBlocks(lessonBlocks, { student, weighted: true });
+  const manualCount = studentManualCurriculumSet(student).size;
+  const automaticCount = [...studentAutomaticCurriculum(student).values()].filter((blocks) => blocks.length).length;
 
   els.progressContent.innerHTML = `
     <div class="progress-summary-grid">
       <div class="progress-stat-card">
         <strong>${practiceBlocks.length}</strong>
         <span>누적 실습곡</span>
+      </div>
+      <div class="progress-stat-card">
+        <strong>${manualCount}</strong>
+        <span>직접 확인한 항목</span>
+      </div>
+      <div class="progress-stat-card">
+        <strong>${automaticCount}</strong>
+        <span>블럭에서 배운 항목</span>
       </div>
       <div class="progress-stat-card">
         <strong>${completedBlocks.length}</strong>
@@ -4407,10 +4512,11 @@ function renderProgress() {
         <span>점검할 곡</span>
       </div>
     </div>
+    ${renderStudentCurriculumChecklist(student)}
     <div class="curriculum-map-head">
       <div>
-        <strong>반주력 지도</strong>
-        <span>수업 블럭의 학습 항목과 실습곡 연습 정도를 함께 반영합니다.</span>
+        <strong>블럭 기반 누적 경험</strong>
+        <span>수업 블럭의 학습 항목과 실습곡 연습 정도를 가중치로 반영합니다.</span>
       </div>
     </div>
     ${renderCurriculumMap(analysis, { mode: "student" })}
@@ -5513,6 +5619,13 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const progressCurriculumArea = event.target.closest("[data-progress-curriculum-area]");
+  if (progressCurriculumArea) {
+    activeProgressCurriculumArea = progressCurriculumArea.dataset.progressCurriculumArea;
+    renderProgress();
+    return;
+  }
+
   const removeCurriculum = event.target.closest("[data-remove-block-curriculum]");
   if (removeCurriculum) {
     editingCurriculumSkills.delete(removeCurriculum.dataset.removeBlockCurriculum);
@@ -5916,6 +6029,14 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  const manualCurriculum = event.target.closest("[data-student-manual-curriculum]");
+  if (manualCurriculum) {
+    const student = getActiveStudent() || state.students[0];
+    if (!setStudentManualCurriculum(student, manualCurriculum.dataset.studentManualCurriculum, manualCurriculum.checked)) return;
+    renderProgress();
+    saveStateInBackground({}, "학생의 직접 확인 진도를 저장했습니다.");
+    return;
+  }
   const practiceSkill = event.target.closest("[data-practice-skill]");
   if (practiceSkill) {
     if (practiceSkill.checked) editingCurriculumSkills.add(practiceSkill.value);
