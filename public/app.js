@@ -226,37 +226,128 @@ const MAJOR_SCALE_KEYS = [
   { key: "Bb", notes: ["Bb", "C", "D", "Eb", "F", "G", "A"] },
   { key: "B", notes: ["B", "C#", "D#", "E", "F#", "G#", "A#"] },
 ];
+const skill = (id, label, aliases = []) => ({ id, label, aliases });
+const group = (label, skills) => ({ label, skills });
+const GENERAL_CHORDS = [
+  "C", "G", "D", "E", "A",
+  "Am", "Em", "Dm",
+  "CM7", "DM7", "EM7", "FM7", "GM7", "AM7",
+  "Dm7", "Em7", "Am7", "F#m7",
+  "C7", "G7", "D7", "E7", "A7", "B7",
+  "Csus4", "Gsus4", "Dsus4", "Esus4", "Asus4",
+];
 const CURRICULUM_AREAS = [
   {
     key: "left",
     label: "왼손",
-    description: "코드 사운드와 지판 운용",
-    skills: ["일반코드", "바코드", "파워코드", "오픈코드", "재즈코드", "분수코드", "코드이론", "다이어토닉", "스케일"],
+    description: "코드 어휘와 이동 가능한 코드 폼",
+    groups: [
+      group("일반코드", GENERAL_CHORDS.map((name) => skill(`left.general.${name}`, name, name.endsWith("M7") ? [name.replace("M7", "maj7")] : []))),
+      group("바레코드", ["6M", "6m", "5M", "5m"].map((name) => skill(`left.barre.${name}`, name))),
+      group("워십코드", [
+        skill("left.worship.e", "E계열"),
+        skill("left.worship.a", "A계열"),
+        skill("left.worship.fsm", "F#m7계열"),
+      ]),
+      group("재즈코드", ["6M", "6m", "5M", "5m"].map((name) => skill(`left.jazz.${name}`, name))),
+    ],
   },
   {
     key: "right",
     label: "오른손",
-    description: "리듬과 반주 주법",
-    skills: ["4비트", "8비트", "16비트", "6/8", "스트로크", "핑거링", "피킹"],
+    description: "스트로크·아르페지오·퍼커시브 패턴",
+    groups: [
+      group("스트로크 · 기본", [
+        skill("right.strum.4", "4비트", ["4비트"]),
+        skill("right.strum.8.1", "8비트 패턴 1 · 칼립소"),
+        skill("right.strum.8.2", "8비트 패턴 2 · 컨트리"),
+        skill("right.strum.8.3", "8비트 패턴 3 · 2마디 복합"),
+      ]),
+      group("스트로크 · 16비트", [
+        skill("right.strum.16.1", "16비트 패턴 1"),
+        skill("right.strum.16.1split", "16비트 패턴 1 분할"),
+        skill("right.strum.16.2", "16비트 패턴 2 · 저음"),
+        skill("right.strum.16.3", "16비트 패턴 3 · 락"),
+        skill("right.strum.16.4", "16비트 패턴 4 · 락 응용"),
+        skill("right.strum.16.5", "16비트 패턴 5 · 락 응용"),
+        skill("right.strum.16.6", "16비트 패턴 6"),
+      ]),
+      group("스트로크 · 응용", [
+        skill("right.strum.syncopation", "싱코페이션"),
+        skill("right.strum.section", "섹션"),
+        skill("right.strum.swing8", "스윙/셔플 · 8비트"),
+        skill("right.strum.swing16", "스윙/셔플 · 16비트"),
+      ]),
+      group("아르페지오", [
+        skill("right.arpeggio.8.1", "8비트 패턴 1"),
+        skill("right.arpeggio.8.1split", "8비트 패턴 1 분할"),
+        skill("right.arpeggio.8.2", "8비트 패턴 2"),
+        skill("right.arpeggio.16.1", "16비트 패턴 1"),
+        skill("right.arpeggio.16.2", "16비트 패턴 2 · 쓰리핑거"),
+      ]),
+      group("퍼커시브", [
+        skill("right.percussive.8.1", "8비트 패턴 1"),
+        skill("right.percussive.16.1", "16비트 패턴 1"),
+        skill("right.percussive.16.2", "16비트 패턴 2"),
+      ]),
+    ],
   },
   {
     key: "technique",
     label: "테크닉",
-    description: "뮤트와 표현 기법",
-    skills: ["왼손뮤트", "오른손뮤트", "팜뮤트", "베이스라인", "해머링온", "풀링오프", "슬라이드", "하모닉스"],
+    description: "뮤트와 기타 표현 기법",
+    groups: [
+      group("표현과 아티큘레이션", [
+        skill("technique.hammer-on", "해머링온", ["해머링", "hammer-on"]),
+        skill("technique.pull-off", "풀링오프", ["풀링", "pull-off"]),
+        skill("technique.slide", "슬라이드"),
+        skill("technique.bending", "밴딩"),
+        skill("technique.harmonics", "하모닉스"),
+      ]),
+      group("뮤트", [
+        skill("technique.left-mute", "왼손 뮤트", ["왼손뮤트"]),
+        skill("technique.right-mute", "오른손 뮤트", ["오른손뮤트"]),
+        skill("technique.palm-mute", "팜뮤트", ["팜 뮤트"]),
+      ]),
+    ],
   },
-];
+  {
+    key: "theory",
+    label: "이론",
+    description: "지판·코드·스케일·화성 진행",
+    groups: [
+      group("기초", [skill("theory.fretboard", "기타 지판")]),
+      group("코드 구성", [
+        skill("theory.triad", "3화음"),
+        skill("theory.seventh", "7th"),
+        skill("theory.sus", "sus"),
+        skill("theory.aug", "aug"),
+        skill("theory.half-diminish", "half-diminish"),
+        skill("theory.diminish", "diminish"),
+        skill("theory.add", "add"),
+        skill("theory.tension", "tension"),
+        skill("theory.inversion", "인버전 코드"),
+      ]),
+      group("스케일", [
+        skill("theory.major-scale", "메이저 스케일"),
+        skill("theory.minor-scale", "마이너 스케일"),
+      ]),
+      group("화성 진행", [
+        skill("theory.diatonic", "다이어토닉", ["다이어토닉 코드"]),
+        skill("theory.function", "펑션 & 대리코드"),
+        skill("theory.dominant-motion", "도미넌트 모션"),
+        skill("theory.251", "2-5-1"),
+        skill("theory.secondary-dominant", "세컨더리 도미넌트", ["세컨터리 도미넌트"]),
+      ]),
+    ],
+  },
+].map((area) => ({ ...area, skills: area.groups.flatMap((item) => item.skills) }));
 
-const CURRICULUM_SKILL_ALIASES = {
-  왼손뮤트: ["왼손 뮤트"],
-  오른손뮤트: ["오른손 뮤트"],
-  팜뮤트: ["팜 뮤트"],
-  분수코드: ["슬래시코드", "슬래시 코드", "slash chord", "slash chords"],
-  베이스라인: ["베이스 라인", "bass line", "bassline"],
-  해머링온: ["해머링", "hammering", "hammer-on"],
-  풀링오프: ["풀링", "pulling", "pull-off"],
-  "6/8": ["6/8리듬", "6/8 리듬"],
-};
+const LEGACY_CURRICULUM_SKILLS = new Set([
+  "일반코드", "바코드", "파워코드", "오픈코드", "재즈코드", "분수코드", "코드이론", "다이어토닉", "스케일",
+  "4비트", "8비트", "16비트", "6/8", "스트로크", "핑거링", "피킹", "퍼커시브",
+  "왼손뮤트", "오른손뮤트", "팜뮤트", "베이스라인", "해머링온", "풀링오프", "슬라이드", "하모닉스",
+]);
 
 const starterData = {
   practiceProgressScale: "four-step",
@@ -360,6 +451,10 @@ let practiceSortDirection = {
 let selectedBlockIds = new Set();
 let selectedCurriculumSkills = new Set();
 let libraryCurriculumFilters = new Set();
+let editingCurriculumSkills = new Set();
+let activeBlockCurriculumArea = "left";
+let blockCurriculumSearch = "";
+let bulkCurriculumSearch = "";
 let selectedChordNames = [];
 let selectedRhythmIds = [];
 let editingBlockChordNames = [];
@@ -1048,6 +1143,72 @@ const els = {
   loginMessage: $("#loginMessage"),
 };
 
+function curriculumSkillByValue(value, areaKey = "") {
+  const normalized = normalizeSkillText(value);
+  const areas = areaKey ? CURRICULUM_AREAS.filter((area) => area.key === areaKey) : CURRICULUM_AREAS;
+  const matches = areas.flatMap((area) => area.skills).filter((item) =>
+    [item.id, item.label, ...(item.aliases || [])].some((name) => normalizeSkillText(name) === normalized),
+  );
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function emptyCurriculum() {
+  return Object.fromEntries(CURRICULUM_AREAS.map((area) => [area.key, []]));
+}
+
+function normalizeCurriculum(curriculum = {}) {
+  const result = emptyCurriculum();
+  CURRICULUM_AREAS.forEach((area) => {
+    const values = Array.isArray(curriculum?.[area.key]) ? curriculum[area.key] : [];
+    result[area.key] = [...new Set(values.map((value) => curriculumSkillByValue(value, area.key)?.id).filter(Boolean))];
+  });
+  return result;
+}
+
+function migrateBlockCurriculum(block) {
+  if (Number(block.curriculumVersion) >= 2) return normalizeCurriculum(block.curriculum);
+  const result = emptyCurriculum();
+  const add = (id) => {
+    const area = CURRICULUM_AREAS.find((entry) => entry.skills.some((item) => item.id === id));
+    if (area && !result[area.key].includes(id)) result[area.key].push(id);
+  };
+  const legacyMap = {
+    "4비트": "right.strum.4",
+    "왼손뮤트": "technique.left-mute",
+    "왼손 뮤트": "technique.left-mute",
+    "오른손뮤트": "technique.right-mute",
+    "오른손 뮤트": "technique.right-mute",
+    "팜뮤트": "technique.palm-mute",
+    "팜 뮤트": "technique.palm-mute",
+    "해머링온": "technique.hammer-on",
+    "풀링오프": "technique.pull-off",
+    "슬라이드": "technique.slide",
+    "하모닉스": "technique.harmonics",
+    "다이어토닉": "theory.diatonic",
+  };
+  const legacyValues = [
+    ...(block.tags || []),
+    block.practice?.leftHand,
+    block.practice?.rightHand,
+    block.practice?.technique,
+  ].filter(Boolean);
+  legacyValues.forEach((value) => {
+    const id = legacyMap[String(value).trim()];
+    if (id) add(id);
+  });
+  normalizeChordNames(block.chords || []).forEach((value) => {
+    const chordName = chordNameFromFile(value).replace(/maj7$/i, "M7");
+    const item = curriculumSkillByValue(chordName, "left");
+    if (item?.id.startsWith("left.general.")) add(item.id);
+  });
+  return result;
+}
+
+function stripLegacyCurriculumTags(tags = []) {
+  const legacy = new Set([...LEGACY_CURRICULUM_SKILLS].map(normalizeSkillText));
+  return tags.filter((tag) => !legacy.has(normalizeSkillText(tag)) && !curriculumSkillByValue(tag));
+}
+
 function migrateState(data) {
   if (!data.blocks) return structuredClone(starterData);
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
@@ -1057,11 +1218,14 @@ function migrateState(data) {
   data.customRhythms = Array.isArray(data.customRhythms) ? data.customRhythms.map(normalizeCustomRhythm) : [];
   data.blocks = data.blocks.map((block) => ({
     ...block,
+    tags: stripLegacyCurriculumTags(block.tags || []),
     scores: normalizeScores(block),
     resources: normalizeResources(block),
     audioLink: block.audioLink || "",
     chords: normalizeChordNames(block.chords || []),
     rhythms: normalizeRhythmIds(block.rhythms || []),
+    curriculum: migrateBlockCurriculum(block),
+    curriculumVersion: 2,
     practice: normalizePractice(block.practice),
     updatedAt: block.updatedAt || "",
   }));
@@ -2690,49 +2854,63 @@ function getChordByName(name) {
   return findChord(name);
 }
 
-function allCurriculumSkillLabels() {
+function allCurriculumSkills() {
   return CURRICULUM_AREAS.flatMap((area) => area.skills);
 }
 
 function isCurriculumSkillTag(tag) {
-  const normalizedTag = normalizeSkillText(tag);
-  return allCurriculumSkillLabels().some((skill) => [skill, ...(CURRICULUM_SKILL_ALIASES[skill] || [])].map(normalizeSkillText).includes(normalizedTag));
+  return LEGACY_CURRICULUM_SKILLS.has(String(tag || "").trim()) || Boolean(curriculumSkillByValue(tag));
 }
 
 function nonCurriculumTags(tags = []) {
   return tags.filter((tag) => !isCurriculumSkillTag(tag));
 }
 
-function selectedPracticeSkillTags() {
-  return [...els.practiceSkillFields.querySelectorAll("[data-practice-skill]:checked")].map((checkbox) => checkbox.value);
+function selectedBlockCurriculum() {
+  const result = emptyCurriculum();
+  editingCurriculumSkills.forEach((id) => {
+    const area = CURRICULUM_AREAS.find((entry) => entry.skills.some((item) => item.id === id));
+    if (area) result[area.key].push(id);
+  });
+  return result;
 }
 
-function renderPracticeSkillFields(block = null) {
+function renderPracticeSkillFields() {
   if (!els.practiceSkillFields) return;
-  const currentTags = new Set((block?.tags || []).filter(isCurriculumSkillTag).map((tag) => {
-    const normalizedTag = normalizeSkillText(tag);
-    return allCurriculumSkillLabels().find((skill) => [skill, ...(CURRICULUM_SKILL_ALIASES[skill] || [])].map(normalizeSkillText).includes(normalizedTag)) || tag;
-  }));
-
-  els.practiceSkillFields.innerHTML = CURRICULUM_AREAS.map(
-    (area) => `
-      <fieldset>
-        <legend>${escapeHTML(area.label)}</legend>
-        <div class="practice-skill-options">
-          ${area.skills
-            .map(
-              (skill) => `
-                <label>
-                  <input type="checkbox" data-practice-skill value="${escapeHTML(skill)}" ${currentTags.has(skill) ? "checked" : ""} />
-                  ${escapeHTML(skill)}
-                </label>
-              `,
-            )
-            .join("")}
-        </div>
-      </fieldset>
-    `,
-  ).join("");
+  const activeArea = CURRICULUM_AREAS.find((area) => area.key === activeBlockCurriculumArea) || CURRICULUM_AREAS[0];
+  const query = normalizeSkillText(blockCurriculumSearch);
+  const selectedItems = allCurriculumSkills().filter((item) => editingCurriculumSkills.has(item.id));
+  const groups = activeArea.groups
+    .map((item) => ({ ...item, skills: item.skills.filter((entry) => !query || normalizeSkillText(`${item.label} ${entry.label}`).includes(query)) }))
+    .filter((item) => item.skills.length);
+  els.practiceSkillFields.innerHTML = `
+    <div class="curriculum-editor-head">
+      <div>
+        <strong>학습 영역</strong>
+        <span>이 블럭에서 실제로 다루는 항목만 체크하세요.</span>
+      </div>
+      <span class="count-pill">${editingCurriculumSkills.size}</span>
+    </div>
+    <div class="curriculum-editor-tools">
+      <div class="curriculum-area-tabs">
+        ${CURRICULUM_AREAS.map((area) => `<button class="${area.key === activeArea.key ? "active" : ""}" type="button" data-block-curriculum-area="${area.key}">${area.label}<b>${area.skills.filter((item) => editingCurriculumSkills.has(item.id)).length}</b></button>`).join("")}
+      </div>
+      <input id="curriculumSkillSearch" type="search" value="${escapeHTML(blockCurriculumSearch)}" placeholder="현재 영역에서 항목 검색" aria-label="학습 항목 검색" />
+    </div>
+    <div class="curriculum-selected-list">
+      ${selectedItems.length ? selectedItems.map((item) => `<button type="button" data-remove-block-curriculum="${escapeHTML(item.id)}">${escapeHTML(item.label)} <span>×</span></button>`).join("") : `<span>아직 선택한 항목이 없습니다.</span>`}
+    </div>
+    <div class="curriculum-editor-groups">
+      ${groups.length ? groups.map((item, index) => `
+        <details ${index === 0 || query ? "open" : ""}>
+          <summary>${escapeHTML(item.label)} <span>${item.skills.filter((entry) => editingCurriculumSkills.has(entry.id)).length}/${item.skills.length}</span></summary>
+          <div class="practice-skill-options">
+            ${item.skills.map((entry) => `<label class="${editingCurriculumSkills.has(entry.id) ? "checked" : ""}"><input type="checkbox" data-practice-skill value="${escapeHTML(entry.id)}" ${editingCurriculumSkills.has(entry.id) ? "checked" : ""} />${escapeHTML(entry.label)}</label>`).join("")}
+          </div>
+        </details>
+      `).join("") : `<div class="empty">검색 결과가 없습니다.</div>`}
+    </div>
+  `;
 }
 
 function filteredBlocks() {
@@ -2750,6 +2928,7 @@ function filteredBlocks() {
       normalizeScores(block).map(resourceLabel).join(" "),
       normalizeResources(block).map(resourceLabel).join(" "),
       blockKindLabel(block.kind),
+      [...blockSkillSet(block)].map((id) => curriculumSkillByValue(id)?.label || "").join(" "),
       ...block.tags,
     ]
       .join(" ")
@@ -2760,13 +2939,13 @@ function filteredBlocks() {
     const skillSet = blockSkillSet(block);
     const matchesCurriculum =
       !libraryCurriculumFilters.size ||
-      (block.kind === "practice" && [...libraryCurriculumFilters].every((skill) => skillSet.has(skill)));
+      [...libraryCurriculumFilters].every((skillId) => skillSet.has(skillId));
     return matchesQuery && matchesTag && matchesKind && matchesCurriculum;
   });
 }
 
-function curriculumSkillBlockCount(skill) {
-  return state.blocks.filter((block) => block.kind === "practice" && blockSkillSet(block).has(skill)).length;
+function curriculumSkillBlockCount(skillId) {
+  return state.blocks.filter((block) => blockSkillSet(block).has(skillId)).length;
 }
 
 function renderCurriculumFinder() {
@@ -2779,35 +2958,23 @@ function renderCurriculumFinder() {
           <span>${escapeHTML(area.description)}</span>
         </div>
         <div class="curriculum-finder-skills">
-          ${area.skills
-            .map((skill) => {
-              const count = curriculumSkillBlockCount(skill);
-              const active = libraryCurriculumFilters.has(skill);
-              return `
-                <button
-                  class="curriculum-filter-chip ${active ? "active" : ""}"
-                  type="button"
-                  data-library-curriculum-filter="${escapeHTML(skill)}"
-                  aria-pressed="${active}"
-                >
-                  <span>${escapeHTML(skill)}</span>
-                  <b>${count}</b>
-                </button>
-              `;
-            })
-            .join("")}
+          ${area.groups.map((item, index) => `<details ${index === 0 ? "open" : ""}><summary>${escapeHTML(item.label)}</summary><div>${item.skills.map((entry) => {
+            const count = curriculumSkillBlockCount(entry.id);
+            const active = libraryCurriculumFilters.has(entry.id);
+            return `<button class="curriculum-filter-chip ${active ? "active" : ""}" type="button" data-library-curriculum-filter="${escapeHTML(entry.id)}" aria-pressed="${active}"><span>${escapeHTML(entry.label)}</span><b>${count}</b></button>`;
+          }).join("")}</div></details>`).join("")}
         </div>
       </section>
     `,
   ).join("");
 
-  const selected = [...libraryCurriculumFilters];
+  const selected = [...libraryCurriculumFilters].map((id) => curriculumSkillByValue(id)?.label || id);
   const resultCount = filteredBlocks().length;
   els.curriculumFinderResult.innerHTML = selected.length
     ? `
         <div class="curriculum-filter-selection">
           <span><b>${selected.map(escapeHTML).join(" + ")}</b> 모두 포함</span>
-          <strong>${resultCount}곡</strong>
+          <strong>${resultCount}개 블럭</strong>
           <button class="secondary-button mini-button" type="button" data-clear-library-curriculum>초기화</button>
         </div>
       `
@@ -2821,30 +2988,25 @@ function normalizeSkillText(value) {
 }
 
 function blockSkillSet(block) {
-  const tags = new Set((block.tags || []).map(normalizeSkillText));
-  return new Set(
-    CURRICULUM_AREAS.flatMap((area) => area.skills).filter((skill) => {
-      const names = [skill, ...(CURRICULUM_SKILL_ALIASES[skill] || [])].map(normalizeSkillText);
-      return names.some((name) => tags.has(name));
-    }),
-  );
+  const curriculum = Number(block.curriculumVersion) >= 2 ? normalizeCurriculum(block.curriculum) : migrateBlockCurriculum(block);
+  return new Set(CURRICULUM_AREAS.flatMap((area) => curriculum[area.key] || []));
 }
 
 function analyzeCurriculumBlocks(blocks, { student = null, weighted = false } = {}) {
-  const practiceBlocks = blocks.filter((block) => block?.kind === "practice");
+  const curriculumBlocks = blocks.filter((block) => block && blockSkillSet(block).size);
   const areaRows = CURRICULUM_AREAS.map((area) => ({
     ...area,
     score: 0,
     count: 0,
-    skills: area.skills.map((skill) => ({ label: skill, score: 0, count: 0, blocks: [] })),
+    skills: area.skills.map((item) => ({ id: item.id, label: item.label, score: 0, count: 0, blocks: [] })),
   }));
 
-  practiceBlocks.forEach((block) => {
+  curriculumBlocks.forEach((block) => {
     const skillSet = blockSkillSet(block);
-    const weight = weighted && student ? masteryLevel(student, block.id) : 1;
+    const weight = weighted && student && block.kind === "practice" ? masteryLevel(student, block.id) : 1;
     areaRows.forEach((area) => {
       area.skills.forEach((skill) => {
-        if (!skillSet.has(skill.label)) return;
+        if (!skillSet.has(skill.id)) return;
         skill.score += weight;
         skill.count += 1;
         skill.blocks.push(block);
@@ -2875,7 +3037,7 @@ function analyzeCurriculumBlocks(blocks, { student = null, weighted = false } = 
     .slice(0, 5);
 
   return {
-    practiceBlocks,
+    practiceBlocks: curriculumBlocks,
     areaRows,
     weakSkills,
     strongSkills,
@@ -2892,14 +3054,7 @@ function averageSkillScore(scoreMap, labels) {
 }
 
 function curriculumRadarAxes(analysis) {
-  const scoreMap = curriculumSkillScoreMap(analysis);
-  const rows = [
-    { label: "코드폼", score: averageSkillScore(scoreMap, ["일반코드", "바코드", "파워코드", "오픈코드", "재즈코드"]) },
-    { label: "리듬", score: averageSkillScore(scoreMap, ["4비트", "8비트", "16비트", "6/8", "스트로크"]) },
-    { label: "핑거링", score: averageSkillScore(scoreMap, ["핑거링", "퍼커시브", "피킹"]) },
-    { label: "뮤트", score: averageSkillScore(scoreMap, ["왼손뮤트", "오른손뮤트", "팜뮤트"]) },
-    { label: "표현기법", score: averageSkillScore(scoreMap, ["해머링온", "풀링오프", "슬라이드", "하모닉스", "스케일"]) },
-  ];
+  const rows = analysis.areaRows.map((area) => ({ label: area.label, score: area.score }));
   const maxScore = Math.max(1, ...rows.map((row) => row.score));
   return rows.map((row) => ({ ...row, percent: Math.round((row.score / maxScore) * 100) }));
 }
@@ -2929,7 +3084,7 @@ function renderCurriculumRadar(analysis) {
   });
   return `
     <section class="curriculum-radar-card">
-      <svg class="curriculum-radar" viewBox="0 0 100 100" role="img" aria-label="커리큘럼 5축 지도">
+      <svg class="curriculum-radar" viewBox="0 0 100 100" role="img" aria-label="커리큘럼 4영역 지도">
         <g class="radar-grid">${grid.join("")}</g>
         <polygon class="radar-shape" points="${polygon}" />
         ${axes
@@ -3049,7 +3204,7 @@ function renderLibrary() {
 }
 
 function selectedPracticeBlockCount() {
-  return [...selectedBlockIds].map(getBlock).filter((block) => block?.kind === "practice").length;
+  return [...selectedBlockIds].map(getBlock).filter(Boolean).length;
 }
 
 function updateBulkCurriculumSelectedCount() {
@@ -3062,39 +3217,34 @@ function renderBulkCurriculumPanel() {
   els.bulkCurriculumPanel.innerHTML = `
     <div class="bulk-curriculum-head">
       <div>
-        <strong>선택 곡 일괄 분류</strong>
-        <span>여러 실습곡을 선택하고 필요한 커리큘럼 항목을 한 번에 태그로 넣습니다.</span>
+        <strong>선택 블럭 일괄 분류</strong>
+        <span>먼저 학습 항목을 고른 뒤, 적용할 블럭을 여러 개 선택해 한 번에 연결할 수 있습니다.</span>
       </div>
       <div class="bulk-curriculum-status">
-        <span>선택 곡 <b data-selected-practice-count>${selectedPracticeBlockCount()}</b></span>
+        <span>선택 블럭 <b data-selected-practice-count>${selectedPracticeBlockCount()}</b></span>
         <span>체크 항목 <b data-selected-skill-count>${selectedCurriculumSkills.size}</b></span>
       </div>
     </div>
+    <div class="bulk-curriculum-search"><input type="search" data-bulk-curriculum-search value="${escapeHTML(bulkCurriculumSearch)}" placeholder="전체 학습 항목 검색" /></div>
     <div class="bulk-curriculum-grid">
       ${CURRICULUM_AREAS.map(
-        (area) => `
+        (area) => {
+          const query = normalizeSkillText(bulkCurriculumSearch);
+          const groups = area.groups.map((item) => ({ ...item, skills: item.skills.filter((entry) => !query || normalizeSkillText(`${item.label} ${entry.label}`).includes(query)) })).filter((item) => item.skills.length);
+          return `
           <fieldset>
-            <legend>${area.label}</legend>
-            <div class="bulk-skill-list">
-              ${area.skills
-                .map(
-                  (skill) => `
-                    <label>
-                      <input type="checkbox" data-bulk-curriculum-skill="${escapeHTML(skill)}" ${selectedCurriculumSkills.has(skill) ? "checked" : ""} />
-                      ${escapeHTML(skill)}
-                    </label>
-                  `,
-                )
-                .join("")}
-            </div>
+            <legend>${area.label} <b>${area.skills.filter((item) => selectedCurriculumSkills.has(item.id)).length}</b></legend>
+            ${groups.map((item, index) => `<details ${query || index === 0 ? "open" : ""}><summary>${escapeHTML(item.label)}</summary><div class="bulk-skill-list">${item.skills.map((entry) => `<label class="${selectedCurriculumSkills.has(entry.id) ? "checked" : ""}"><input type="checkbox" data-bulk-curriculum-skill="${escapeHTML(entry.id)}" ${selectedCurriculumSkills.has(entry.id) ? "checked" : ""} />${escapeHTML(entry.label)}</label>`).join("")}</div></details>`).join("") || `<span class="empty-inline">검색 결과 없음</span>`}
           </fieldset>
-        `,
+        `;
+        },
       ).join("")}
     </div>
     <div class="bulk-curriculum-actions">
-      <button class="secondary-button" type="button" data-select-visible-practice-blocks>보이는 실습곡 선택</button>
+      <button class="secondary-button" type="button" data-select-visible-practice-blocks>보이는 블럭 선택</button>
       <button class="secondary-button" type="button" data-clear-bulk-curriculum>체크 해제</button>
-      <button class="primary-button" type="button" data-apply-bulk-curriculum>선택 곡에 적용</button>
+      <button class="secondary-button danger-text" type="button" data-remove-bulk-curriculum>선택 블럭에서 제거</button>
+      <button class="primary-button" type="button" data-apply-bulk-curriculum>선택 블럭에 적용</button>
     </div>
   `;
 }
@@ -3105,7 +3255,7 @@ function renderLibraryInsight() {
     <div class="curriculum-map-head">
       <div>
         <strong>자료 진단</strong>
-        <span>실습 블럭 태그를 기준으로 내 커리큘럼 자료 분포를 봅니다.</span>
+        <span>블럭에 연결한 학습 항목을 기준으로 자료 분포를 봅니다.</span>
       </div>
       <span class="count-pill">${analysis.practiceBlocks.length}</span>
     </div>
@@ -4224,10 +4374,11 @@ function renderProgress() {
   ensurePracticeProgress(student, student.lessons.flatMap((lesson) => lesson.blockIds));
   els.progressStudentName.textContent = `${student.name}'s 진도표`;
 
-  const practiceBlocks = uniqueLessonBlocks(student).filter((block) => block.kind === "practice");
+  const lessonBlocks = uniqueLessonBlocks(student);
+  const practiceBlocks = lessonBlocks.filter((block) => block.kind === "practice");
   const completedBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) === 4);
   const inProgressBlocks = practiceBlocks.filter((block) => masteryLevel(student, block.id) < 4);
-  const analysis = analyzeCurriculumBlocks(practiceBlocks, { student, weighted: true });
+  const analysis = analyzeCurriculumBlocks(lessonBlocks, { student, weighted: true });
 
   els.progressContent.innerHTML = `
     <div class="progress-summary-grid">
@@ -4247,7 +4398,7 @@ function renderProgress() {
     <div class="curriculum-map-head">
       <div>
         <strong>반주력 지도</strong>
-        <span>실습곡 태그와 연습 정도를 합산해서 영역별 균형을 봅니다.</span>
+        <span>수업 블럭의 학습 항목과 실습곡 연습 정도를 함께 반영합니다.</span>
       </div>
     </div>
     ${renderCurriculumMap(analysis, { mode: "student" })}
@@ -5198,9 +5349,8 @@ function renderPracticeMeta(block) {
 }
 
 function renderPracticeDetails(block) {
-  if (block.kind !== "practice") return "";
   const skillSet = blockSkillSet(block);
-  const items = CURRICULUM_AREAS.map((area) => [area.label, area.skills.filter((skill) => skillSet.has(skill)).join(" · ")]).filter(([, value]) => value);
+  const items = CURRICULUM_AREAS.map((area) => [area.label, area.skills.filter((item) => skillSet.has(item.id)).map((item) => item.label).join(" · ")]).filter(([, value]) => value);
   if (!items.length) return "";
   return `
     <div class="practice-detail-list">
@@ -5301,9 +5451,7 @@ async function assignSelectedToStudent(studentId) {
 }
 
 function selectVisiblePracticeBlocks() {
-  filteredBlocks()
-    .filter((block) => block.kind === "practice")
-    .forEach((block) => selectedBlockIds.add(block.id));
+  filteredBlocks().forEach((block) => selectedBlockIds.add(block.id));
   renderLibrary();
 }
 
@@ -5312,36 +5460,53 @@ function clearBulkCurriculumChecks() {
   renderBulkCurriculumPanel();
 }
 
-function applyBulkCurriculumTags() {
-  const tags = [...selectedCurriculumSkills];
-  const selectedPracticeIds = [...selectedBlockIds].filter((id) => getBlock(id)?.kind === "practice");
-  if (!selectedPracticeIds.length) {
-    showToast("먼저 실습곡을 선택하세요.");
+function applyBulkCurriculumTags(mode = "add") {
+  const skillIds = [...selectedCurriculumSkills];
+  const selectedIds = [...selectedBlockIds].filter((id) => getBlock(id));
+  if (!selectedIds.length) {
+    showToast("먼저 블럭을 선택하세요.");
     return;
   }
-  if (!tags.length) {
+  if (!skillIds.length) {
     showToast("추가할 커리큘럼 항목을 체크하세요.");
     return;
   }
 
-  const selectedSet = new Set(selectedPracticeIds);
-  state.blocks = state.blocks.map((block) =>
-    selectedSet.has(block.id)
-      ? {
-          ...block,
-          tags: [...new Set([...(block.tags || []), ...tags])],
-          updatedAt: nowIso(),
-        }
-      : block,
-  );
+  const selectedSet = new Set(selectedIds);
+  state.blocks = state.blocks.map((block) => {
+    if (!selectedSet.has(block.id)) return block;
+    const curriculum = normalizeCurriculum(block.curriculum);
+    skillIds.forEach((id) => {
+      const area = CURRICULUM_AREAS.find((entry) => entry.skills.some((item) => item.id === id));
+      if (!area) return;
+      if (mode === "remove") curriculum[area.key] = curriculum[area.key].filter((entry) => entry !== id);
+      else if (!curriculum[area.key].includes(id)) curriculum[area.key].push(id);
+    });
+    return { ...block, curriculum, curriculumVersion: 2, updatedAt: nowIso() };
+  });
   selectedCurriculumSkills.clear();
   render();
-  saveStateInBackground({}, `${selectedPracticeIds.length}개 실습곡에 커리큘럼 태그를 추가했습니다.`);
+  saveStateInBackground({}, mode === "remove" ? `${selectedIds.length}개 블럭에서 학습 항목을 제거했습니다.` : `${selectedIds.length}개 블럭에 학습 항목을 연결했습니다.`);
 }
 
 document.addEventListener("click", (event) => {
   const nav = event.target.closest("[data-view]");
   if (nav) switchView(nav.dataset.view);
+
+  const curriculumArea = event.target.closest("[data-block-curriculum-area]");
+  if (curriculumArea) {
+    activeBlockCurriculumArea = curriculumArea.dataset.blockCurriculumArea;
+    blockCurriculumSearch = "";
+    renderPracticeSkillFields();
+    return;
+  }
+
+  const removeCurriculum = event.target.closest("[data-remove-block-curriculum]");
+  if (removeCurriculum) {
+    editingCurriculumSkills.delete(removeCurriculum.dataset.removeBlockCurriculum);
+    renderPracticeSkillFields();
+    return;
+  }
 
   const openPracticeTool = event.target.closest("[data-open-practice-tool]");
   if (openPracticeTool) {
@@ -5711,6 +5876,24 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  const curriculumSearch = event.target.closest("#curriculumSkillSearch");
+  if (curriculumSearch) {
+    blockCurriculumSearch = curriculumSearch.value;
+    renderPracticeSkillFields();
+    const nextInput = document.querySelector("#curriculumSkillSearch");
+    nextInput?.focus();
+    nextInput?.setSelectionRange(blockCurriculumSearch.length, blockCurriculumSearch.length);
+    return;
+  }
+  const bulkSearch = event.target.closest("[data-bulk-curriculum-search]");
+  if (bulkSearch) {
+    bulkCurriculumSearch = bulkSearch.value;
+    renderBulkCurriculumPanel();
+    const nextInput = document.querySelector("[data-bulk-curriculum-search]");
+    nextInput?.focus();
+    nextInput?.setSelectionRange(bulkCurriculumSearch.length, bulkCurriculumSearch.length);
+    return;
+  }
   const input = event.target.closest("[data-diatonic-row]");
   if (!input) return;
   const row = input.dataset.diatonicRow;
@@ -5721,6 +5904,13 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  const practiceSkill = event.target.closest("[data-practice-skill]");
+  if (practiceSkill) {
+    if (practiceSkill.checked) editingCurriculumSkills.add(practiceSkill.value);
+    else editingCurriculumSkills.delete(practiceSkill.value);
+    renderPracticeSkillFields();
+    return;
+  }
   const checkbox = event.target.closest("[data-block-check]");
   if (checkbox) {
     if (checkbox.checked) selectedBlockIds.add(checkbox.dataset.blockCheck);
@@ -5735,6 +5925,7 @@ document.addEventListener("change", (event) => {
     document.querySelectorAll("[data-selected-skill-count]").forEach((node) => {
       node.textContent = selectedCurriculumSkills.size;
     });
+    bulkSkill.closest("label")?.classList.toggle("checked", bulkSkill.checked);
   }
 });
 
@@ -6328,6 +6519,9 @@ document.addEventListener("click", async (event) => {
   if (event.target.closest("[data-apply-bulk-curriculum]")) {
     applyBulkCurriculumTags();
   }
+  if (event.target.closest("[data-remove-bulk-curriculum]")) {
+    applyBulkCurriculumTags("remove");
+  }
 });
 
 window.addEventListener("hashchange", () => {
@@ -6374,6 +6568,10 @@ $("#openQuickAdd").addEventListener("click", () => openBlockDialog());
 function openBlockDialog(blockId = "") {
   const block = blockId ? getBlock(blockId) : null;
   const practice = normalizePractice(block?.practice);
+  const curriculum = block ? normalizeCurriculum(block.curriculum) : emptyCurriculum();
+  editingCurriculumSkills = new Set(CURRICULUM_AREAS.flatMap((area) => curriculum[area.key] || []));
+  activeBlockCurriculumArea = CURRICULUM_AREAS.find((area) => (curriculum[area.key] || []).length)?.key || "left";
+  blockCurriculumSearch = "";
   editingBlockChordNames = normalizeChordNames(block?.chords || []);
   editingBlockRhythmIds = normalizeRhythmIds(block?.rhythms || []);
   els.blockDialogTitle.textContent = block ? "블럭 편집" : "블럭 추가";
@@ -6393,7 +6591,7 @@ function openBlockDialog(blockId = "") {
   els.practiceCategories.forEach((checkbox) => {
     checkbox.checked = practice.categories.includes(checkbox.value);
   });
-  renderPracticeSkillFields(block);
+  renderPracticeSkillFields();
   els.newFiles.value = "";
   els.newScoreFiles.value = "";
   updatePracticeFieldsVisibility();
@@ -6620,7 +6818,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
     const scoreFileResources = await Promise.all([...els.newScoreFiles.files].map(readFileAsUploadedResource));
     const fileResources = await Promise.all([...els.newFiles.files].map(readFileAsUploadedResource));
     const kind = $("#newType").value;
-    const tags = kind === "practice" ? [...new Set([...parseTags($("#newTags").value), ...selectedPracticeSkillTags()])] : parseTags($("#newTags").value);
+    const tags = parseTags($("#newTags").value).filter((tag) => !isCurriculumSkillTag(tag));
     const editedChords = normalizeChordNames([...editingBlockChordNames, ...normalizeChordNames(els.practiceChords.value)]);
     const block = {
       id: editingId || uid("blk"),
@@ -6631,6 +6829,8 @@ $("#materialForm").addEventListener("submit", async (event) => {
       audioLink: els.newAudioLink.value.trim(),
       chords: editedChords,
       rhythms: normalizeRhythmIds(editingBlockRhythmIds),
+      curriculum: selectedBlockCurriculum(),
+      curriculumVersion: 2,
       updatedAt: nowIso(),
       practice: {
         tempo: els.practiceTempo.value.trim(),

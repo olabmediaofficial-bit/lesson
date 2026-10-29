@@ -407,7 +407,7 @@ menu {
 
 .curriculum-finder-groups {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
 }
 
@@ -439,9 +439,27 @@ menu {
 }
 
 .curriculum-finder-skills {
+  display: grid;
+  gap: 7px;
+}
+
+.curriculum-finder-skills details {
+  padding: 7px 0;
+  border-top: 1px solid rgba(166, 125, 92, 0.16);
+}
+
+.curriculum-finder-skills summary {
+  color: #6c594b;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.curriculum-finder-skills details > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 6px;
+  padding-top: 8px;
 }
 
 .curriculum-filter-chip {
@@ -709,7 +727,7 @@ textarea {
 
 .bulk-curriculum-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -727,6 +745,37 @@ textarea {
   color: var(--accent-strong);
   font-size: 13px;
   font-weight: 900;
+}
+
+.bulk-curriculum-grid legend b {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 5px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f1dfcd;
+  font-size: 10px;
+}
+
+.bulk-curriculum-search input {
+  width: 100%;
+}
+
+.bulk-curriculum-grid details {
+  padding: 7px 0;
+  border-top: 1px solid rgba(166, 125, 92, 0.15);
+}
+
+.bulk-curriculum-grid summary {
+  color: #6c594b;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.bulk-curriculum-grid details .bulk-skill-list {
+  padding-top: 8px;
 }
 
 .bulk-skill-list {
@@ -747,6 +796,12 @@ textarea {
   color: #4b5563;
   font-size: 12px;
   font-weight: 900;
+}
+
+.bulk-skill-list label.checked {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
 }
 
 .bulk-skill-list input {
@@ -3630,6 +3685,12 @@ dialog::backdrop {
   background: rgba(0, 0, 0, 0.38);
 }
 
+#materialDialog {
+  width: min(980px, calc(100vw - 28px));
+  max-height: calc(100dvh - 28px);
+  overflow: auto;
+}
+
 .image-viewer-dialog {
   width: min(1280px, calc(100vw - 24px));
   height: calc(100vh - 24px);
@@ -4493,31 +4554,142 @@ dialog::backdrop {
 
 .practice-skill-fields {
   display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(185, 130, 85, 0.28);
+  border-radius: 8px;
+  background: #fffdf9;
 }
 
-.practice-skill-fields fieldset {
+.curriculum-editor-head,
+.curriculum-editor-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.curriculum-editor-head > div {
+  display: grid;
+  gap: 2px;
+}
+
+.curriculum-editor-head strong {
+  color: #5a3927;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.curriculum-editor-head span,
+.curriculum-selected-list > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.curriculum-area-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.curriculum-area-tabs button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: #6c594b;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.curriculum-area-tabs button.active {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+}
+
+.curriculum-area-tabs b {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: #f4e5d5;
+  font-size: 9px;
+}
+
+.curriculum-editor-tools input {
+  width: min(280px, 40%);
+}
+
+.curriculum-selected-list {
+  display: flex;
+  min-height: 34px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 7px;
+  background: #f8efe5;
+}
+
+.curriculum-selected-list button {
+  min-height: 27px;
+  padding: 4px 8px;
+  border: 1px solid rgba(166, 125, 92, 0.32);
+  border-radius: 999px;
+  color: #6a4430;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.curriculum-selected-list button span {
+  color: #a54c45;
+}
+
+.curriculum-editor-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.curriculum-editor-groups details {
   min-width: 0;
-  margin: 0;
   padding: 10px;
-  border: 1px solid rgba(185, 130, 85, 0.16);
+  border: 1px solid rgba(185, 130, 85, 0.2);
   border-radius: 8px;
   background: #fff;
 }
 
-.practice-skill-fields legend {
-  padding: 0 6px;
+.curriculum-editor-groups summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   color: #5a3927;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
+  cursor: pointer;
+}
+
+.curriculum-editor-groups summary span {
+  color: var(--muted);
+  font-size: 10px;
 }
 
 .practice-skill-options {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+  padding-top: 9px;
 }
 
 .practice-skill-options label {
@@ -4532,6 +4704,12 @@ dialog::backdrop {
   color: #374151;
   font-size: 12px;
   font-weight: 800;
+}
+
+.practice-skill-options label.checked {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
 }
 
 .practice-skill-options input {
@@ -5402,6 +5580,11 @@ textarea,
     grid-template-columns: 1fr;
   }
 
+  .curriculum-finder-groups,
+  .bulk-curriculum-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .share-hero {
     grid-template-columns: 1fr;
   }
@@ -5460,6 +5643,21 @@ textarea,
 
   .curriculum-filter-selection {
     gap: 7px;
+  }
+
+  .curriculum-finder-groups,
+  .bulk-curriculum-grid,
+  .curriculum-editor-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .curriculum-editor-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .curriculum-editor-tools input {
+    width: 100%;
   }
   .practice-tool-head {
     align-items: flex-start;

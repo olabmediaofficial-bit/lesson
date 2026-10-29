@@ -105,8 +105,8 @@
             <div class="curriculum-finder-head">
               <div>
                 <p class="eyebrow">CURRICULUM FINDER</p>
-                <h2 id="curriculumFinderTitle">수업 내용으로 곡 찾기</h2>
-                <p>가르칠 항목을 누르면 그 내용이 들어 있는 실습곡만 모아봅니다.</p>
+                <h2 id="curriculumFinderTitle">학습 항목으로 블럭 찾기</h2>
+                <p>가르칠 항목을 누르면 그 내용이 연결된 블럭만 모아봅니다.</p>
               </div>
               <div class="curriculum-finder-result" id="curriculumFinderResult"></div>
             </div>
@@ -136,14 +136,14 @@
               <details class="library-tool-panel">
                 <summary>
                   <strong>일괄분류</strong>
-                  <span>여러 실습곡의 커리큘럼 태그를 한 번에 정리합니다.</span>
+                  <span>학습 항목을 고른 뒤 여러 블럭에 한 번에 연결합니다.</span>
                 </summary>
                 <div id="bulkCurriculumPanel" class="bulk-curriculum-panel"></div>
               </details>
               <details class="library-tool-panel">
                 <summary>
                   <strong>자료진단</strong>
-                  <span>보유 실습곡이 커리큘럼 영역별로 얼마나 채워졌는지 봅니다.</span>
+                  <span>보유 블럭이 학습 영역별로 얼마나 채워졌는지 봅니다.</span>
                 </summary>
                 <div id="libraryInsight" class="curriculum-map"></div>
               </details>
@@ -572,12 +572,12 @@
             <label><input type="checkbox" name="practiceCategory" value="재즈" /> 재즈</label>
             <label><input type="checkbox" name="practiceCategory" value="그외" /> 그외</label>
           </fieldset>
-          <div class="practice-skill-fields" id="practiceSkillFields"></div>
           <label>
             사용 코드
             <input id="practiceChords" type="text" placeholder="쉼표로 구분: A, E, F#m7, D" />
           </label>
         </div>
+        <section class="practice-skill-fields" id="practiceSkillFields"></section>
         <section class="block-asset-panel">
           <div class="field-head">
             <strong>코드와 리듬</strong>
