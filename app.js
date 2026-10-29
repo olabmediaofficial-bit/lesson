@@ -1958,6 +1958,18 @@ function selectedImageMarkupAction() {
   return markup?.actions.find((action) => action.id === imageMarkup.selectedId) || null;
 }
 
+function deleteSelectedImageMarkup() {
+  if (!imageMarkup.selectedId) return false;
+  const markup = currentScoreMarkup(true);
+  const nextActions = markup.actions.filter((action) => action.id !== imageMarkup.selectedId);
+  if (nextActions.length === markup.actions.length) return false;
+  markup.actions = nextActions;
+  imageMarkup.selectedId = "";
+  renderImageMarkup();
+  saveImageMarkup("선택한 필기를 삭제했습니다.");
+  return true;
+}
+
 function strokeBounds(action) {
   const xs = action.points.map((point) => Number(point.x));
   const ys = action.points.map((point) => Number(point.y));
@@ -6290,14 +6302,7 @@ els.imageMarkupSelect.addEventListener("click", () => setImageMarkupTool("select
 els.imageMarkupPen.addEventListener("click", () => setImageMarkupTool("pen"));
 els.imageMarkupText.addEventListener("click", () => setImageMarkupTool("text"));
 els.imageMarkupDone.addEventListener("click", () => setImageMarkupActive(false));
-els.imageMarkupDelete.addEventListener("click", () => {
-  if (!imageMarkup.selectedId) return;
-  const markup = currentScoreMarkup(true);
-  markup.actions = markup.actions.filter((action) => action.id !== imageMarkup.selectedId);
-  imageMarkup.selectedId = "";
-  renderImageMarkup();
-  saveImageMarkup("선택한 필기를 삭제했습니다.");
-});
+els.imageMarkupDelete.addEventListener("click", deleteSelectedImageMarkup);
 els.imageMarkupUndo.addEventListener("click", () => {
   const markup = currentScoreMarkup(true);
   if (!markup.actions.length) return;
@@ -6321,14 +6326,23 @@ els.imageMarkupCanvas.addEventListener("pointerdown", (event) => {
   const targetId = resizeTarget?.dataset.markupResizeId || actionTarget?.dataset.markupActionId || "";
   if (targetId) {
     imageMarkup.selectedId = targetId;
-    const action = selectedImageMarkupAction();
+    let action = selectedImageMarkupAction();
     if (!action) return;
+    const shouldDuplicate = !resizeTarget && event.altKey;
+    if (shouldDuplicate) {
+      const duplicate = structuredClone(action);
+      duplicate.id = uid("mark");
+      currentScoreMarkup(true).actions.push(duplicate);
+      imageMarkup.selectedId = duplicate.id;
+      action = duplicate;
+    }
     els.imageMarkupCanvas.setPointerCapture(event.pointerId);
     imageMarkup.interaction = {
       type: resizeTarget ? "resize" : "move",
       actionId: action.id,
       start: markupPoint(event),
       snapshot: structuredClone(action),
+      duplicated: shouldDuplicate,
     };
     renderImageMarkup();
     return;
@@ -6383,9 +6397,10 @@ els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
 });
 const finishImageMarkupStroke = (event) => {
   if (imageMarkup.interaction) {
+    const duplicated = imageMarkup.interaction.duplicated;
     if (els.imageMarkupCanvas.hasPointerCapture?.(event.pointerId)) els.imageMarkupCanvas.releasePointerCapture(event.pointerId);
     imageMarkup.interaction = null;
-    saveImageMarkup("필기 위치와 크기를 저장했습니다.");
+    saveImageMarkup(duplicated ? "필기를 복사했습니다." : "필기 위치와 크기를 저장했습니다.");
     return;
   }
   if (!imageMarkup.drawing) return;
@@ -6443,7 +6458,7 @@ document.addEventListener("keydown", (event) => {
   if (!els.imageViewerDialog.open) return;
   if (imageMarkup.active && imageMarkup.selectedId && ["Backspace", "Delete"].includes(event.key) && !event.target.matches("input, textarea, [contenteditable='true']")) {
     event.preventDefault();
-    els.imageMarkupDelete.click();
+    deleteSelectedImageMarkup();
     return;
   }
   if (event.key === "ArrowLeft") moveImageViewer(-1);
