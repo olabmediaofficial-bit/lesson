@@ -5393,6 +5393,296 @@ dialog::backdrop {
   color: #88786b;
 }
 
+.progress-source-section {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.progress-source-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 64px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.progress-source-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.progress-source-section > summary::after {
+  content: "+";
+  color: var(--accent-strong);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.progress-source-section[open] > summary::after {
+  content: "−";
+}
+
+.progress-source-section > summary > div {
+  display: grid;
+  gap: 3px;
+}
+
+.progress-source-section > summary strong {
+  color: var(--accent-strong);
+  font-size: 16px;
+}
+
+.progress-source-section > summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.progress-source-section > summary > b {
+  margin-left: auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #f1e2d4;
+  color: var(--accent-strong);
+  font-size: 12px;
+}
+
+.progress-source-body {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.progress-source-body > .student-progress-tabs {
+  margin-top: 14px;
+}
+
+.student-curriculum-row {
+  grid-template-columns: minmax(90px, 0.7fr) minmax(0, 2fr);
+}
+
+.student-curriculum-row.level-1 {
+  background: #fff8ee;
+}
+
+.student-curriculum-row.level-2 {
+  background: #f7e4ce;
+}
+
+.student-curriculum-row.level-3 {
+  background: #dfb98f;
+}
+
+.student-curriculum-row.level-4 {
+  border-color: #805037;
+  background: #a66d49;
+}
+
+.student-curriculum-row.level-4 > span {
+  color: #fff;
+}
+
+.curriculum-level-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(64px, 1fr)) auto;
+  gap: 5px;
+  min-width: 0;
+}
+
+.curriculum-level-buttons button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 6px;
+  border: 1px solid #d7c4b4;
+  border-radius: 7px;
+  background: #fff;
+  color: #6e5c4f;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.curriculum-level-buttons .level-1.active {
+  border-color: #e1bd8d;
+  background: #f8e6ca;
+  color: #72421f;
+}
+
+.curriculum-level-buttons .level-2.active {
+  border-color: #d49c66;
+  background: #edc99f;
+  color: #63391f;
+}
+
+.curriculum-level-buttons .level-3.active {
+  border-color: #ad734d;
+  background: #c98e64;
+  color: #fff;
+}
+
+.curriculum-level-buttons .level-4.active {
+  border-color: #653b27;
+  background: #805037;
+  color: #fff;
+}
+
+.curriculum-level-buttons .clear {
+  width: 30px;
+  padding: 0;
+  color: #9b3b43;
+}
+
+.curriculum-skill-tree {
+  position: relative;
+  display: grid;
+  grid-template:
+    "top top top" minmax(180px, auto)
+    "left center right" minmax(150px, auto)
+    "bottom bottom bottom" minmax(180px, auto)
+    / minmax(0, 1fr) 130px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 620px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #171411;
+}
+
+.curriculum-skill-tree::before,
+.curriculum-skill-tree::after {
+  position: absolute;
+  z-index: 0;
+  content: "";
+  background: rgba(210, 176, 141, 0.3);
+}
+
+.curriculum-skill-tree::before {
+  top: 50%;
+  left: 8%;
+  width: 84%;
+  height: 2px;
+}
+
+.curriculum-skill-tree::after {
+  top: 8%;
+  left: 50%;
+  width: 2px;
+  height: 84%;
+}
+
+.skill-tree-center,
+.skill-tree-arm {
+  position: relative;
+  z-index: 1;
+}
+
+.skill-tree-center {
+  grid-area: center;
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  place-content: center;
+  width: 112px;
+  height: 112px;
+  border: 3px solid #d49c66;
+  border-radius: 50%;
+  background: #2e241d;
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 0 24px rgba(212, 156, 102, 0.3);
+}
+
+.skill-tree-center b {
+  font-size: 15px;
+}
+
+.skill-tree-center span {
+  color: #d8b99d;
+  font-size: 10px;
+}
+
+.skill-tree-arm {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(219, 192, 166, 0.18);
+  border-radius: 8px;
+  background: rgba(35, 31, 28, 0.92);
+}
+
+.skill-tree-arm.left-arm { grid-area: left; }
+.skill-tree-arm.right-arm { grid-area: right; }
+.skill-tree-arm.top-arm { grid-area: top; width: min(520px, 100%); justify-self: center; }
+.skill-tree-arm.bottom-arm { grid-area: bottom; width: min(520px, 100%); justify-self: center; }
+
+.skill-tree-arm header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #f0dbc7;
+}
+
+.skill-tree-arm header span {
+  color: #a99585;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.skill-tree-branches {
+  display: grid;
+  gap: 7px;
+}
+
+.skill-tree-branch {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+}
+
+.skill-tree-branch > b {
+  padding-top: 5px;
+  color: #aa9381;
+  font-size: 10px;
+  text-align: right;
+}
+
+.skill-tree-branch > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.skill-tree-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  max-width: 118px;
+  padding: 3px 7px;
+  overflow: hidden;
+  border: 1px solid #56504b;
+  border-radius: 999px;
+  background: #302d2a;
+  color: #77716c;
+  font-size: 9px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-tree-node.level-1 { border-color: #d8b68d; background: #f1ddc4; color: #68432b; }
+.skill-tree-node.level-2 { border-color: #ce9461; background: #d9ab7d; color: #4e2d1b; }
+.skill-tree-node.level-3 { border-color: #b26f43; background: #ad6b43; color: #fff7ee; }
+.skill-tree-node.level-4 { border-color: #f1b57f; background: #713e26; color: #fff; box-shadow: 0 0 9px rgba(229, 145, 82, 0.46); }
+
 .progress-stat-card {
   display: grid;
   gap: 4px;
@@ -6287,12 +6577,46 @@ textarea,
   }
 
   .student-curriculum-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: 1fr;
   }
 
   .student-curriculum-row .automatic-status {
-    grid-column: 2 / -1;
     justify-self: start;
+  }
+
+  .curriculum-level-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 30px;
+  }
+
+  .curriculum-level-buttons .clear {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    height: 100%;
+  }
+
+  .curriculum-skill-tree {
+    grid-template:
+      "top" auto
+      "left" auto
+      "center" 120px
+      "right" auto
+      "bottom" auto
+      / 1fr;
+    min-height: 0;
+  }
+
+  .curriculum-skill-tree::before,
+  .curriculum-skill-tree::after {
+    display: none;
+  }
+
+  .skill-tree-arm.top-arm,
+  .skill-tree-arm.bottom-arm {
+    width: 100%;
+  }
+
+  .skill-tree-branch {
+    grid-template-columns: 74px minmax(0, 1fr);
   }
 
   .progress-song-row .mastery-control {
