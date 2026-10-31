@@ -5574,7 +5574,6 @@ dialog::backdrop {
 .skill-tree-edges .area-right { stroke: #6e927d; }
 .skill-tree-edges .area-technique { stroke: #88758e; }
 .skill-tree-edges .area-theory { stroke: #a18468; }
-}
 
 .skill-tree-center,
 .skill-tree-arm {
@@ -5588,29 +5587,29 @@ dialog::backdrop {
   justify-self: center;
   display: grid;
   place-content: center;
-  width: 108px;
-  height: 108px;
+  width: 92px;
+  height: 92px;
   border: 3px solid #d49c66;
   border-radius: 50%;
   background: #2e241d;
   color: #fff;
   text-align: center;
-  box-shadow: 0 0 24px rgba(212, 156, 102, 0.3);
+  box-shadow: 0 0 18px rgba(212, 156, 102, 0.26);
 }
 
 .skill-tree-center b {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .skill-tree-center span {
   color: #d8b99d;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .skill-tree-arm {
   display: grid;
   align-content: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
   padding: 0;
   background: transparent;
@@ -5627,13 +5626,13 @@ dialog::backdrop {
 .skill-tree-arm.area-technique {
   grid-area: technique;
   justify-self: center;
-  width: min(760px, 76%);
+  width: min(820px, 82%);
 }
 
 .skill-tree-arm.area-theory {
   grid-area: theory;
   justify-self: center;
-  width: min(900px, 88%);
+  width: min(940px, 92%);
 }
 
 .skill-tree-arm header {
@@ -5642,13 +5641,17 @@ dialog::backdrop {
   display: inline-flex;
   justify-self: center;
   align-items: center;
-  gap: 7px;
-  min-height: 42px;
-  padding: 7px 15px;
-  border: 2px solid currentColor;
-  border-radius: 999px;
+  flex-direction: column;
+  gap: 2px;
+  width: 92px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  clip-path: polygon(20% 0, 80% 0, 93% 16%, 100% 50%, 93% 84%, 80% 100%, 20% 100%, 7% 84%, 0 50%, 7% 16%);
   background: #2e2925;
   color: #f0dbc7;
+  filter: drop-shadow(0 0 1px currentColor);
 }
 
 .skill-tree-arm.area-left header { color: #d6a77f; }
@@ -5658,63 +5661,68 @@ dialog::backdrop {
 
 .skill-tree-arm header span {
   color: currentColor;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 900;
   opacity: 0.74;
 }
 
 .skill-tree-branches {
   display: grid;
-  gap: 10px;
+  gap: 7px;
 }
 
 .area-technique .skill-tree-branches,
 .area-theory .skill-tree-branches {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 .skill-tree-branch {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: start;
-  gap: 9px;
+  gap: 7px;
 }
+
+.skill-tree-arm.area-left .skill-tree-branch:nth-child(even) { transform: translateX(-6px); }
+.skill-tree-arm.area-right .skill-tree-branch:nth-child(even) { transform: translateX(6px); }
+.skill-tree-arm.area-technique .skill-tree-branch:nth-child(even) { transform: translateY(-4px); }
+.skill-tree-arm.area-theory .skill-tree-branch:nth-child(odd) { transform: translateY(4px); }
 
 .skill-tree-branch > b {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
-  padding: 5px 8px;
+  min-height: 26px;
+  padding: 3px 7px;
   border: 1px solid #796a5f;
   border-radius: 8px;
   background: #292521;
   color: #c5ad99;
-  font-size: 10px;
+  font-size: 9px;
   text-align: center;
 }
 
 .skill-tree-branch > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .skill-tree-node {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  max-width: 132px;
-  padding: 4px 8px;
+  min-height: 23px;
+  max-width: 138px;
+  padding: 3px 6px;
   overflow: hidden;
   border: 1px solid #56504b;
-  border-radius: 50%;
+  border-radius: 999px;
   background: #302d2a;
   color: #77716c;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
