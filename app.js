@@ -471,6 +471,7 @@ let chordBuilder = {
   rootMode: false,
   studentId: "",
   blockId: "",
+  lessonId: "",
   category: "custom",
 };
 let pendingBlockIds = new Set();
@@ -517,6 +518,9 @@ let rhythmBuilder = {
   unit: 16,
   bars: 1,
   cells: [],
+  studentId: "",
+  blockId: "",
+  lessonId: "",
 };
 let rhythmPlayback = {
   audioContext: null,
@@ -836,6 +840,7 @@ function normalizeCustomRhythm(rhythm = {}) {
     unit,
     bars,
     cells: normalizeRhythmCells(rhythm.cells, count),
+    studentId: rhythm.studentId || "",
     updatedAt: rhythm.updatedAt || nowIso(),
   };
 }
@@ -1299,6 +1304,7 @@ function migrateState(data) {
         ...lesson,
         blockIds: lesson.blockIds || lesson.materialIds || [],
         scoreMarkups: lesson.scoreMarkups && typeof lesson.scoreMarkups === "object" ? lesson.scoreMarkups : {},
+        blockAssets: lesson.blockAssets && typeof lesson.blockAssets === "object" ? lesson.blockAssets : {},
         updatedAt: lesson.updatedAt || "",
       })),
     };
@@ -1935,7 +1941,9 @@ function renderImageViewerAudio() {
 }
 
 function renderImageViewerResourceButtons() {
-  const block = currentImageViewerBlock();
+  const sourceBlock = currentImageViewerBlock();
+  const item = imageViewer.items[imageViewer.index];
+  const block = lessonResourceBlock(sourceBlock, item?.studentId, item?.lessonId);
   const hasScoreContext = imageViewer.mode === "score" && Boolean(block);
   const hasChords = hasScoreContext && normalizeChordNames(block.chords || []).some((name) => getChordByName(name));
   const hasRhythm = hasScoreContext && rhythmViewerItems(block).length > 0;
@@ -1977,6 +1985,40 @@ function currentScoreMarkup(create = false) {
   const markup = lesson.scoreMarkups[context.blockId][key];
   if (!Array.isArray(markup.actions)) markup.actions = [];
   return markup;
+}
+
+function lessonBlockAssets(studentId, lessonId, blockId, create = false) {
+  const student = state.students.find((entry) => entry.id === studentId);
+  const lesson = student?.lessons.find((entry) => entry.id === lessonId);
+  if (!student || !lesson || !blockId) return null;
+  if (!lesson.blockAssets || typeof lesson.blockAssets !== "object") {
+    if (!create) return null;
+    lesson.blockAssets = {};
+  }
+  if (!lesson.blockAssets[blockId]) {
+    if (!create) return null;
+    lesson.blockAssets[blockId] = { chords: [], rhythms: [] };
+  }
+  const assets = lesson.blockAssets[blockId];
+  assets.chords = normalizeChordNames(assets.chords || []);
+  assets.rhythms = normalizeRhythmIds(assets.rhythms || []);
+  return { student, lesson, assets };
+}
+
+function lessonResourceBlock(block, studentId = "", lessonId = "") {
+  if (!block) return null;
+  const local = lessonBlockAssets(studentId, lessonId, block.id, false)?.assets;
+  if (!local) return block;
+  return {
+    ...block,
+    chords: normalizeChordNames([...(block.chords || []), ...local.chords]),
+    rhythms: normalizeRhythmIds([...(block.rhythms || []), ...local.rhythms]),
+  };
+}
+
+function currentImageViewerResourceBlock() {
+  const item = imageViewer.items[imageViewer.index];
+  return lessonResourceBlock(currentImageViewerBlock(), item?.studentId || "", item?.lessonId || "");
 }
 
 function setImageMarkupActive(active) {
@@ -2115,7 +2157,9 @@ function addImageMarkupText(event) {
 }
 
 function openImageViewerChords() {
-  const block = currentImageViewerBlock();
+  const sourceBlock = currentImageViewerBlock();
+  const item = imageViewer.items[imageViewer.index];
+  const block = lessonResourceBlock(sourceBlock, item?.studentId, item?.lessonId);
   if (!block) return;
   const items = normalizeChordNames(block.chords || [])
     .map(getChordByName)
@@ -2154,7 +2198,9 @@ function rhythmViewerItems(block) {
 }
 
 function openImageViewerRhythm() {
-  const block = currentImageViewerBlock();
+  const sourceBlock = currentImageViewerBlock();
+  const item = imageViewer.items[imageViewer.index];
+  const block = lessonResourceBlock(sourceBlock, item?.studentId, item?.lessonId);
   const resources = rhythmViewerItems(block);
   if (!resources.length) return;
   const images = resources
@@ -3495,6 +3541,8 @@ function openRhythmBuilder(options = {}) {
     bars: editRhythm?.bars || 1,
     cells: editRhythm?.cells ? structuredClone(editRhythm.cells) : [],
     blockId: options.blockId || "",
+    lessonId: options.lessonId || "",
+    studentId: options.studentId || editRhythm?.studentId || "",
     attachToLesson: Boolean(options.attachToLesson),
     viewerContext: captureImageViewerContext(),
   };
@@ -3788,6 +3836,7 @@ function saveCustomRhythmFromBuilder() {
     unit: Number(els.rhythmBuilderUnit.value || rhythmBuilder.unit),
     bars: Number(els.rhythmBuilderBars.value) === 2 ? 2 : 1,
     cells: rhythmBuilder.cells,
+    studentId: rhythmBuilder.studentId,
     updatedAt: nowIso(),
   });
   state.customRhythms = [
@@ -3803,6 +3852,10 @@ function saveCustomRhythmFromBuilder() {
   if (rhythmBuilder.blockId === "__editing__") {
     editingBlockRhythmIds = normalizeRhythmIds([...editingBlockRhythmIds, rhythm.id]);
     renderBlockAssetLists();
+  } else if (rhythmBuilder.blockId && rhythmBuilder.lessonId && rhythmBuilder.studentId) {
+    const local = lessonBlockAssets(rhythmBuilder.studentId, rhythmBuilder.lessonId, rhythmBuilder.blockId, true);
+    local.assets.rhythms = normalizeRhythmIds([...local.assets.rhythms, rhythm.id]);
+    local.lesson.updatedAt = nowIso();
   } else if (rhythmBuilder.blockId) {
     const sourceBlock = getBlock(rhythmBuilder.blockId);
     if (sourceBlock) {
@@ -4102,6 +4155,7 @@ function openChordBuilder(options = {}) {
     rootMode: false,
     studentId: options.studentId ?? editChord?.studentId ?? chordBuilderStudentId(),
     blockId: options.blockId ?? (els.imageViewerDialog?.open && imageViewer.mode === "score" ? currentImageViewerBlock()?.id || "" : ""),
+    lessonId: options.lessonId ?? (els.imageViewerDialog?.open && imageViewer.mode === "score" ? imageViewer.items[imageViewer.index]?.lessonId || "" : ""),
     attachToLesson: Boolean(options.attachToLesson),
     category: editChord?.category || options.category || "custom",
     tones: editChord?.tones || "",
@@ -4267,10 +4321,18 @@ function saveCustomChordFromBuilder() {
     editingBlockChordNames = normalizeChordNames([...editingBlockChordNames, `custom:${chord.id}`]);
     renderBlockAssetLists();
   }
-  const sourceBlock = chordBuilder.blockId ? getBlock(chordBuilder.blockId) : null;
-  if (sourceBlock) {
+  const local = chordBuilder.blockId && chordBuilder.lessonId && chordBuilder.studentId
+    ? lessonBlockAssets(chordBuilder.studentId, chordBuilder.lessonId, chordBuilder.blockId, true)
+    : null;
+  if (local) {
+    local.assets.chords = normalizeChordNames([...local.assets.chords, `custom:${chord.id}`]);
+    local.lesson.updatedAt = nowIso();
+  } else {
+    const sourceBlock = chordBuilder.blockId ? getBlock(chordBuilder.blockId) : null;
+    if (sourceBlock) {
     sourceBlock.chords = normalizeChordNames([...(sourceBlock.chords || []), `custom:${chord.id}`]);
     sourceBlock.updatedAt = nowIso();
+    }
   }
   activeChordLibrary = "mine";
   activeChordCategory = chord.category || "custom";
@@ -5493,8 +5555,8 @@ function renderLessonBlock(block, options = {}) {
               controls
             ? `<div class="block-controls">
                 <span class="drag-handle" title="드래그해서 순서 바꾸기">↕</span>
-                <button class="secondary-button mini-button" type="button" data-draw-lesson-block-chord="${block.id}">코드 그리기</button>
-                <button class="secondary-button mini-button" type="button" data-draw-lesson-block-rhythm="${block.id}">리듬 그리기</button>
+                <button class="secondary-button mini-button" type="button" data-draw-lesson-block-chord="${block.id}" data-lesson-id="${lessonId}">코드 그리기</button>
+                <button class="secondary-button mini-button" type="button" data-draw-lesson-block-rhythm="${block.id}" data-lesson-id="${lessonId}">리듬 그리기</button>
                 <button class="secondary-button mini-button" type="button" data-edit-block="${block.id}">편집</button>
                 <button class="icon-button tiny-button" type="button" data-move-block="${block.id}" data-lesson-id="${lessonId}" data-direction="up" ${index === 0 ? "disabled" : ""} title="위로">↑</button>
                 <button class="icon-button tiny-button" type="button" data-move-block="${block.id}" data-lesson-id="${lessonId}" data-direction="down" ${index === total - 1 ? "disabled" : ""} title="아래로">↓</button>
@@ -5504,7 +5566,7 @@ function renderLessonBlock(block, options = {}) {
         }
       </div>
       <strong>${escapeHTML(block.title)}</strong>
-      ${renderLessonResourceChips(block, { editable: controls })}
+      ${renderLessonResourceChips(block, { editable: controls, studentId: student?.id || "", lessonId })}
       ${showMastery ? renderMasteryControl(student, block, masteryEditable) : ""}
       ${renderPracticeMeta(block)}
       <p>${escapeHTML(block.summary)}</p>
@@ -5515,10 +5577,11 @@ function renderLessonBlock(block, options = {}) {
   `;
 }
 
-function renderLessonResourceChips(block, { editable = false } = {}) {
+function renderLessonResourceChips(block, { editable = false, studentId = "", lessonId = "" } = {}) {
+  const resourceBlock = lessonResourceBlock(block, studentId, lessonId);
   const audio = block.audioLink ? renderAudioButton(block.audioLink) : "";
-  const chords = renderBlockChordDictionary(block, { editable });
-  const rhythms = renderBlockRhythmDictionary(block, { editable });
+  const chords = renderBlockChordDictionary(resourceBlock, { editable });
+  const rhythms = renderBlockRhythmDictionary(resourceBlock, { editable });
   if (!audio && !chords && !rhythms) return "";
   return `<div class="lesson-resource-chips">${audio}${chords}${rhythms}</div>`;
 }
@@ -5646,6 +5709,8 @@ function upsertLesson(student, date, blockIds, memo = "") {
     date,
     memo,
     blockIds: [...new Set(blockIds)],
+    blockAssets: {},
+    scoreMarkups: {},
     updatedAt: nowIso(),
   };
   student.lessons.unshift(newLesson);
@@ -5874,13 +5939,21 @@ document.addEventListener("click", (event) => {
 
   const drawLessonBlockChord = event.target.closest("[data-draw-lesson-block-chord]");
   if (drawLessonBlockChord) {
-    openChordBuilder({ blockId: drawLessonBlockChord.dataset.drawLessonBlockChord, studentId: activeStudentId });
+    openChordBuilder({
+      blockId: drawLessonBlockChord.dataset.drawLessonBlockChord,
+      lessonId: drawLessonBlockChord.dataset.lessonId,
+      studentId: activeStudentId,
+    });
     return;
   }
 
   const drawLessonBlockRhythm = event.target.closest("[data-draw-lesson-block-rhythm]");
   if (drawLessonBlockRhythm) {
-    openRhythmBuilder({ blockId: drawLessonBlockRhythm.dataset.drawLessonBlockRhythm });
+    openRhythmBuilder({
+      blockId: drawLessonBlockRhythm.dataset.drawLessonBlockRhythm,
+      lessonId: drawLessonBlockRhythm.dataset.lessonId,
+      studentId: activeStudentId,
+    });
     return;
   }
 
@@ -6531,7 +6604,14 @@ els.imageViewerRhythm.addEventListener("click", (event) => {
   event.preventDefault();
   openImageViewerRhythm();
 });
-els.imageViewerChordBuilder.addEventListener("click", () => openChordBuilder({ studentId: imageViewerStudentId() }));
+els.imageViewerChordBuilder.addEventListener("click", () => {
+  const item = imageViewer.items[imageViewer.index];
+  openChordBuilder({
+    studentId: imageViewerStudentId(),
+    blockId: item?.blockId || "",
+    lessonId: item?.lessonId || "",
+  });
+});
 els.imageViewerMarkup.addEventListener("click", () => setImageMarkupActive(!imageMarkup.active));
 els.imageMarkupSelect.addEventListener("click", () => setImageMarkupTool("select"));
 els.imageMarkupPen.addEventListener("click", () => setImageMarkupTool("pen"));
@@ -7122,6 +7202,8 @@ async function deleteBlockById(blockId) {
   state.students.forEach((student) => {
     student.lessons.forEach((lesson) => {
       lesson.blockIds = lesson.blockIds.filter((id) => id !== blockId);
+      if (lesson.blockAssets) delete lesson.blockAssets[blockId];
+      if (lesson.scoreMarkups) delete lesson.scoreMarkups[blockId];
     });
     student.lessons = student.lessons.filter((lesson) => lesson.blockIds.length || lesson.memo);
     if (student.practiceProgress) delete student.practiceProgress[blockId];
@@ -7145,6 +7227,10 @@ async function deleteSelectedLibraryBlocks() {
   state.students.forEach((student) => {
     student.lessons.forEach((lesson) => {
       lesson.blockIds = lesson.blockIds.filter((id) => !idSet.has(id));
+      ids.forEach((id) => {
+        if (lesson.blockAssets) delete lesson.blockAssets[id];
+        if (lesson.scoreMarkups) delete lesson.scoreMarkups[id];
+      });
     });
     student.lessons = student.lessons.filter((lesson) => lesson.blockIds.length || lesson.memo);
     if (student.practiceProgress) ids.forEach((id) => delete student.practiceProgress[id]);
@@ -7242,6 +7328,8 @@ async function saveEditingLesson(lessonId) {
               ...item,
               memo: nextMemo || item.memo,
               blockIds: [...new Set([...item.blockIds, ...lesson.blockIds])],
+              blockAssets: { ...(item.blockAssets || {}), ...(lesson.blockAssets || {}) },
+              scoreMarkups: { ...(item.scoreMarkups || {}), ...(lesson.scoreMarkups || {}) },
               updatedAt: nowIso(),
             }
           : item,
@@ -7272,6 +7360,8 @@ async function removeBlockFromLesson(lessonId, blockId) {
   const lesson = student?.lessons.find((item) => item.id === lessonId);
   if (!lesson) return;
   lesson.blockIds = lesson.blockIds.filter((id) => id !== blockId);
+  if (lesson.blockAssets) delete lesson.blockAssets[blockId];
+  if (lesson.scoreMarkups) delete lesson.scoreMarkups[blockId];
   lesson.updatedAt = nowIso();
   if (!lesson.blockIds.length && !lesson.memo) {
     student.lessons = student.lessons.filter((item) => item.id !== lessonId);
