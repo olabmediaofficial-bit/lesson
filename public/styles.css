@@ -5541,41 +5541,39 @@ dialog::backdrop {
   position: relative;
   display: grid;
   grid-template:
-    "top top top" minmax(180px, auto)
-    "left center right" minmax(150px, auto)
-    "bottom bottom bottom" minmax(180px, auto)
-    / minmax(0, 1fr) 130px minmax(0, 1fr);
-  gap: 2px;
-  min-height: 620px;
-  padding: 18px;
-  overflow: hidden;
+    "technique technique technique" auto
+    "left center right" auto
+    "theory theory theory" auto
+    / minmax(0, 1fr) 124px minmax(0, 1fr);
+  gap: 28px 18px;
+  min-height: 760px;
+  padding: 28px;
+  overflow: auto;
   border: 1px solid var(--line);
-  border-radius: 44px;
-  background:
-    radial-gradient(circle at center, rgba(212, 156, 102, 0.1) 0 14%, transparent 30%),
-    #171411;
+  border-radius: 18px;
+  background: #171411;
 }
 
-.curriculum-skill-tree::before,
-.curriculum-skill-tree::after {
+.skill-tree-edges {
   position: absolute;
+  inset: 0;
   z-index: 0;
-  content: "";
-  background: rgba(210, 176, 141, 0.18);
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
-.curriculum-skill-tree::before {
-  top: 50%;
-  left: 8%;
-  width: 84%;
-  height: 2px;
+.skill-tree-edges path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.72;
 }
 
-.curriculum-skill-tree::after {
-  top: 8%;
-  left: 50%;
-  width: 2px;
-  height: 84%;
+.skill-tree-edges .area-left { stroke: #a97a57; }
+.skill-tree-edges .area-right { stroke: #6e927d; }
+.skill-tree-edges .area-technique { stroke: #88758e; }
+.skill-tree-edges .area-theory { stroke: #a18468; }
 }
 
 .skill-tree-center,
@@ -5590,8 +5588,8 @@ dialog::backdrop {
   justify-self: center;
   display: grid;
   place-content: center;
-  width: 112px;
-  height: 112px;
+  width: 108px;
+  height: 108px;
   border: 3px solid #d49c66;
   border-radius: 50%;
   background: #2e241d;
@@ -5612,99 +5610,108 @@ dialog::backdrop {
 .skill-tree-arm {
   display: grid;
   align-content: center;
-  gap: 8px;
-  padding: 18px 20px;
-  border: 0;
-  background: rgba(35, 31, 28, 0.9);
-  box-shadow: inset 0 0 0 1px rgba(235, 213, 192, 0.08);
+  gap: 12px;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
 }
 
-.skill-tree-arm.left-arm {
+.skill-tree-arm.area-left {
   grid-area: left;
-  margin-right: -14px;
-  padding-right: 34px;
-  border-radius: 52% 18% 18% 52% / 34% 28% 28% 34%;
-  background: rgba(92, 69, 50, 0.76);
 }
 
-.skill-tree-arm.right-arm {
+.skill-tree-arm.area-right {
   grid-area: right;
-  margin-left: -14px;
-  padding-left: 34px;
-  border-radius: 18% 52% 52% 18% / 28% 34% 34% 28%;
-  background: rgba(56, 76, 65, 0.7);
 }
 
-.skill-tree-arm.top-arm {
-  grid-area: top;
-  align-self: end;
+.skill-tree-arm.area-technique {
+  grid-area: technique;
   justify-self: center;
-  width: min(600px, 72%);
-  margin-bottom: -18px;
-  padding-bottom: 36px;
-  border-radius: 52% 52% 20% 20% / 64% 64% 22% 22%;
-  background: rgba(76, 67, 82, 0.72);
+  width: min(760px, 76%);
 }
 
-.skill-tree-arm.bottom-arm {
-  grid-area: bottom;
-  align-self: start;
+.skill-tree-arm.area-theory {
+  grid-area: theory;
   justify-self: center;
-  width: min(600px, 72%);
-  margin-top: -18px;
-  padding-top: 36px;
-  border-radius: 20% 20% 52% 52% / 22% 22% 64% 64%;
-  background: rgba(84, 66, 53, 0.76);
+  width: min(900px, 88%);
 }
 
 .skill-tree-arm header {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  justify-self: center;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 7px 15px;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  background: #2e2925;
   color: #f0dbc7;
 }
 
+.skill-tree-arm.area-left header { color: #d6a77f; }
+.skill-tree-arm.area-right header { color: #91b49f; }
+.skill-tree-arm.area-technique header { color: #b5a2bd; }
+.skill-tree-arm.area-theory header { color: #c8aa8d; }
+
 .skill-tree-arm header span {
-  color: #a99585;
+  color: currentColor;
   font-size: 11px;
   font-weight: 900;
+  opacity: 0.74;
 }
 
 .skill-tree-branches {
   display: grid;
-  gap: 7px;
+  gap: 10px;
+}
+
+.area-technique .skill-tree-branches,
+.area-theory .skill-tree-branches {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .skill-tree-branch {
+  position: relative;
+  z-index: 2;
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr);
+  grid-template-columns: 92px minmax(0, 1fr);
   align-items: start;
-  gap: 7px;
+  gap: 9px;
 }
 
 .skill-tree-branch > b {
-  padding-top: 5px;
-  color: #aa9381;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid #796a5f;
+  border-radius: 8px;
+  background: #292521;
+  color: #c5ad99;
   font-size: 10px;
-  text-align: right;
+  text-align: center;
 }
 
 .skill-tree-branch > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
 
 .skill-tree-node {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 24px;
-  max-width: 118px;
-  padding: 3px 7px;
+  min-height: 28px;
+  max-width: 132px;
+  padding: 4px 8px;
   overflow: hidden;
   border: 1px solid #56504b;
-  border-radius: 999px;
+  border-radius: 50%;
   background: #302d2a;
   color: #77716c;
   font-size: 9px;
@@ -6631,34 +6638,34 @@ textarea,
 
   .curriculum-skill-tree {
     grid-template:
-      "top" auto
+      "technique" auto
       "left" auto
       "center" 120px
       "right" auto
-      "bottom" auto
+      "theory" auto
       / 1fr;
     min-height: 0;
-    gap: 8px;
-    border-radius: 24px;
+    gap: 26px;
+    padding: 20px 14px;
+    border-radius: 18px;
   }
 
-  .curriculum-skill-tree::before,
-  .curriculum-skill-tree::after {
-    display: none;
-  }
-
-  .skill-tree-arm.left-arm,
-  .skill-tree-arm.right-arm,
-  .skill-tree-arm.top-arm,
-  .skill-tree-arm.bottom-arm {
+  .skill-tree-arm.area-left,
+  .skill-tree-arm.area-right,
+  .skill-tree-arm.area-technique,
+  .skill-tree-arm.area-theory {
     width: 100%;
     margin: 0;
-    padding: 14px;
-    border-radius: 24px;
+    padding: 0;
   }
 
   .skill-tree-branch {
-    grid-template-columns: 74px minmax(0, 1fr);
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .area-technique .skill-tree-branches,
+  .area-theory .skill-tree-branches {
+    grid-template-columns: 1fr;
   }
 
   .progress-song-row .mastery-control {

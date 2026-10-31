@@ -4461,20 +4461,22 @@ function renderCurriculumLevelButtons(skillId, level) {
 
 function renderCurriculumSkillTree(student) {
   const levels = studentCurriculumLevels(student);
-  const areaClass = { left: "left-arm", right: "right-arm", technique: "top-arm", theory: "bottom-arm" };
   return `
-    <section class="curriculum-skill-tree" aria-label="직접 확인 기반 4방향 스킬 지도">
-      <div class="skill-tree-center"><b>${escapeHTML(student.name)}</b><span>현재 진도</span></div>
+    <section class="curriculum-skill-tree" aria-label="직접 확인 기반 4방향 마인드맵">
+      <svg class="skill-tree-edges" aria-hidden="true"></svg>
+      <div class="skill-tree-center" data-tree-node="student"><b>${escapeHTML(student.name)}</b><span>현재 진도</span></div>
       ${CURRICULUM_AREAS.map((area) => `
-        <section class="skill-tree-arm ${areaClass[area.key]}">
-          <header><strong>${area.label}</strong><span>${area.skills.filter((item) => levels[item.id]).length}/${area.skills.length}</span></header>
+        <section class="skill-tree-arm area-${area.key}">
+          <header class="skill-tree-area-node" data-tree-node="area-${area.key}" data-tree-parent="student" data-tree-area="${area.key}">
+            <strong>${area.label}</strong><span>${area.skills.filter((item) => levels[item.id]).length}/${area.skills.length}</span>
+          </header>
           <div class="skill-tree-branches">
-            ${area.groups.map((item) => `
+            ${area.groups.map((item, groupIndex) => `
               <div class="skill-tree-branch">
-                <b>${escapeHTML(item.label)}</b>
+                <b data-tree-node="group-${area.key}-${groupIndex}" data-tree-parent="area-${area.key}" data-tree-area="${area.key}">${escapeHTML(item.label)}</b>
                 <div>${item.skills.map((entry) => {
                   const level = levels[entry.id] || 0;
-                  return `<span class="skill-tree-node level-${level}" title="${escapeHTML(`${entry.label} · ${level ? masteryLabel(level) : "아직 배우지 않음"}`)}">${escapeHTML(entry.label)}</span>`;
+                  return `<span class="skill-tree-node level-${level}" data-tree-parent="group-${area.key}-${groupIndex}" data-tree-area="${area.key}" title="${escapeHTML(`${entry.label} · ${level ? masteryLabel(level) : "아직 배우지 않음"}`)}">${escapeHTML(entry.label)}</span>`;
                 }).join("")}</div>
               </div>
             `).join("")}
@@ -4483,6 +4485,31 @@ function renderCurriculumSkillTree(student) {
       `).join("")}
     </section>
   `;
+}
+
+function drawCurriculumSkillTree() {
+  const root = document.querySelector(".curriculum-skill-tree");
+  const svg = root?.querySelector(".skill-tree-edges");
+  if (!root || !svg) return;
+  const rootRect = root.getBoundingClientRect();
+  if (!rootRect.width || !rootRect.height) return;
+  svg.setAttribute("viewBox", `0 0 ${rootRect.width} ${rootRect.height}`);
+  const nodeCenter = (node) => {
+    const rect = node.getBoundingClientRect();
+    return { x: rect.left - rootRect.left + rect.width / 2, y: rect.top - rootRect.top + rect.height / 2 };
+  };
+  const paths = [...root.querySelectorAll("[data-tree-parent]")].map((child) => {
+    const parent = root.querySelector(`[data-tree-node="${CSS.escape(child.dataset.treeParent)}"]`);
+    if (!parent) return "";
+    const start = nodeCenter(parent);
+    const end = nodeCenter(child);
+    const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
+    const path = horizontal
+      ? `M ${start.x} ${start.y} C ${(start.x + end.x) / 2} ${start.y}, ${(start.x + end.x) / 2} ${end.y}, ${end.x} ${end.y}`
+      : `M ${start.x} ${start.y} C ${start.x} ${(start.y + end.y) / 2}, ${end.x} ${(start.y + end.y) / 2}, ${end.x} ${end.y}`;
+    return `<path class="area-${child.dataset.treeArea || "left"}" d="${path}" />`;
+  }).join("");
+  svg.innerHTML = paths;
 }
 
 function renderStudentCurriculumRows(student, mode) {
@@ -4534,7 +4561,7 @@ function renderStudentCurriculumChecklist(student) {
   return `
     <section class="student-curriculum-panel">
       <div class="student-curriculum-head">
-        <div><strong>4방향 스킬 지도</strong><span>회색은 미학습, 색이 진해질수록 직접 확인한 구사 수준이 높습니다.</span></div>
+        <div><strong>커리큘럼 마인드맵</strong><span>중앙에서 네 영역과 세부 학습 항목으로 이어지며, 색이 진할수록 구사 수준이 높습니다.</span></div>
         <div class="student-curriculum-totals"><span class="manual"><b>${manualTotal}</b> 직접 확인</span><span class="automatic"><b>${automaticTotal}</b> 블럭 학습</span></div>
       </div>
       ${renderCurriculumSkillTree(student)}
@@ -4601,6 +4628,7 @@ function renderProgress() {
       }
     </section>
   `;
+  requestAnimationFrame(drawCurriculumSkillTree);
 }
 
 function schedulePeople() {
@@ -7399,6 +7427,12 @@ function openStudentShareLink(student) {
   if (!student) return;
   window.open(studentShareUrl(student), "_blank", "noopener,noreferrer");
 }
+
+let curriculumTreeResizeFrame = 0;
+window.addEventListener("resize", () => {
+  cancelAnimationFrame(curriculumTreeResizeFrame);
+  curriculumTreeResizeFrame = requestAnimationFrame(drawCurriculumSkillTree);
+});
 
 async function init() {
   await loadServerInfo();
