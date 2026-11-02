@@ -177,6 +177,7 @@
                 </div>
                 <div class="student-actions">
                   <button class="secondary-button" data-view="progress" type="button">진도표 보기</button>
+                  <button class="secondary-button" id="openUsefulSites" type="button">유용한 사이트</button>
                   <button class="secondary-button danger" id="deleteStudent" type="button">학생 삭제</button>
                   <button class="primary-button" id="copyShareLink" type="button">공유 링크 복사</button>
                   <button class="secondary-button" id="openActiveShareLink" type="button">공유 화면 보기</button>
@@ -477,6 +478,7 @@
                   <h2 id="shareStudentName">학생 레슨룸</h2>
                   <a class="resource-library-button" id="shareResourceLibrary" href="#" target="_blank" rel="noreferrer" hidden>레슨 자료실</a>
                   <button class="secondary-button chord-dictionary-link" data-view="chords" type="button">코드사전</button>
+                  <button class="secondary-button useful-sites-button" data-open-useful-sites type="button">유용한 사이트</button>
                 </div>
                 <div class="share-actions">
                   <select id="shareStudentPicker" aria-label="공유 학생 선택"></select>
@@ -682,6 +684,30 @@
           <button class="primary-button" id="saveStudent" value="default" type="submit">저장</button>
         </menu>
       </form>
+    </dialog>
+
+    <dialog id="usefulSitesDialog">
+      <div class="dialog-card useful-sites-dialog-card">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Lesson resources</p>
+            <h2>유용한 사이트</h2>
+          </div>
+          <button class="icon-button" id="closeUsefulSites" type="button" title="닫기">×</button>
+        </div>
+        <div id="usefulSitesList" class="useful-sites-list"></div>
+        <form id="usefulSiteForm" class="useful-site-form">
+          <label>
+            사이트 이름
+            <input id="newUsefulSiteName" type="text" required placeholder="예: 기타 지판 & 스케일" />
+          </label>
+          <label>
+            링크 주소
+            <input id="newUsefulSiteUrl" type="url" required placeholder="https://example.com" />
+          </label>
+          <button class="primary-button" type="submit">사이트 추가</button>
+        </form>
+      </div>
     </dialog>
 
     <dialog id="imageViewerDialog" class="image-viewer-dialog">

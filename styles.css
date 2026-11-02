@@ -123,7 +123,8 @@ button {
 .public-share button,
 .public-share .resource-button,
 .public-share .resource-library-button,
-.public-share .chord-dictionary-link {
+.public-share .chord-dictionary-link,
+.public-share .useful-sites-button {
   font-size: 13px;
   line-height: 1;
 }
@@ -2331,7 +2332,8 @@ textarea {
   text-decoration: none;
 }
 
-.chord-dictionary-link {
+.chord-dictionary-link,
+.useful-sites-button {
   width: max-content;
   max-width: 100%;
   margin-top: 8px;
@@ -6018,7 +6020,8 @@ textarea,
 }
 
 .resource-library-button,
-.chord-dictionary-link {
+.chord-dictionary-link,
+.useful-sites-button {
   display: inline-flex;
   width: max-content;
   min-height: 38px;
@@ -6032,6 +6035,81 @@ textarea,
   box-shadow:
     5px 5px 12px rgba(117, 82, 55, 0.13),
     -5px -5px 12px rgba(255, 252, 247, 0.88);
+}
+
+.useful-sites-dialog-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(580px, calc(100vw - 32px));
+  max-height: min(720px, calc(100vh - 32px));
+  overflow: hidden;
+}
+
+.useful-sites-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 140px;
+  max-height: 420px;
+  padding: 4px 2px 12px;
+  overflow-y: auto;
+}
+
+.useful-site-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf5;
+}
+
+.useful-site-item a {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 8px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.useful-site-item a:hover strong {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.useful-site-item strong,
+.useful-site-item small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.useful-site-item small {
+  color: var(--muted);
+}
+
+.useful-site-form {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.useful-site-form[hidden] {
+  display: none;
+}
+
+.useful-site-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .share-hero .compact-metronome {
@@ -6146,6 +6224,15 @@ textarea,
 }
 
 @media (max-width: 640px) {
+  .useful-sites-dialog-card {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .useful-site-form {
+    grid-template-columns: 1fr;
+  }
+
   .curriculum-finder-head,
   .curriculum-filter-selection {
     align-items: flex-start;

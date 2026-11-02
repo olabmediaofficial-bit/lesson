@@ -349,9 +349,18 @@ const LEGACY_CURRICULUM_SKILLS = new Set([
   "왼손뮤트", "오른손뮤트", "팜뮤트", "베이스라인", "해머링온", "풀링오프", "슬라이드", "하모닉스",
 ]);
 
+const DEFAULT_USEFUL_SITES = [
+  {
+    id: "site-guitar-scale",
+    name: "기타 지판 & 스케일",
+    url: "https://www.guitarscale.org/c-major.html",
+  },
+];
+
 const starterData = {
   practiceProgressScale: "four-step",
   resourceLibraryUrl: "",
+  usefulSites: structuredClone(DEFAULT_USEFUL_SITES),
   schedule: [],
   schedulePeople: [],
   customChords: [],
@@ -1068,6 +1077,7 @@ const els = {
   copyPreviewShareLink: $("#copyPreviewShareLink"),
   openPreviewShareLink: $("#openPreviewShareLink"),
   openActiveShareLink: $("#openActiveShareLink"),
+  openUsefulSites: $("#openUsefulSites"),
   shareStudentName: $("#shareStudentName"),
   shareResourceLibrary: $("#shareResourceLibrary"),
   shareScheduleLink: $("#shareScheduleLink"),
@@ -1082,6 +1092,12 @@ const els = {
   closeBlockViewerBottom: $("#closeBlockViewerBottom"),
   editViewedBlock: $("#editViewedBlock"),
   studentDialog: $("#studentDialog"),
+  usefulSitesDialog: $("#usefulSitesDialog"),
+  usefulSitesList: $("#usefulSitesList"),
+  usefulSiteForm: $("#usefulSiteForm"),
+  newUsefulSiteName: $("#newUsefulSiteName"),
+  newUsefulSiteUrl: $("#newUsefulSiteUrl"),
+  closeUsefulSites: $("#closeUsefulSites"),
   imageViewerDialog: $("#imageViewerDialog"),
   imageViewerTitle: $("#imageViewerTitle"),
   imageViewerMastery: $("#imageViewerMastery"),
@@ -1270,6 +1286,12 @@ function stripLegacyCurriculumTags(tags = []) {
 function migrateState(data) {
   if (!data.blocks) return structuredClone(starterData);
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
+  data.usefulSites = Array.isArray(data.usefulSites)
+    ? data.usefulSites
+        .map(normalizeUsefulSite)
+        .map((site) => ({ ...site, url: safeExternalUrl(site.url) }))
+        .filter((site) => site.name && site.url)
+    : structuredClone(DEFAULT_USEFUL_SITES);
   data.schedule = Array.isArray(data.schedule) ? data.schedule : [];
   data.schedulePeople = Array.isArray(data.schedulePeople) ? data.schedulePeople : [];
   data.customChords = Array.isArray(data.customChords) ? data.customChords.map(normalizeCustomChord) : [];
@@ -1311,6 +1333,80 @@ function migrateState(data) {
   });
   data.practiceProgressScale = "four-step";
   return data;
+}
+
+function normalizeUsefulSite(site = {}) {
+  return {
+    id: site.id || uid("site"),
+    name: String(site.name || "").trim(),
+    url: String(site.url || "").trim(),
+  };
+}
+
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim());
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function usefulSiteHost(value) {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function usefulSites() {
+  return (state.usefulSites || [])
+    .map(normalizeUsefulSite)
+    .map((site) => ({ ...site, url: safeExternalUrl(site.url) }))
+    .filter((site) => site.name && site.url);
+}
+
+function renderUsefulSitesDialog() {
+  const sites = usefulSites();
+  els.usefulSitesList.innerHTML = sites.length
+    ? sites.map((site) => `
+        <div class="useful-site-item">
+          <a href="${escapeHTML(site.url)}" target="_blank" rel="noopener noreferrer">
+            <strong>${escapeHTML(site.name)}</strong>
+            <small>${escapeHTML(usefulSiteHost(site.url))}</small>
+          </a>
+          ${publicShareMode ? "" : `<button class="icon-button tiny-button danger" type="button" data-delete-useful-site="${escapeHTML(site.id)}" title="삭제">×</button>`}
+        </div>`).join("")
+    : `<div class="empty">아직 등록된 사이트가 없습니다.</div>`;
+  els.usefulSiteForm.hidden = publicShareMode;
+}
+
+function openUsefulSitesDialog() {
+  renderUsefulSitesDialog();
+  els.usefulSitesDialog.showModal();
+}
+
+function deleteUsefulSite(siteId) {
+  const site = usefulSites().find((item) => item.id === siteId);
+  if (!site || !window.confirm(`"${site.name}" 링크를 삭제할까요?`)) return;
+  state.usefulSites = usefulSites().filter((item) => item.id !== siteId);
+  renderUsefulSitesDialog();
+  saveStateInBackground({}, "유용한 사이트를 삭제했습니다.");
+}
+
+function addUsefulSite(event) {
+  event.preventDefault();
+  const name = els.newUsefulSiteName.value.trim();
+  const url = safeExternalUrl(els.newUsefulSiteUrl.value);
+  if (!name || !url) {
+    showToast("사이트 이름과 올바른 주소를 입력해주세요.");
+    return;
+  }
+  state.usefulSites = [...usefulSites(), { id: uid("site"), name, url }];
+  els.usefulSiteForm.reset();
+  renderUsefulSitesDialog();
+  saveStateInBackground({}, `${name} 사이트를 추가했습니다.`);
 }
 
 function normalizePractice(practice = {}) {
@@ -7485,6 +7581,17 @@ $("#copyShareLink").addEventListener("click", async () => {
 
 els.openActiveShareLink?.addEventListener("click", () => {
   openStudentShareLink(getActiveStudent());
+});
+
+els.openUsefulSites?.addEventListener("click", openUsefulSitesDialog);
+document.querySelectorAll("[data-open-useful-sites]").forEach((button) => {
+  button.addEventListener("click", openUsefulSitesDialog);
+});
+els.closeUsefulSites?.addEventListener("click", () => els.usefulSitesDialog.close());
+els.usefulSiteForm?.addEventListener("submit", addUsefulSite);
+els.usefulSitesList?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-delete-useful-site]");
+  if (button) deleteUsefulSite(button.dataset.deleteUsefulSite);
 });
 
 els.copyPreviewShareLink.addEventListener("click", async () => {

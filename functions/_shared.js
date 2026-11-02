@@ -141,6 +141,7 @@ export function mergeState(serverState, incomingState) {
     ...serverState,
     ...incomingState,
     resourceLibraryUrl: incomingState.resourceLibraryUrl ?? serverState.resourceLibraryUrl ?? "",
+    usefulSites: incomingState.usefulSites ?? serverState.usefulSites ?? [],
     blocks: mergeBlocks(serverState.blocks || [], incomingState.blocks || []),
     customChords: mergeCustomChords(serverState.customChords || [], incomingState.customChords || []),
     customRhythms: mergeCustomRhythms(serverState.customRhythms || [], incomingState.customRhythms || []),

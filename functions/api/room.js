@@ -26,6 +26,7 @@ export async function onRequest(context) {
       customRhythms,
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
+      usefulSites: state.usefulSites,
     });
   } catch (error) {
     return json({ error: "Room storage unavailable", detail: error.message || String(error) }, 500);
