@@ -463,7 +463,6 @@ let libraryCurriculumFilters = new Set();
 let editingCurriculumSkills = new Set();
 let activeBlockCurriculumArea = "left";
 let activeProgressCurriculumArea = "left";
-let expandedSkillTreeGroups = new Set();
 let openBlockCurriculumGroups = new Set();
 let openProgressCurriculumGroups = new Set();
 let blockCurriculumSearch = "";
@@ -4622,6 +4621,9 @@ function renderCurriculumSkillTree(student) {
   const levels = studentCurriculumLevels(student);
   return `
     <section class="curriculum-skill-tree" aria-label="직접 확인 기반 4방향 마인드맵">
+      <button class="skill-tree-fullscreen-toggle" type="button" data-toggle-skill-tree-fullscreen aria-label="진도 트리 크게 보기">
+        <span aria-hidden="true">⛶</span><b>크게 보기</b>
+      </button>
       <div class="skill-tree-canvas">
         <svg class="skill-tree-edges" aria-hidden="true"></svg>
         <div class="skill-tree-center" data-tree-node="student" data-tree-kind="center"><b>${escapeHTML(student.name)}</b><span>기타 여정</span></div>
@@ -4631,22 +4633,21 @@ function renderCurriculumSkillTree(student) {
           </div>
           ${area.groups.map((group, groupIndex) => {
             const groupKey = `${area.key}-${groupIndex}`;
-            const expanded = expandedSkillTreeGroups.has(groupKey);
             const learned = group.skills.filter((item) => levels[item.id]).length;
             const groupLevel = group.skills.reduce((highest, item) => Math.max(highest, Number(levels[item.id]) || 0), 0);
             return `
-              <button class="skill-tree-group area-${area.key} level-${groupLevel}" type="button"
+              <div class="skill-tree-group area-${area.key} level-${groupLevel}"
                 data-tree-node="group-${groupKey}" data-tree-parent="area-${area.key}" data-tree-area="${area.key}" data-tree-kind="group"
-                data-skill-tree-group="${groupKey}" aria-expanded="${expanded}">
+                data-skill-tree-group="${groupKey}">
                 <b>${escapeHTML(group.label)}</b><span>${learned}/${group.skills.length}</span>
-              </button>
-              ${expanded ? group.skills.map((entry, skillIndex) => {
+              </div>
+              ${group.skills.map((entry, skillIndex) => {
                 const level = Number(levels[entry.id]) || 0;
-                return `<button class="skill-tree-node area-${area.key} level-${level}" type="button"
+                return `<span class="skill-tree-node area-${area.key} level-${level}"
                   data-tree-node="skill-${escapeHTML(entry.id)}" data-tree-parent="group-${groupKey}" data-tree-area="${area.key}" data-tree-kind="skill"
                   data-tree-group="${groupKey}" data-tree-skill-index="${skillIndex}"
-                  data-tooltip="${escapeHTML(`${entry.label} · ${level ? masteryLabel(level) : "아직 배우지 않음"}`)}">${escapeHTML(entry.label)}${level === 4 ? `<i aria-hidden="true"></i>` : ""}</button>`;
-              }).join("") : ""}
+                  data-tooltip="${escapeHTML(`${entry.label} · ${level ? masteryLabel(level) : "아직 배우지 않음"}`)}">${escapeHTML(entry.label)}${level === 4 ? `<i aria-hidden="true"></i>` : ""}</span>`;
+              }).join("")}
             `;
           }).join("")}
         `).join("")}
@@ -4661,9 +4662,8 @@ function drawCurriculumSkillTree() {
   const svg = canvas?.querySelector(".skill-tree-edges");
   if (!root || !canvas || !svg) return;
 
-  const hasExpandedGroup = Boolean(canvas.querySelector('[data-tree-kind="skill"]'));
-  const width = Math.max(root.clientWidth - 2, hasExpandedGroup ? 1540 : 1120);
-  const height = hasExpandedGroup ? 1120 : 820;
+  const width = 1680;
+  const height = 1240;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
@@ -4675,8 +4675,8 @@ function drawCurriculumSkillTree() {
     theory: -Math.PI / 2,
     technique: Math.PI / 2,
   };
-  const areaRadius = hasExpandedGroup ? 178 : 150;
-  const groupRadius = hasExpandedGroup ? 390 : 310;
+  const areaRadius = 184;
+  const groupRadius = 398;
   const positions = new Map();
   const fixed = new Set(["student"]);
   const place = (node, x, y) => {
@@ -4777,20 +4777,26 @@ function drawCurriculumSkillTree() {
     return `<path class="area-${child.dataset.treeArea || "left"} edge-${kind} ${level}" d="M ${start.x} ${start.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${end.x} ${end.y}" />`;
   }).join("");
   svg.innerHTML = paths;
-  const expandedSkills = [...canvas.querySelectorAll('[data-tree-kind="skill"]')]
-    .map((node) => positions.get(node.dataset.treeNode))
-    .filter(Boolean);
-  const expandedGroup = canvas.querySelector('.skill-tree-group[aria-expanded="true"]');
-  const expandedGroupPosition = expandedGroup ? positions.get(expandedGroup.dataset.treeNode) : null;
-  const focusItems = expandedSkills.length ? [...expandedSkills, ...(expandedGroupPosition ? [expandedGroupPosition] : [])] : [];
-  const focus = focusItems.length
-    ? {
-        x: focusItems.reduce((sum, item) => sum + item.x, 0) / focusItems.length,
-        y: focusItems.reduce((sum, item) => sum + item.y, 0) / focusItems.length,
-      }
-    : center;
-  root.scrollLeft = Math.max(0, Math.min(width - root.clientWidth, focus.x - root.clientWidth / 2));
-  root.scrollTop = Math.max(0, Math.min(height - root.clientHeight, focus.y - root.clientHeight / 2));
+  const fullscreen = root.classList.contains("is-fullscreen");
+  const padding = fullscreen ? 48 : 18;
+  const bounds = fullscreen
+    ? all.reduce((box, item) => {
+        const halfWidth = item.node.offsetWidth / 2 + 22;
+        const halfHeight = item.node.offsetHeight / 2 + 22;
+        return {
+          minX: Math.min(box.minX, item.x - halfWidth),
+          maxX: Math.max(box.maxX, item.x + halfWidth),
+          minY: Math.min(box.minY, item.y - halfHeight),
+          maxY: Math.max(box.maxY, item.y + halfHeight),
+        };
+      }, { minX: width, maxX: 0, minY: height, maxY: 0 })
+    : { minX: 0, maxX: width, minY: 0, maxY: height };
+  const contentWidth = Math.max(1, bounds.maxX - bounds.minX);
+  const contentHeight = Math.max(1, bounds.maxY - bounds.minY);
+  const scale = Math.min((root.clientWidth - padding * 2) / contentWidth, (root.clientHeight - padding * 2) / contentHeight);
+  const offsetX = (root.clientWidth - contentWidth * scale) / 2 - bounds.minX * scale;
+  const offsetY = (root.clientHeight - contentHeight * scale) / 2 - bounds.minY * scale;
+  canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
 }
 
 function renderStudentCurriculumRows(student, mode) {
@@ -6010,15 +6016,15 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const skillTreeGroup = event.target.closest("[data-skill-tree-group]");
-  if (skillTreeGroup) {
-    const groupKey = skillTreeGroup.dataset.skillTreeGroup;
-    if (expandedSkillTreeGroups.has(groupKey)) expandedSkillTreeGroups.delete(groupKey);
-    else {
-      expandedSkillTreeGroups.clear();
-      expandedSkillTreeGroups.add(groupKey);
-    }
-    renderProgress();
+  const skillTreeFullscreen = event.target.closest("[data-toggle-skill-tree-fullscreen]");
+  if (skillTreeFullscreen) {
+    const tree = skillTreeFullscreen.closest(".curriculum-skill-tree");
+    const fullscreen = tree.classList.toggle("is-fullscreen");
+    document.body.classList.toggle("skill-tree-fullscreen-open", fullscreen);
+    skillTreeFullscreen.querySelector("span").textContent = fullscreen ? "×" : "⛶";
+    skillTreeFullscreen.querySelector("b").textContent = fullscreen ? "닫기" : "크게 보기";
+    skillTreeFullscreen.setAttribute("aria-label", fullscreen ? "진도 트리 크게 보기 닫기" : "진도 트리 크게 보기");
+    requestAnimationFrame(drawCurriculumSkillTree);
     return;
   }
 
@@ -7764,6 +7770,21 @@ let curriculumTreeResizeFrame = 0;
 window.addEventListener("resize", () => {
   cancelAnimationFrame(curriculumTreeResizeFrame);
   curriculumTreeResizeFrame = requestAnimationFrame(drawCurriculumSkillTree);
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  const tree = document.querySelector(".curriculum-skill-tree.is-fullscreen");
+  if (!tree) return;
+  tree.classList.remove("is-fullscreen");
+  document.body.classList.remove("skill-tree-fullscreen-open");
+  const button = tree.querySelector("[data-toggle-skill-tree-fullscreen]");
+  if (button) {
+    button.querySelector("span").textContent = "⛶";
+    button.querySelector("b").textContent = "크게 보기";
+    button.setAttribute("aria-label", "진도 트리 크게 보기");
+  }
+  requestAnimationFrame(drawCurriculumSkillTree);
 });
 
 async function init() {

@@ -5550,7 +5550,7 @@ dialog::backdrop {
   gap: 28px 18px;
   min-height: 760px;
   padding: 28px;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: #171411;
@@ -5757,6 +5757,53 @@ dialog::backdrop {
   transform-origin: 0 0;
 }
 
+.skill-tree-fullscreen-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid rgba(224, 201, 181, 0.42);
+  border-radius: 8px;
+  background: rgba(41, 34, 29, 0.9);
+  color: #f4e6dc;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.2);
+}
+
+.skill-tree-fullscreen-toggle span {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.skill-tree-fullscreen-toggle b {
+  font-size: 11px;
+}
+
+.curriculum-skill-tree.is-fullscreen {
+  position: fixed;
+  inset: 12px;
+  z-index: 1000;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  border-color: rgba(224, 201, 181, 0.5);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.48);
+}
+
+.skill-tree-fullscreen-open {
+  overflow: hidden;
+}
+
+.curriculum-skill-tree.is-fullscreen .skill-tree-fullscreen-toggle {
+  top: 18px;
+  right: 18px;
+  min-width: 76px;
+}
+
 .skill-tree-canvas [data-tree-node] {
   position: absolute;
   z-index: 2;
@@ -5838,12 +5885,6 @@ dialog::backdrop {
   background: #292521;
   color: #e6d8cc;
   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.16);
-}
-
-.skill-tree-group:hover,
-.skill-tree-group[aria-expanded="true"] {
-  background: #39312b;
-  transform: translate(-50%, -50%) scale(1.035);
 }
 
 .skill-tree-group b {
@@ -6402,6 +6443,15 @@ textarea,
 }
 
 @media (max-width: 640px) {
+  .curriculum-skill-tree.is-fullscreen {
+    inset: 6px;
+  }
+
+  .curriculum-skill-tree.is-fullscreen .skill-tree-fullscreen-toggle {
+    top: 8px;
+    right: 8px;
+  }
+
   .useful-sites-dialog-card {
     width: calc(100vw - 20px);
     max-height: calc(100vh - 20px);
