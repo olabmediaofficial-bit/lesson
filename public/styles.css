@@ -5735,6 +5735,184 @@ dialog::backdrop {
 .skill-tree-node.level-3 { border-color: #b26f43; background: #ad6b43; color: #fff7ee; }
 .skill-tree-node.level-4 { border-color: #f1b57f; background: #713e26; color: #fff; box-shadow: 0 0 9px rgba(229, 145, 82, 0.46); }
 
+/* Organic curriculum map: positions are assigned by the radial layout in app.js. */
+.curriculum-skill-tree {
+  position: relative;
+  display: block;
+  height: min(72vh, 760px);
+  min-height: 620px;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(66, 54, 45, 0.92), #171411 62%);
+  overscroll-behavior: contain;
+}
+
+.skill-tree-canvas {
+  position: relative;
+  min-width: 100%;
+  min-height: 100%;
+  transform-origin: 0 0;
+}
+
+.skill-tree-canvas [data-tree-node] {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+}
+
+.skill-tree-edges {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.skill-tree-edges path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.82;
+}
+
+.skill-tree-edges .edge-area { stroke-width: 8; }
+.skill-tree-edges .edge-group { stroke-width: 4; }
+.skill-tree-edges .edge-skill { stroke-width: 2; }
+.skill-tree-edges .edge-skill.level-0 { stroke: #514b46; opacity: 0.58; }
+.skill-tree-edges .edge-skill.level-1 { opacity: 0.7; }
+.skill-tree-edges .edge-skill.level-2 { opacity: 0.82; }
+.skill-tree-edges .edge-skill.level-3,
+.skill-tree-edges .edge-skill.level-4 { opacity: 1; }
+
+.skill-tree-center {
+  display: grid;
+  place-content: center;
+  width: 104px;
+  height: 104px;
+  border: 0;
+  border-radius: 50%;
+  background: #9e684d;
+  color: #fffaf5;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+
+.skill-tree-center b { font-size: 15px; }
+.skill-tree-center span { color: #f1d9ca; font-size: 10px; }
+
+.skill-tree-area-node {
+  display: grid;
+  place-content: center;
+  width: 94px;
+  height: 68px;
+  padding: 0 10px;
+  border: 0;
+  clip-path: polygon(25% 0, 75% 0, 96% 25%, 100% 72%, 76% 100%, 25% 94%, 4% 72%, 0 25%);
+  color: #fffaf5;
+  text-align: center;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.18));
+}
+
+.skill-tree-area-node strong { font-size: 13px; }
+.skill-tree-area-node span { font-size: 9px; opacity: 0.75; }
+.skill-tree-area-node.area-left { background: #b27655; }
+.skill-tree-area-node.area-right { background: #668b75; }
+.skill-tree-area-node.area-technique { background: #bd9144; }
+.skill-tree-area-node.area-theory { background: #806f9c; }
+
+.skill-tree-group {
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  max-width: 150px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 2px solid #766a61;
+  border-radius: 10px;
+  background: #292521;
+  color: #e6d8cc;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.16);
+}
+
+.skill-tree-group:hover,
+.skill-tree-group[aria-expanded="true"] {
+  background: #39312b;
+  transform: translate(-50%, -50%) scale(1.035);
+}
+
+.skill-tree-group b {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-tree-group span {
+  color: #bfae9f;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.skill-tree-group.area-left { border-color: #b27655; }
+.skill-tree-group.area-right { border-color: #668b75; }
+.skill-tree-group.area-technique { border-color: #bd9144; }
+.skill-tree-group.area-theory { border-color: #806f9c; }
+
+.skill-tree-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-width: 44px;
+  min-height: 29px;
+  max-width: 148px;
+  padding: 5px 9px;
+  overflow: visible;
+  border: 1px solid #56504b;
+  border-radius: 999px;
+  background: #302d2a;
+  color: #89817a;
+  font-size: 9px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+.skill-tree-node.area-left.level-1 { border-color: #d7ad91; background: #e9cab8; color: #68432b; }
+.skill-tree-node.area-left.level-2 { border-color: #c98d68; background: #c99574; color: #3e281d; }
+.skill-tree-node.area-left.level-3 { border-color: #ad6f4c; background: #a96643; color: #fff8f1; }
+.skill-tree-node.area-left.level-4 { border-color: #e9b18f; background: #6f3e2b; color: #fff; }
+.skill-tree-node.area-right.level-1 { border-color: #abc4b5; background: #cfe0d5; color: #294638; }
+.skill-tree-node.area-right.level-2 { border-color: #82a48f; background: #9fc0ac; color: #20382d; }
+.skill-tree-node.area-right.level-3 { border-color: #658a74; background: #668b75; color: #fff; }
+.skill-tree-node.area-right.level-4 { border-color: #a9d1b8; background: #315b46; color: #fff; }
+.skill-tree-node.area-technique.level-1 { border-color: #e0c694; background: #ead8ad; color: #5a421a; }
+.skill-tree-node.area-technique.level-2 { border-color: #c8a665; background: #d0af6a; color: #463316; }
+.skill-tree-node.area-technique.level-3 { border-color: #b48a3f; background: #b88b3e; color: #fffaf0; }
+.skill-tree-node.area-technique.level-4 { border-color: #efd28f; background: #765417; color: #fff; }
+.skill-tree-node.area-theory.level-1 { border-color: #c7bcd6; background: #ded6e8; color: #493d5c; }
+.skill-tree-node.area-theory.level-2 { border-color: #a897bd; background: #b9a9ca; color: #382f47; }
+.skill-tree-node.area-theory.level-3 { border-color: #8975a3; background: #806f9c; color: #fff; }
+.skill-tree-node.area-theory.level-4 { border-color: #cdbce0; background: #4f3d68; color: #fff; }
+
+.skill-tree-node.level-4 i {
+  position: absolute;
+  top: -6px;
+  right: -5px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #171411;
+  border-radius: 50%;
+  background: #df7060;
+}
+
 .progress-stat-card {
   display: grid;
   gap: 4px;
@@ -6732,17 +6910,11 @@ textarea,
   }
 
   .curriculum-skill-tree {
-    grid-template:
-      "technique" auto
-      "left" auto
-      "center" 120px
-      "right" auto
-      "theory" auto
-      / 1fr;
-    min-height: 0;
-    gap: 26px;
-    padding: 20px 14px;
-    border-radius: 18px;
+    display: block;
+    height: min(68vh, 620px);
+    min-height: 500px;
+    padding: 0;
+    border-radius: 12px;
   }
 
   .skill-tree-arm.area-left,
