@@ -2899,11 +2899,145 @@ textarea {
   text-align: center;
 }
 
+.diatonic-workbook-table {
+  min-width: 920px;
+  background: #fff;
+}
+
+.diatonic-workbook-table thead tr:first-child th,
+.diatonic-workbook-table thead tr:nth-child(2) th {
+  padding: 7px 12px;
+  background: #fff;
+  color: #2b2927;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.diatonic-workbook-table thead tr:nth-child(3) th,
+.diatonic-workbook-table tbody th {
+  background: #faf9f7;
+  color: #282624;
+}
+
+.diatonic-workbook-table th,
+.diatonic-workbook-table td {
+  height: 42px;
+  padding: 0;
+  border-color: #777 !important;
+}
+
+.diatonic-workbook-table th:first-child {
+  width: 116px;
+}
+
+.diatonic-workbook-table input {
+  height: 40px;
+  padding: 4px;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  color: #292725;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.diatonic-workbook-table input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: #fff8ef;
+}
+
 .diatonic-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.theory-tools-dialog-card {
+  width: min(1180px, calc(100vw - 28px));
+  max-width: none;
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+}
+
+#theoryToolsDialog {
+  width: min(1180px, calc(100vw - 28px));
+  max-width: none;
+  max-height: calc(100dvh - 28px);
+  overflow: hidden;
+}
+
+#theoryToolsDialog .dialog-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+#theoryToolsDialog .dialog-title h2,
+#theoryToolsDialog .dialog-title p {
+  margin: 0;
+}
+
+#theoryToolsDialog .theory-tools-dialog-card {
+  width: auto;
+  max-height: calc(100dvh - 28px);
+  overflow: auto;
+}
+
+.theory-tool-menu {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f4ede6;
+}
+
+.theory-tool-menu button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.theory-tool-menu button.active {
+  border-color: var(--line-strong);
+  background: #fff;
+  color: var(--accent-strong);
+}
+
+.theory-tool-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.theory-tool-head h3,
+.theory-tool-head p {
+  margin: 0;
+}
+
+.theory-tool-head p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.theory-tool-head > strong {
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #f1e3d6;
+  color: var(--accent-strong);
+  font-size: 12px;
 }
 
 .scale-practice-controls {
@@ -5999,6 +6133,56 @@ dialog::backdrop {
 .skill-tree-node.area-theory.level-2 { border-color: #a897bd; background: #b9a9ca; color: #382f47; }
 .skill-tree-node.area-theory.level-3 { border-color: #8975a3; background: #806f9c; color: #fff; }
 .skill-tree-node.area-theory.level-4 { border-color: #cdbce0; background: #4f3d68; color: #fff; }
+
+/* One shared five-step scale keeps progress intensity comparable across all areas. */
+.skill-tree-area-node.level-0,
+.skill-tree-group.level-0,
+.skill-tree-node.level-0 {
+  border-color: #464651;
+  background: #202026 !important;
+  color: #85858f;
+  box-shadow: none;
+}
+
+.skill-tree-area-node.level-1,
+.skill-tree-group.level-1,
+.skill-tree-node.level-1 {
+  border-color: #66706b;
+  background: #39413e !important;
+  color: #e1e7e4;
+}
+
+.skill-tree-area-node.level-2,
+.skill-tree-group.level-2,
+.skill-tree-node.level-2 {
+  border-color: #719a89;
+  background: #43675a !important;
+  color: #f1faf6;
+}
+
+.skill-tree-area-node.level-3,
+.skill-tree-group.level-3,
+.skill-tree-node.level-3 {
+  border-color: #62b28f;
+  background: #327a60 !important;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(64, 158, 116, 0.2);
+}
+
+.skill-tree-area-node.level-4,
+.skill-tree-group.level-4,
+.skill-tree-node.level-4 {
+  border-color: #83e4b9;
+  background: #16885d !important;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(38, 196, 132, 0.42);
+}
+
+.skill-tree-edges .level-0 { stroke: #464651 !important; opacity: 0.46; }
+.skill-tree-edges .level-1 { stroke: #66706b !important; opacity: 0.7; }
+.skill-tree-edges .level-2 { stroke: #719a89 !important; opacity: 0.82; }
+.skill-tree-edges .level-3 { stroke: #4da47e !important; opacity: 0.94; }
+.skill-tree-edges .level-4 { stroke: #54d69f !important; opacity: 1; filter: drop-shadow(0 0 3px rgba(61, 213, 151, 0.5)); }
 
 .skill-tree-node.level-4 i {
   position: absolute;

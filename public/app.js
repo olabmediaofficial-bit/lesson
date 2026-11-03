@@ -540,8 +540,8 @@ let rhythmPlayback = {
   tempo: 90,
 };
 let visibleFretboardNotes = new Set();
-let activeDiatonicKey = "C";
-const diatonicPracticeDrafts = new Map();
+const DIATONIC_TABLE_KEYS = ["C", "G", "D", "A", "E", "B", "F# (=Gb)", "Gb (=F#)", "Db", "Ab", "Eb", "Bb", "F"];
+let activeTheoryStudentId = "";
 let activePracticeTool = "";
 let scalePractice = {
   key: "C",
@@ -1012,10 +1012,7 @@ const els = {
   fretboardTrainer: $("#fretboardTrainer"),
   revealFretboardNotes: $("#revealFretboardNotes"),
   clearFretboardNotes: $("#clearFretboardNotes"),
-  diatonicKey: $("#diatonicKey"),
-  diatonicKeyboard: $("#diatonicKeyboard"),
-  diatonicStaffImage: $("#diatonicStaffImage"),
-  diatonicPracticeBody: $("#diatonicPracticeBody"),
+  diatonicPracticeTable: $("#diatonicPracticeTable"),
   clearDiatonicPractice: $("#clearDiatonicPractice"),
   practiceToolPicker: $("#practiceToolPicker"),
   practiceToolSavebar: $("#practiceToolSavebar"),
@@ -1099,6 +1096,12 @@ const els = {
   newUsefulSiteName: $("#newUsefulSiteName"),
   newUsefulSiteUrl: $("#newUsefulSiteUrl"),
   closeUsefulSites: $("#closeUsefulSites"),
+  theoryToolsDialog: $("#theoryToolsDialog"),
+  closeTheoryTools: $("#closeTheoryTools"),
+  theoryToolStudentName: $("#theoryToolStudentName"),
+  theoryDiatonicTable: $("#theoryDiatonicTable"),
+  clearTheoryDiatonic: $("#clearTheoryDiatonic"),
+  saveTheoryDiatonic: $("#saveTheoryDiatonic"),
   imageViewerDialog: $("#imageViewerDialog"),
   imageViewerTitle: $("#imageViewerTitle"),
   imageViewerMastery: $("#imageViewerMastery"),
@@ -1284,6 +1287,20 @@ function stripLegacyCurriculumTags(tags = []) {
   return tags.filter((tag) => !legacy.has(normalizeSkillText(tag)) && !curriculumSkillByValue(tag));
 }
 
+function normalizeTheoryPractice(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  const rows = source.diatonic?.rows && typeof source.diatonic.rows === "object" ? source.diatonic.rows : {};
+  return {
+    ...source,
+    diatonic: {
+      rows: Object.fromEntries(DIATONIC_TABLE_KEYS.map((key) => [
+        key,
+        Array.from({ length: 8 }, (_, index) => String(rows[key]?.[index] || "")),
+      ])),
+    },
+  };
+}
+
 function migrateState(data) {
   if (!data.blocks) return structuredClone(starterData);
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
@@ -1321,6 +1338,7 @@ function migrateState(data) {
     return {
       ...student,
       practiceProgress,
+      theoryPractice: normalizeTheoryPractice(student.theoryPractice),
       manualCurriculum: normalizeCurriculum(student.manualCurriculum),
       curriculumLevels: normalizeCurriculumLevels(student.curriculumLevels, student.manualCurriculum),
       lessons: student.lessons.map((lesson) => ({
@@ -1386,6 +1404,38 @@ function renderUsefulSitesDialog() {
 function openUsefulSitesDialog() {
   renderUsefulSitesDialog();
   els.usefulSitesDialog.showModal();
+}
+
+function openTheoryToolsDialog(source = "room") {
+  const student = publicShareMode
+    ? state.students[0]
+    : source === "share"
+      ? state.students.find((item) => item.id === activeShareStudentId)
+      : getActiveStudent();
+  if (!student) return;
+  activeTheoryStudentId = student.id;
+  renderDiatonicPractice();
+  els.theoryToolsDialog?.showModal();
+}
+
+async function persistTheoryPractice(student) {
+  if (!student) return;
+  if (!publicShareMode) {
+    saveStateInBackground({}, `${student.name}의 다이어토닉 표를 저장했습니다.`);
+    return;
+  }
+  try {
+    const response = await fetch(`${SERVER_ROOM_ENDPOINT}?room=${encodeURIComponent(student.id)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theoryPractice: normalizeTheoryPractice(student.theoryPractice) }),
+    });
+    if (!response.ok) throw new Error(`Room save failed: ${response.status}`);
+    showToast("다이어토닉 표를 저장했습니다.");
+  } catch (error) {
+    console.error(error);
+    showToast("다이어토닉 표를 저장하지 못했습니다.");
+  }
 }
 
 function deleteUsefulSite(siteId) {
@@ -2609,71 +2659,57 @@ function notePitchClass(note) {
   return (base + (accidental === "#" ? 1 : accidental === "b" ? -1 : 0) + 12) % 12;
 }
 
-function activeMajorScale() {
-  return MAJOR_SCALE_KEYS.find((scale) => scale.key === activeDiatonicKey) || MAJOR_SCALE_KEYS[0];
+function practiceToolStudent() {
+  return state.students.find((student) => student.id === els.practiceToolStudent?.value)
+    || getActiveStudent()
+    || state.students[0];
 }
 
-function currentDiatonicDraft() {
-  if (!diatonicPracticeDrafts.has(activeDiatonicKey)) {
-    diatonicPracticeDrafts.set(activeDiatonicKey, {
-      scale: Array(7).fill(""),
-      triad: Array(7).fill(""),
-      seventh: Array(7).fill(""),
-    });
-  }
-  return diatonicPracticeDrafts.get(activeDiatonicKey);
+function theoryToolStudent() {
+  return state.students.find((student) => student.id === activeTheoryStudentId)
+    || getActiveStudent()
+    || state.students[0];
 }
 
-function renderDiatonicKeyboard(scale) {
-  if (!els.diatonicKeyboard) return;
-  const scalePitches = new Set(scale.notes.map(notePitchClass));
-  const whiteKeys = [
-    { note: "C", pitch: 0 }, { note: "D", pitch: 2 }, { note: "E", pitch: 4 }, { note: "F", pitch: 5 },
-    { note: "G", pitch: 7 }, { note: "A", pitch: 9 }, { note: "B", pitch: 11 }, { note: "C", pitch: 0 },
-  ];
-  const blackKeys = [
-    { pitch: 1, left: 12.5 }, { pitch: 3, left: 25 }, { pitch: 6, left: 50 }, { pitch: 8, left: 62.5 }, { pitch: 10, left: 75 },
-  ];
-  els.diatonicKeyboard.innerHTML = `
-    <strong>${escapeHTML(scale.key)} Major Scale</strong>
-    <div class="piano-keys" aria-hidden="true">
-      ${whiteKeys.map((key) => `<div class="piano-white-key ${scalePitches.has(key.pitch) ? "active" : ""}"></div>`).join("")}
-      ${blackKeys.map((key) => `<div class="piano-black-key ${scalePitches.has(key.pitch) ? "active" : ""}" style="left:${key.left}%"></div>`).join("")}
-    </div>
+function studentDiatonicRows(student) {
+  if (!student) return Object.fromEntries(DIATONIC_TABLE_KEYS.map((key) => [key, Array(8).fill("")]));
+  student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
+  return student.theoryPractice.diatonic.rows;
+}
+
+function diatonicTableMarkup(student, context) {
+  const rows = studentDiatonicRows(student);
+  const numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "I"];
+  return `
+    <table class="diatonic-practice-table diatonic-workbook-table" data-diatonic-context="${context}" data-student-id="${escapeHTML(student?.id || "")}">
+      <thead>
+        <tr><th colspan="9">스케일(Scale) : 음계 / 메이저 스케일(Major Scale) : 3-4, 7-8을 반음으로 하는 밝은 색채의 음계</th></tr>
+        <tr><th colspan="9">다이어토닉 코드(Diatonic Chords) : 해당 스케일 상에서 사용 가능한 코드 모음</th></tr>
+        <tr><th scope="col">Key</th>${numerals.map((item) => `<th scope="col">${item}</th>`).join("")}</tr>
+      </thead>
+      <tbody>
+        ${DIATONIC_TABLE_KEYS.map((key) => `
+          <tr>
+            <th scope="row">${escapeHTML(key)} key</th>
+            ${rows[key].map((value, index) => `<td><input data-diatonic-key="${escapeHTML(key)}" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${escapeHTML(key)} key ${numerals[index]}" autocomplete="off" /></td>`).join("")}
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
   `;
 }
 
-function renderDiatonicStaff(scale) {
-  if (!els.diatonicStaffImage) return;
-  const fileKey = scale.key.replace("#", "-sharp").replace("b", "-flat");
-  els.diatonicStaffImage.src = `./scale-staffs/${fileKey}-major.svg`;
-  els.diatonicStaffImage.alt = `${scale.key} 메이저 스케일 악보`;
-}
-
 function renderDiatonicPractice() {
-  if (!els.diatonicPracticeBody) return;
-  const scale = activeMajorScale();
-  const draft = currentDiatonicDraft();
-  if (els.diatonicKey) {
-    els.diatonicKey.innerHTML = MAJOR_SCALE_KEYS.map((item) => `<option value="${escapeHTML(item.key)}" ${item.key === activeDiatonicKey ? "selected" : ""}>${escapeHTML(item.key)} Major</option>`).join("");
-  }
-  renderDiatonicKeyboard(scale);
-  renderDiatonicStaff(scale);
-  const rows = [
-    { key: "scale", label: "음계" },
-    { key: "triad", label: "3화음" },
-    { key: "seventh", label: "4화음" },
-  ];
-  els.diatonicPracticeBody.innerHTML = rows.map((row) => `
-    <tr>
-      <th scope="row">${row.label}</th>
-      ${draft[row.key].map((value, index) => `<td><input data-diatonic-row="${row.key}" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${row.label} ${index + 1}도" autocomplete="off" /></td>`).join("")}
-    </tr>
-  `).join("");
+  const practiceStudent = practiceToolStudent();
+  if (els.diatonicPracticeTable) els.diatonicPracticeTable.innerHTML = diatonicTableMarkup(practiceStudent, "practice");
+  const theoryStudent = theoryToolStudent();
+  if (els.theoryDiatonicTable) els.theoryDiatonicTable.innerHTML = diatonicTableMarkup(theoryStudent, "theory");
+  if (els.theoryToolStudentName) els.theoryToolStudentName.textContent = theoryStudent ? `${theoryStudent.name}의 이론 노트` : "";
 }
 
-function clearDiatonicPractice() {
-  diatonicPracticeDrafts.delete(activeDiatonicKey);
+function clearDiatonicPractice(student = practiceToolStudent()) {
+  if (!student) return;
+  student.theoryPractice = normalizeTheoryPractice();
   renderDiatonicPractice();
 }
 
@@ -2808,9 +2844,9 @@ function practiceToolResultSummary(tool) {
     return positions.length ? `확인한 음: ${positions.join(", ")}` : "지판에서 아직 표시한 음이 없습니다.";
   }
   if (tool === "diatonic") {
-    const draft = currentDiatonicDraft();
-    const row = (label, values) => `${label}: ${values.map((value) => value || "-").join(" · ")}`;
-    return [`${activeDiatonicKey} Major`, row("음계", draft.scale), row("3화음", draft.triad), row("4화음", draft.seventh)].join("\n");
+    const rows = studentDiatonicRows(practiceToolStudent());
+    const completed = Object.values(rows).reduce((count, values) => count + values.filter(Boolean).length, 0);
+    return `다이어토닉 코드표 입력 ${completed} / ${DIATONIC_TABLE_KEYS.length * 8}칸`;
   }
   return `${scalePractice.key} ${scalePractice.type === "major" ? "Major" : scalePractice.type === "harmonic-minor" ? "Harmonic Minor" : "Natural Minor"}\n그린 음: ${scalePractice.notes.map(scaleNoteLabel).join(" - ") || "없음"}`;
 }
@@ -4634,8 +4670,10 @@ function renderCurriculumSkillTree(student) {
       <div class="skill-tree-canvas">
         <svg class="skill-tree-edges" aria-hidden="true"></svg>
         <div class="skill-tree-center" data-tree-node="student" data-tree-kind="center"><b>${escapeHTML(student.name)}</b><span>기타 여정</span></div>
-        ${CURRICULUM_AREAS.map((area) => `
-          <div class="skill-tree-area-node area-${area.key}" data-tree-node="area-${area.key}" data-tree-parent="student" data-tree-area="${area.key}" data-tree-kind="area">
+        ${CURRICULUM_AREAS.map((area) => {
+          const areaLevel = area.skills.reduce((highest, item) => Math.max(highest, Number(levels[item.id]) || 0), 0);
+          return `
+          <div class="skill-tree-area-node area-${area.key} level-${areaLevel}" data-tree-node="area-${area.key}" data-tree-parent="student" data-tree-area="${area.key}" data-tree-kind="area">
             <strong>${area.label}</strong><span>${area.skills.filter((item) => levels[item.id]).length}/${area.skills.length}</span>
           </div>
           ${area.groups.map((group, groupIndex) => {
@@ -4657,7 +4695,7 @@ function renderCurriculumSkillTree(student) {
               }).join("")}
             `;
           }).join("")}
-        `).join("")}
+        `}).join("")}
       </div>
     </section>
   `;
@@ -4777,12 +4815,21 @@ function drawCurriculumSkillTree() {
   }
   movable.forEach((item) => place(item.node, item.x, item.y));
 
+  const edgePoint = (from, toward) => {
+    const dx = toward.x - from.x;
+    const dy = toward.y - from.y;
+    const halfWidth = Math.max(1, from.node.offsetWidth / 2);
+    const halfHeight = Math.max(1, from.node.offsetHeight / 2);
+    const factor = 1 / Math.sqrt((dx * dx) / (halfWidth * halfWidth) + (dy * dy) / (halfHeight * halfHeight));
+    return { x: from.x + dx * factor, y: from.y + dy * factor };
+  };
+
   const paths = [...canvas.querySelectorAll("[data-tree-parent]")].map((child, index) => {
     const parentPosition = positions.get(child.dataset.treeParent);
     const childPosition = positions.get(child.dataset.treeNode);
     if (!parentPosition || !childPosition) return "";
-    const start = parentPosition;
-    const end = childPosition;
+    const start = edgePoint(parentPosition, childPosition);
+    const end = edgePoint(childPosition, parentPosition);
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const length = Math.hypot(dx, dy) || 1;
@@ -6078,6 +6125,7 @@ document.addEventListener("click", (event) => {
     activePracticeTool = openPracticeTool.dataset.openPracticeTool;
     renderPracticeToolWorkspace();
     if (activePracticeTool === "scale") renderScalePractice();
+    if (activePracticeTool === "diatonic") renderDiatonicPractice();
     return;
   }
 
@@ -6480,13 +6528,15 @@ document.addEventListener("input", (event) => {
     nextInput?.setSelectionRange(bulkCurriculumSearch.length, bulkCurriculumSearch.length);
     return;
   }
-  const input = event.target.closest("[data-diatonic-row]");
+  const input = event.target.closest("[data-diatonic-key]");
   if (!input) return;
-  const row = input.dataset.diatonicRow;
+  const table = input.closest("[data-student-id]");
+  const student = state.students.find((item) => item.id === table?.dataset.studentId);
+  const key = input.dataset.diatonicKey;
   const index = Number(input.dataset.diatonicIndex);
-  const draft = currentDiatonicDraft();
-  if (!Array.isArray(draft[row]) || !Number.isInteger(index) || index < 0 || index > 6) return;
-  draft[row][index] = input.value;
+  const rows = studentDiatonicRows(student);
+  if (!Array.isArray(rows[key]) || !Number.isInteger(index) || index < 0 || index > 7) return;
+  rows[key][index] = input.value;
 });
 
 document.addEventListener("change", (event) => {
@@ -6723,11 +6773,8 @@ els.rhythmPlaybackTempoRange?.addEventListener("input", () => {
 });
 els.revealFretboardNotes?.addEventListener("click", () => setAllFretboardNotes(true));
 els.clearFretboardNotes?.addEventListener("click", () => setAllFretboardNotes(false));
-els.diatonicKey?.addEventListener("change", () => {
-  activeDiatonicKey = els.diatonicKey.value;
-  renderDiatonicPractice();
-});
-els.clearDiatonicPractice?.addEventListener("click", clearDiatonicPractice);
+els.clearDiatonicPractice?.addEventListener("click", () => clearDiatonicPractice());
+els.practiceToolStudent?.addEventListener("change", renderDiatonicPractice);
 els.scalePracticeKey?.addEventListener("change", () => {
   scalePractice.key = els.scalePracticeKey.value;
   renderScalePractice();
@@ -7698,6 +7745,7 @@ $("#studentForm").addEventListener("submit", async (event) => {
     name: $("#newStudentName").value.trim(),
     level: $("#newStudentLevel").value.trim(),
     practiceProgress: {},
+    theoryPractice: normalizeTheoryPractice(),
     lessons: [],
   };
 
@@ -7758,6 +7806,12 @@ document.querySelectorAll("[data-open-useful-sites]").forEach((button) => {
   button.addEventListener("click", openUsefulSitesDialog);
 });
 els.closeUsefulSites?.addEventListener("click", () => els.usefulSitesDialog.close());
+document.querySelectorAll("[data-open-theory-tools]").forEach((button) => {
+  button.addEventListener("click", () => openTheoryToolsDialog(button.dataset.openTheoryTools));
+});
+els.closeTheoryTools?.addEventListener("click", () => els.theoryToolsDialog.close());
+els.clearTheoryDiatonic?.addEventListener("click", () => clearDiatonicPractice(theoryToolStudent()));
+els.saveTheoryDiatonic?.addEventListener("click", () => persistTheoryPractice(theoryToolStudent()));
 els.usefulSiteForm?.addEventListener("submit", addUsefulSite);
 els.usefulSitesList?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-delete-useful-site]");

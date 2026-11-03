@@ -484,11 +484,6 @@ function handleUpload(request, response) {
 }
 
 async function handlePublicRoom(request, response) {
-  if (request.method !== "GET") {
-    send(response, 405, "Method not allowed");
-    return;
-  }
-
   const url = new URL(request.url, `http://${request.headers.host}`);
   const roomId = url.searchParams.get("room");
   let state = null;
@@ -503,6 +498,23 @@ async function handlePublicRoom(request, response) {
 
   if (!state || !student) {
     send(response, 404, JSON.stringify({ error: "Room not found" }), "application/json; charset=utf-8");
+    return;
+  }
+
+  if (request.method === "POST") {
+    try {
+      const body = await readJsonBody(request, 256 * 1024);
+      student.theoryPractice = sanitizeTheoryPractice(body.theoryPractice);
+      await writeState(state);
+      send(response, 200, JSON.stringify({ ok: true }), "application/json; charset=utf-8");
+    } catch (error) {
+      console.error(error);
+      send(response, 400, JSON.stringify({ error: "Unable to save theory practice" }), "application/json; charset=utf-8");
+    }
+    return;
+  }
+  if (request.method !== "GET") {
+    send(response, 405, "Method not allowed");
     return;
   }
 
@@ -525,6 +537,18 @@ async function handlePublicRoom(request, response) {
     }),
     "application/json; charset=utf-8",
   );
+}
+
+function sanitizeTheoryPractice(value = {}) {
+  const rows = value?.diatonic?.rows && typeof value.diatonic.rows === "object" ? value.diatonic.rows : {};
+  return {
+    diatonic: {
+      rows: Object.fromEntries(Object.entries(rows).slice(0, 20).map(([key, values]) => [
+        String(key).slice(0, 20),
+        Array.from({ length: 8 }, (_, index) => String(values?.[index] || "").slice(0, 40)),
+      ])),
+    },
+  };
 }
 
 async function handlePublicCustomChord(request, response) {

@@ -81,8 +81,6 @@ async function handleUpload(request, env) {
 }
 
 async function handleRoom(request, env) {
-  if (request.method !== "GET") return text("Method not allowed", 405);
-
   const url = new URL(request.url);
   const roomId = url.searchParams.get("room");
   if (!roomId) return json({ error: "Room not found" }, 404);
@@ -91,6 +89,14 @@ async function handleRoom(request, env) {
     const state = await readState(env);
     const student = state?.students?.find((item) => item.id === roomId);
     if (!state || !student) return json({ error: "Room not found" }, 404);
+
+    if (request.method === "POST") {
+      const body = await readJson(request);
+      student.theoryPractice = sanitizeTheoryPractice(body.theoryPractice);
+      await writeState(env, state);
+      return json({ ok: true });
+    }
+    if (request.method !== "GET") return text("Method not allowed", 405);
 
     const blockIds = new Set(student.lessons.flatMap((lesson) => lesson.blockIds || []));
     const blocks = state.blocks.filter((block) => blockIds.has(block.id));
@@ -109,6 +115,18 @@ async function handleRoom(request, env) {
   } catch (error) {
     return json({ error: "Room storage unavailable", detail: error.message || String(error) }, 500);
   }
+}
+
+function sanitizeTheoryPractice(value = {}) {
+  const rows = value?.diatonic?.rows && typeof value.diatonic.rows === "object" ? value.diatonic.rows : {};
+  return {
+    diatonic: {
+      rows: Object.fromEntries(Object.entries(rows).slice(0, 20).map(([key, values]) => [
+        String(key).slice(0, 20),
+        Array.from({ length: 8 }, (_, index) => String(values?.[index] || "").slice(0, 40)),
+      ])),
+    },
+  };
 }
 
 async function handleCustomChord(request, env) {
