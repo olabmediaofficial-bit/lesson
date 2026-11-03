@@ -5783,6 +5783,38 @@ dialog::backdrop {
   font-size: 11px;
 }
 
+.skill-tree-view-tabs {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 9;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid rgba(126, 119, 153, 0.42);
+  border-radius: 8px;
+  background: rgba(21, 20, 30, 0.9);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.24);
+}
+
+.skill-tree-view-tabs button {
+  min-height: 29px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #8e8b9f;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.skill-tree-view-tabs button:hover,
+.skill-tree-view-tabs button.active {
+  border-color: #716c91;
+  background: #29263b;
+  color: #f0edf9;
+}
+
 .curriculum-skill-tree.is-fullscreen {
   position: fixed;
   inset: 12px;
@@ -5810,6 +5842,10 @@ dialog::backdrop {
   transform: translate(-50%, -50%);
 }
 
+.skill-tree-canvas [data-tree-node][hidden] {
+  display: none !important;
+}
+
 .skill-tree-edges {
   position: absolute;
   inset: 0;
@@ -5823,13 +5859,13 @@ dialog::backdrop {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.82;
+  opacity: 0.72;
 }
 
-.skill-tree-edges .edge-area { stroke-width: 8; }
-.skill-tree-edges .edge-group { stroke-width: 4; }
-.skill-tree-edges .edge-skill { stroke-width: 2; }
-.skill-tree-edges .edge-skill.level-0 { stroke: #514b46; opacity: 0.58; }
+.skill-tree-edges .edge-area { stroke-width: 4; }
+.skill-tree-edges .edge-group { stroke-width: 2.5; }
+.skill-tree-edges .edge-skill { stroke-width: 1.5; }
+.skill-tree-edges .edge-skill.level-0 { stroke: #474557; opacity: 0.62; }
 .skill-tree-edges .edge-skill.level-1 { opacity: 0.7; }
 .skill-tree-edges .edge-skill.level-2 { opacity: 0.82; }
 .skill-tree-edges .edge-skill.level-3,
@@ -5842,10 +5878,11 @@ dialog::backdrop {
   height: 104px;
   border: 0;
   border-radius: 50%;
-  background: #9e684d;
+  border: 2px solid #8b829f;
+  background: #272438;
   color: #fffaf5;
   text-align: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 0 0 5px rgba(92, 83, 121, 0.1), 0 10px 26px rgba(0, 0, 0, 0.32);
 }
 
 .skill-tree-center b { font-size: 15px; }
@@ -5854,11 +5891,13 @@ dialog::backdrop {
 .skill-tree-area-node {
   display: grid;
   place-content: center;
-  width: 94px;
-  height: 68px;
+  width: 82px;
+  height: 82px;
   padding: 0 10px;
   border: 0;
-  clip-path: polygon(25% 0, 75% 0, 96% 25%, 100% 72%, 76% 100%, 25% 94%, 4% 72%, 0 25%);
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: #272438 !important;
   color: #fffaf5;
   text-align: center;
   filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.18));
@@ -5866,10 +5905,10 @@ dialog::backdrop {
 
 .skill-tree-area-node strong { font-size: 13px; }
 .skill-tree-area-node span { font-size: 9px; opacity: 0.75; }
-.skill-tree-area-node.area-left { background: #b27655; }
-.skill-tree-area-node.area-right { background: #668b75; }
-.skill-tree-area-node.area-technique { background: #bd9144; }
-.skill-tree-area-node.area-theory { background: #806f9c; }
+.skill-tree-area-node.area-left { color: #d18a68; }
+.skill-tree-area-node.area-right { color: #71b190; }
+.skill-tree-area-node.area-technique { color: #d4aa51; }
+.skill-tree-area-node.area-theory { color: #9985c5; }
 
 .skill-tree-group {
   display: inline-grid;
@@ -5880,9 +5919,9 @@ dialog::backdrop {
   max-width: 150px;
   min-height: 36px;
   padding: 7px 10px;
-  border: 2px solid #766a61;
-  border-radius: 10px;
-  background: #292521;
+  border: 1.5px solid #666176;
+  border-radius: 999px;
+  background: #242231;
   color: #e6d8cc;
   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.16);
 }
@@ -5915,15 +5954,33 @@ dialog::backdrop {
   max-width: 148px;
   padding: 5px 9px;
   overflow: visible;
-  border: 1px solid #56504b;
+  border: 1px solid #56536a;
   border-radius: 999px;
-  background: #302d2a;
-  color: #89817a;
+  background: #24222f;
+  color: #8d899e;
   font-size: 9px;
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
   box-shadow: none;
+}
+
+.curriculum-skill-tree[data-skill-tree-view]:not([data-skill-tree-view="all"]) .skill-tree-area-node {
+  width: 112px;
+  height: 112px;
+  box-shadow: 0 0 0 7px rgba(117, 107, 151, 0.1), 0 0 28px rgba(111, 99, 153, 0.24);
+}
+
+.curriculum-skill-tree[data-skill-tree-view]:not([data-skill-tree-view="all"]) .skill-tree-group {
+  min-height: 42px;
+  padding: 8px 13px;
+}
+
+.curriculum-skill-tree[data-skill-tree-view]:not([data-skill-tree-view="all"]) .skill-tree-node {
+  min-width: 52px;
+  min-height: 34px;
+  padding: 6px 11px;
+  font-size: 10px;
 }
 
 .skill-tree-node.area-left.level-1 { border-color: #d7ad91; background: #e9cab8; color: #68432b; }

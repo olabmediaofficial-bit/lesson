@@ -463,6 +463,7 @@ let libraryCurriculumFilters = new Set();
 let editingCurriculumSkills = new Set();
 let activeBlockCurriculumArea = "left";
 let activeProgressCurriculumArea = "left";
+let activeSkillTreeView = "all";
 let openBlockCurriculumGroups = new Set();
 let openProgressCurriculumGroups = new Set();
 let blockCurriculumSearch = "";
@@ -4620,7 +4621,13 @@ function renderCurriculumLevelButtons(skillId, level) {
 function renderCurriculumSkillTree(student) {
   const levels = studentCurriculumLevels(student);
   return `
-    <section class="curriculum-skill-tree" aria-label="직접 확인 기반 4방향 마인드맵">
+    <section class="curriculum-skill-tree" data-skill-tree-view="${activeSkillTreeView}" aria-label="직접 확인 기반 4방향 마인드맵">
+      <div class="skill-tree-view-tabs" aria-label="진도 트리 영역 선택">
+        ${[
+          ["all", "전체"],
+          ...CURRICULUM_AREAS.map((area) => [area.key, area.label]),
+        ].map(([key, label]) => `<button class="${activeSkillTreeView === key ? "active" : ""}" type="button" data-skill-tree-view="${key}">${label}</button>`).join("")}
+      </div>
       <button class="skill-tree-fullscreen-toggle" type="button" data-toggle-skill-tree-fullscreen aria-label="진도 트리 크게 보기">
         <span aria-hidden="true">⛶</span><b>크게 보기</b>
       </button>
@@ -4662,8 +4669,9 @@ function drawCurriculumSkillTree() {
   const svg = canvas?.querySelector(".skill-tree-edges");
   if (!root || !canvas || !svg) return;
 
-  const width = 1680;
-  const height = 1240;
+  const focusedArea = activeSkillTreeView === "all" ? null : CURRICULUM_AREAS.find((area) => area.key === activeSkillTreeView);
+  const width = focusedArea ? 1320 : 1680;
+  const height = focusedArea ? 900 : 1240;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
@@ -4686,20 +4694,31 @@ function drawCurriculumSkillTree() {
     positions.set(node.dataset.treeNode, { node, x, y });
   };
 
-  place(canvas.querySelector('[data-tree-node="student"]'), center.x, center.y);
+  const studentNode = canvas.querySelector('[data-tree-node="student"]');
+  studentNode.hidden = Boolean(focusedArea);
+  if (!focusedArea) place(studentNode, center.x, center.y);
   CURRICULUM_AREAS.forEach((area, areaIndex) => {
+    const visible = !focusedArea || focusedArea.key === area.key;
+    canvas.querySelectorAll(`[data-tree-area="${area.key}"]`).forEach((node) => { node.hidden = !visible; });
+    if (!visible) return;
     const angle = baseAngles[area.key];
     const areaNode = canvas.querySelector(`[data-tree-node="area-${area.key}"]`);
-    place(areaNode, center.x + Math.cos(angle) * areaRadius, center.y + Math.sin(angle) * areaRadius);
+    if (focusedArea) {
+      areaNode.dataset.treeParent = "";
+      place(areaNode, center.x, center.y);
+    } else {
+      areaNode.dataset.treeParent = "student";
+      place(areaNode, center.x + Math.cos(angle) * areaRadius, center.y + Math.sin(angle) * areaRadius);
+    }
     fixed.add(`area-${area.key}`);
 
     const groups = [...canvas.querySelectorAll(`[data-tree-kind="group"][data-tree-area="${area.key}"]`)];
-    const fan = area.key === "left" || area.key === "right" ? 1.3 : 1.45;
+    const fan = focusedArea ? Math.PI * 1.72 : (area.key === "left" || area.key === "right" ? 1.3 : 1.45);
     groups.forEach((group, index) => {
       const ratio = groups.length === 1 ? 0 : index / (groups.length - 1) - 0.5;
       const organicOffset = Math.sin((index + 1) * 2.17 + areaIndex) * 0.075;
-      const groupAngle = angle + ratio * fan + organicOffset;
-      const radius = groupRadius + (index % 2 ? 34 : -12) + Math.cos(index * 1.7) * 16;
+      const groupAngle = (focusedArea ? -Math.PI / 2 : angle) + ratio * fan + organicOffset;
+      const radius = (focusedArea ? 255 : groupRadius) + (index % 2 ? 28 : -10) + Math.cos(index * 1.7) * 14;
       const x = center.x + Math.cos(groupAngle) * radius;
       const y = center.y + Math.sin(groupAngle) * radius;
       group.dataset.treeAngle = String(groupAngle);
@@ -4713,7 +4732,7 @@ function drawCurriculumSkillTree() {
         const slot = skillIndex % perRing;
         const slotRatio = ringItems === 1 ? 0 : slot / (ringItems - 1) - 0.5;
         const skillAngle = groupAngle + slotRatio * (1.28 + ring * 0.08) + Math.sin((skillIndex + 1) * 1.91) * 0.035;
-        const skillRadius = 118 + ring * 74 + (slot % 2) * 12;
+        const skillRadius = (focusedArea ? 142 : 118) + ring * (focusedArea ? 82 : 74) + (slot % 2) * 12;
         place(skill, x + Math.cos(skillAngle) * skillRadius, y + Math.sin(skillAngle) * skillRadius);
       });
     });
@@ -6013,6 +6032,16 @@ document.addEventListener("click", (event) => {
   if (progressCurriculumArea) {
     activeProgressCurriculumArea = progressCurriculumArea.dataset.progressCurriculumArea;
     renderProgress();
+    return;
+  }
+
+  const skillTreeView = event.target.closest("[data-skill-tree-view]");
+  if (skillTreeView && skillTreeView.closest(".skill-tree-view-tabs")) {
+    activeSkillTreeView = skillTreeView.dataset.skillTreeView;
+    skillTreeView.closest(".skill-tree-view-tabs").querySelectorAll("button").forEach((button) => button.classList.toggle("active", button === skillTreeView));
+    const tree = skillTreeView.closest(".curriculum-skill-tree");
+    tree.dataset.skillTreeView = activeSkillTreeView;
+    requestAnimationFrame(drawCurriculumSkillTree);
     return;
   }
 
