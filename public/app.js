@@ -541,6 +541,14 @@ let rhythmPlayback = {
 };
 let visibleFretboardNotes = new Set();
 const DIATONIC_TABLE_KEYS = ["C", "G", "D", "A", "E", "B", "F# (=Gb)", "Gb (=F#)", "Db", "Ab", "Eb", "Bb", "F"];
+const DIATONIC_MINOR_KEYS = ["Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m (=Ebm)", "Ebm (=D#m)", "Bbm", "Fm", "Cm", "Gm", "Dm"];
+const DIATONIC_TYPES = {
+  major: { label: "메이저 스케일", description: "메이저 스케일(Major Scale) : 3-4, 7-8을 반음으로 하는 밝은 색채의 음계", keys: DIATONIC_TABLE_KEYS },
+  naturalMinor: { label: "내추럴 마이너", description: "내추럴 마이너 스케일(Natural Minor Scale) : 2-3, 5-6을 반음으로 하는 어두운 색채의 음계", keys: DIATONIC_MINOR_KEYS },
+  harmonicMinor: { label: "하모닉 마이너", description: "하모닉 마이너 스케일(Harmonic Minor Scale) : 내추럴 마이너 스케일의 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
+  melodicMinor: { label: "멜로딕 마이너", description: "멜로딕 마이너 스케일(Melodic Minor Scale) : 내추럴 마이너 스케일의 6, 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
+};
+let activeDiatonicType = "major";
 let activeTheoryStudentId = "";
 let activePracticeTool = "";
 let scalePractice = {
@@ -1289,16 +1297,21 @@ function stripLegacyCurriculumTags(tags = []) {
 
 function normalizeTheoryPractice(value = {}) {
   const source = value && typeof value === "object" ? value : {};
-  const rows = source.diatonic?.rows && typeof source.diatonic.rows === "object" ? source.diatonic.rows : {};
+  const legacyRows = source.diatonic?.rows && typeof source.diatonic.rows === "object" ? source.diatonic.rows : {};
+  const tables = source.diatonic?.tables && typeof source.diatonic.tables === "object" ? source.diatonic.tables : {};
+  const normalizeRows = (keys, rows = {}) => Object.fromEntries(keys.map((key) => [
+    key,
+    {
+      scale: Array.from({ length: 8 }, (_, index) => String(rows[key]?.scale?.[index] || "")),
+      chords: Array.from({ length: 8 }, (_, index) => String(rows[key]?.chords?.[index] || rows[key]?.[index] || "")),
+    },
+  ]));
   return {
     ...source,
     diatonic: {
-      rows: Object.fromEntries(DIATONIC_TABLE_KEYS.map((key) => [
-        key,
-        {
-          scale: Array.from({ length: 8 }, (_, index) => String(rows[key]?.scale?.[index] || "")),
-          chords: Array.from({ length: 8 }, (_, index) => String(rows[key]?.chords?.[index] || rows[key]?.[index] || "")),
-        },
+      tables: Object.fromEntries(Object.entries(DIATONIC_TYPES).map(([type, config]) => [
+        type,
+        normalizeRows(config.keys, tables[type] || (type === "major" ? legacyRows : {})),
       ])),
     },
   };
@@ -2674,30 +2687,36 @@ function theoryToolStudent() {
     || state.students[0];
 }
 
-function studentDiatonicRows(student) {
-  if (!student) return Object.fromEntries(DIATONIC_TABLE_KEYS.map((key) => [key, { scale: Array(8).fill(""), chords: Array(8).fill("") }]));
+function studentDiatonicRows(student, type = activeDiatonicType) {
+  const config = DIATONIC_TYPES[type] || DIATONIC_TYPES.major;
+  if (!student) return Object.fromEntries(config.keys.map((key) => [key, { scale: Array(8).fill(""), chords: Array(8).fill("") }]));
   student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
-  return student.theoryPractice.diatonic.rows;
+  return student.theoryPractice.diatonic.tables[type];
 }
 
 function diatonicTableMarkup(student, context) {
-  const rows = studentDiatonicRows(student);
+  const type = DIATONIC_TYPES[activeDiatonicType] ? activeDiatonicType : "major";
+  const config = DIATONIC_TYPES[type];
+  const rows = studentDiatonicRows(student, type);
   const numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "I"];
   return `
-    <table class="diatonic-practice-table diatonic-workbook-table" data-diatonic-context="${context}" data-student-id="${escapeHTML(student?.id || "")}">
+    <div class="diatonic-type-tabs" role="tablist" aria-label="다이어토닉 스케일 종류">
+      ${Object.entries(DIATONIC_TYPES).map(([value, item]) => `<button type="button" class="${value === type ? "active" : ""}" data-diatonic-type="${value}" role="tab" aria-selected="${value === type}">${item.label}</button>`).join("")}
+    </div>
+    <table class="diatonic-practice-table diatonic-workbook-table" data-diatonic-context="${context}" data-diatonic-table-type="${type}" data-student-id="${escapeHTML(student?.id || "")}">
       <thead>
-        <tr><th colspan="9">스케일(Scale) : 음계 / 메이저 스케일(Major Scale) : 3-4, 7-8을 반음으로 하는 밝은 색채의 음계</th></tr>
+        <tr><th colspan="9">${config.description}</th></tr>
         <tr><th colspan="9">다이어토닉 코드(Diatonic Chords) : 해당 스케일 상에서 사용 가능한 코드 모음</th></tr>
         <tr><th scope="col">Key</th>${numerals.map((item) => `<th scope="col">${item}</th>`).join("")}</tr>
       </thead>
       <tbody>
-        ${DIATONIC_TABLE_KEYS.map((key) => `
+        ${config.keys.map((key) => `
           <tr class="diatonic-scale-row">
             <th scope="row" rowspan="2">${escapeHTML(key)} key</th>
-            ${rows[key].scale.map((value, index) => `<td><input data-diatonic-key="${escapeHTML(key)}" data-diatonic-row="scale" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${escapeHTML(key)} key ${numerals[index]} 스케일" placeholder="음" autocomplete="off" /></td>`).join("")}
+            ${rows[key].scale.map((value, index) => `<td><input data-diatonic-key="${escapeHTML(key)}" data-diatonic-row="scale" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${escapeHTML(key)} key ${numerals[index]} 스케일" autocomplete="off" /></td>`).join("")}
           </tr>
           <tr class="diatonic-chord-row">
-            ${rows[key].chords.map((value, index) => `<td><input data-diatonic-key="${escapeHTML(key)}" data-diatonic-row="chords" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${escapeHTML(key)} key ${numerals[index]} 코드" placeholder="코드" autocomplete="off" /></td>`).join("")}
+            ${rows[key].chords.map((value, index) => `<td><input data-diatonic-key="${escapeHTML(key)}" data-diatonic-row="chords" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${escapeHTML(key)} key ${numerals[index]} 코드" autocomplete="off" /></td>`).join("")}
           </tr>
         `).join("")}
       </tbody>
@@ -2850,9 +2869,10 @@ function practiceToolResultSummary(tool) {
     return positions.length ? `확인한 음: ${positions.join(", ")}` : "지판에서 아직 표시한 음이 없습니다.";
   }
   if (tool === "diatonic") {
-    const rows = studentDiatonicRows(practiceToolStudent());
+    const config = DIATONIC_TYPES[activeDiatonicType] || DIATONIC_TYPES.major;
+    const rows = studentDiatonicRows(practiceToolStudent(), activeDiatonicType);
     const completed = Object.values(rows).reduce((count, values) => count + values.scale.filter(Boolean).length + values.chords.filter(Boolean).length, 0);
-    return `다이어토닉 표 입력 ${completed} / ${DIATONIC_TABLE_KEYS.length * 16}칸`;
+    return `${config.label} 다이어토닉 표 입력 ${completed} / ${config.keys.length * 16}칸`;
   }
   return `${scalePractice.key} ${scalePractice.type === "major" ? "Major" : scalePractice.type === "harmonic-minor" ? "Harmonic Minor" : "Natural Minor"}\n그린 음: ${scalePractice.notes.map(scaleNoteLabel).join(" - ") || "없음"}`;
 }
@@ -6135,6 +6155,13 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const diatonicType = event.target.closest("[data-diatonic-type]");
+  if (diatonicType) {
+    activeDiatonicType = diatonicType.dataset.diatonicType;
+    renderDiatonicPractice();
+    return;
+  }
+
   if (event.target.closest("[data-close-practice-tool]")) {
     activePracticeTool = "";
     renderPracticeToolWorkspace();
@@ -6540,8 +6567,9 @@ document.addEventListener("input", (event) => {
   const student = state.students.find((item) => item.id === table?.dataset.studentId);
   const key = input.dataset.diatonicKey;
   const row = input.dataset.diatonicRow;
+  const type = table?.dataset.diatonicTableType || "major";
   const index = Number(input.dataset.diatonicIndex);
-  const rows = studentDiatonicRows(student);
+  const rows = studentDiatonicRows(student, type);
   if (!Array.isArray(rows[key]?.[row]) || !Number.isInteger(index) || index < 0 || index > 7) return;
   rows[key][row][index] = input.value;
 });

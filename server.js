@@ -540,16 +540,17 @@ async function handlePublicRoom(request, response) {
 }
 
 function sanitizeTheoryPractice(value = {}) {
-  const rows = value?.diatonic?.rows && typeof value.diatonic.rows === "object" ? value.diatonic.rows : {};
+  const tables = value?.diatonic?.tables && typeof value.diatonic.tables === "object" ? value.diatonic.tables : {};
+  const sanitizeRows = (rows = {}) => Object.fromEntries(Object.entries(rows).slice(0, 20).map(([key, values]) => [
+    String(key).slice(0, 20),
+    {
+      scale: Array.from({ length: 8 }, (_, index) => String(values?.scale?.[index] || "").slice(0, 40)),
+      chords: Array.from({ length: 8 }, (_, index) => String(values?.chords?.[index] || values?.[index] || "").slice(0, 40)),
+    },
+  ]));
   return {
     diatonic: {
-      rows: Object.fromEntries(Object.entries(rows).slice(0, 20).map(([key, values]) => [
-        String(key).slice(0, 20),
-        {
-          scale: Array.from({ length: 8 }, (_, index) => String(values?.scale?.[index] || "").slice(0, 40)),
-          chords: Array.from({ length: 8 }, (_, index) => String(values?.chords?.[index] || values?.[index] || "").slice(0, 40)),
-        },
-      ])),
+      tables: Object.fromEntries(Object.entries(tables).slice(0, 4).map(([type, rows]) => [String(type).slice(0, 20), sanitizeRows(rows)])),
     },
   };
 }

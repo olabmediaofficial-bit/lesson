@@ -2904,6 +2904,34 @@ textarea {
   background: #fff;
 }
 
+.diatonic-type-tabs {
+  position: sticky;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.diatonic-type-tabs button {
+  min-height: 36px;
+  padding: 7px 13px;
+  border: 1px solid rgba(139, 94, 60, 0.3);
+  border-radius: 7px;
+  background: #fffaf5;
+  color: #65452f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.diatonic-type-tabs button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
 .diatonic-workbook-table thead tr:first-child th,
 .diatonic-workbook-table thead tr:nth-child(2) th {
   padding: 7px 12px;
@@ -2959,12 +2987,6 @@ textarea {
 
 .diatonic-workbook-table .diatonic-chord-row td {
   border-bottom-width: 2px !important;
-}
-
-.diatonic-workbook-table input::placeholder {
-  color: #b7aea6;
-  font-size: 11px;
-  font-weight: 500;
 }
 
 .diatonic-actions {
