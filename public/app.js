@@ -1295,7 +1295,10 @@ function normalizeTheoryPractice(value = {}) {
     diatonic: {
       rows: Object.fromEntries(DIATONIC_TABLE_KEYS.map((key) => [
         key,
-        Array.from({ length: 8 }, (_, index) => String(rows[key]?.[index] || "")),
+        {
+          scale: Array.from({ length: 8 }, (_, index) => String(rows[key]?.scale?.[index] || "")),
+          chords: Array.from({ length: 8 }, (_, index) => String(rows[key]?.chords?.[index] || rows[key]?.[index] || "")),
+        },
       ])),
     },
   };
@@ -2672,7 +2675,7 @@ function theoryToolStudent() {
 }
 
 function studentDiatonicRows(student) {
-  if (!student) return Object.fromEntries(DIATONIC_TABLE_KEYS.map((key) => [key, Array(8).fill("")]));
+  if (!student) return Object.fromEntries(DIATONIC_TABLE_KEYS.map((key) => [key, { scale: Array(8).fill(""), chords: Array(8).fill("") }]));
   student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
   return student.theoryPractice.diatonic.rows;
 }
@@ -2689,9 +2692,12 @@ function diatonicTableMarkup(student, context) {
       </thead>
       <tbody>
         ${DIATONIC_TABLE_KEYS.map((key) => `
-          <tr>
-            <th scope="row">${escapeHTML(key)} key</th>
-            ${rows[key].map((value, index) => `<td><input data-diatonic-key="${escapeHTML(key)}" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${escapeHTML(key)} key ${numerals[index]}" autocomplete="off" /></td>`).join("")}
+          <tr class="diatonic-scale-row">
+            <th scope="row" rowspan="2">${escapeHTML(key)} key</th>
+            ${rows[key].scale.map((value, index) => `<td><input data-diatonic-key="${escapeHTML(key)}" data-diatonic-row="scale" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${escapeHTML(key)} key ${numerals[index]} 스케일" placeholder="음" autocomplete="off" /></td>`).join("")}
+          </tr>
+          <tr class="diatonic-chord-row">
+            ${rows[key].chords.map((value, index) => `<td><input data-diatonic-key="${escapeHTML(key)}" data-diatonic-row="chords" data-diatonic-index="${index}" value="${escapeHTML(value)}" aria-label="${escapeHTML(key)} key ${numerals[index]} 코드" placeholder="코드" autocomplete="off" /></td>`).join("")}
           </tr>
         `).join("")}
       </tbody>
@@ -2845,8 +2851,8 @@ function practiceToolResultSummary(tool) {
   }
   if (tool === "diatonic") {
     const rows = studentDiatonicRows(practiceToolStudent());
-    const completed = Object.values(rows).reduce((count, values) => count + values.filter(Boolean).length, 0);
-    return `다이어토닉 코드표 입력 ${completed} / ${DIATONIC_TABLE_KEYS.length * 8}칸`;
+    const completed = Object.values(rows).reduce((count, values) => count + values.scale.filter(Boolean).length + values.chords.filter(Boolean).length, 0);
+    return `다이어토닉 표 입력 ${completed} / ${DIATONIC_TABLE_KEYS.length * 16}칸`;
   }
   return `${scalePractice.key} ${scalePractice.type === "major" ? "Major" : scalePractice.type === "harmonic-minor" ? "Harmonic Minor" : "Natural Minor"}\n그린 음: ${scalePractice.notes.map(scaleNoteLabel).join(" - ") || "없음"}`;
 }
@@ -6533,10 +6539,11 @@ document.addEventListener("input", (event) => {
   const table = input.closest("[data-student-id]");
   const student = state.students.find((item) => item.id === table?.dataset.studentId);
   const key = input.dataset.diatonicKey;
+  const row = input.dataset.diatonicRow;
   const index = Number(input.dataset.diatonicIndex);
   const rows = studentDiatonicRows(student);
-  if (!Array.isArray(rows[key]) || !Number.isInteger(index) || index < 0 || index > 7) return;
-  rows[key][index] = input.value;
+  if (!Array.isArray(rows[key]?.[row]) || !Number.isInteger(index) || index < 0 || index > 7) return;
+  rows[key][row][index] = input.value;
 });
 
 document.addEventListener("change", (event) => {

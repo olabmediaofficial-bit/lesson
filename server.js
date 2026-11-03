@@ -545,7 +545,10 @@ function sanitizeTheoryPractice(value = {}) {
     diatonic: {
       rows: Object.fromEntries(Object.entries(rows).slice(0, 20).map(([key, values]) => [
         String(key).slice(0, 20),
-        Array.from({ length: 8 }, (_, index) => String(values?.[index] || "").slice(0, 40)),
+        {
+          scale: Array.from({ length: 8 }, (_, index) => String(values?.scale?.[index] || "").slice(0, 40)),
+          chords: Array.from({ length: 8 }, (_, index) => String(values?.chords?.[index] || values?.[index] || "").slice(0, 40)),
+        },
       ])),
     },
   };

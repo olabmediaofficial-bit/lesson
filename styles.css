@@ -2948,6 +2948,25 @@ textarea {
   background: #fff8ef;
 }
 
+.diatonic-workbook-table .diatonic-scale-row td {
+  border-bottom-color: #aaa !important;
+}
+
+.diatonic-workbook-table .diatonic-scale-row input {
+  background: #fffdf9;
+  color: #755033;
+}
+
+.diatonic-workbook-table .diatonic-chord-row td {
+  border-bottom-width: 2px !important;
+}
+
+.diatonic-workbook-table input::placeholder {
+  color: #b7aea6;
+  font-size: 11px;
+  font-weight: 500;
+}
+
 .diatonic-actions {
   display: flex;
   align-items: center;
