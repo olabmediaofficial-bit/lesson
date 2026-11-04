@@ -437,6 +437,7 @@ const starterData = {
       ],
     },
   ],
+  studentOrder: ["stu-1", "stu-2"],
 };
 
 let state = structuredClone(starterData);
@@ -1382,6 +1383,11 @@ function migrateState(data) {
       })),
     };
   });
+  const studentIds = new Set(data.students.map((student) => student.id));
+  const savedStudentOrder = Array.isArray(data.studentOrder) ? data.studentOrder.filter((id) => studentIds.has(id)) : [];
+  data.studentOrder = [...new Set([...savedStudentOrder, ...data.students.map((student) => student.id)])];
+  const studentsById = new Map(data.students.map((student) => [student.id, student]));
+  data.students = data.studentOrder.map((id) => studentsById.get(id)).filter(Boolean);
   data.practiceProgressScale = "four-step";
   return data;
 }
@@ -6845,6 +6851,7 @@ document.addEventListener("drop", async (event) => {
     const byId = new Map(state.students.map((student) => [student.id, student]));
     if (orderedIds.length !== state.students.length || orderedIds.some((id) => !byId.has(id))) return;
     state.students = orderedIds.map((id) => byId.get(id));
+    state.studentOrder = [...orderedIds];
     suppressStudentTabClickUntil = Date.now() + 350;
     render();
     saveStateInBackground({}, "학생 순서를 저장했습니다.");
@@ -7965,6 +7972,7 @@ async function deleteActiveStudent() {
   if (!confirm(`"${student.name}" 학생과 레슨룸 기록을 삭제할까요?`)) return;
 
   state.students = state.students.filter((item) => item.id !== student.id);
+  state.studentOrder = (state.studentOrder || []).filter((id) => id !== student.id);
   state.schedule = (state.schedule || []).filter((slot) => slot.studentId !== student.id);
   activeStudentId = state.students[0]?.id || "";
   activeShareStudentId = activeStudentId;
@@ -8006,6 +8014,7 @@ $("#studentForm").addEventListener("submit", async (event) => {
   };
 
   state.students.push(student);
+  state.studentOrder = [...new Set([...(state.studentOrder || state.students.map((item) => item.id)), student.id])];
   activeStudentId = student.id;
   activeShareStudentId = student.id;
   event.target.reset();
