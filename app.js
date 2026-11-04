@@ -549,6 +549,7 @@ const DIATONIC_TYPES = {
   melodicMinor: { label: "멜로딕 마이너", description: "멜로딕 마이너 스케일(Melodic Minor Scale) : 내추럴 마이너 스케일의 6, 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
 };
 let activeDiatonicType = "major";
+let suppressStudentTabClickUntil = 0;
 let activeTheoryStudentId = "";
 let activePracticeTool = "";
 let scalePractice = {
@@ -4640,7 +4641,7 @@ function renderRooms() {
   els.roomTabs.innerHTML = state.students
     .map(
       (item) => `
-        <button type="button" class="student-tab ${item.id === student.id ? "active" : ""}" data-student-tab="${item.id}" aria-label="${escapeHTML(item.name)} 학생 선택">
+        <button type="button" class="student-tab ${item.id === student.id ? "active" : ""}" draggable="true" data-student-tab="${item.id}" data-draggable-student="${item.id}" aria-label="${escapeHTML(item.name)} 학생 선택 및 순서 이동">
           <span class="student-tab-masked" aria-hidden="true">${escapeHTML(`${[...String(item.name || "학생")][0] || "학"}OO`)}</span>
           <span class="student-tab-full" aria-hidden="true">${escapeHTML(item.name)}</span>
         </button>
@@ -6251,6 +6252,7 @@ document.addEventListener("click", (event) => {
 
   const studentTab = event.target.closest("[data-student-tab]");
   if (studentTab) {
+    if (Date.now() < suppressStudentTabClickUntil) return;
     activeStudentId = studentTab.dataset.studentTab;
     pendingBlockIds.clear();
     expandedLessonIds.clear();
@@ -6611,6 +6613,14 @@ els.chordPickerDialog.addEventListener("submit", (event) => {
 });
 
 document.addEventListener("dragstart", (event) => {
+  const studentTab = event.target.closest("[data-draggable-student]");
+  if (studentTab) {
+    studentTab.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", JSON.stringify({ type: "student-order", studentId: studentTab.dataset.draggableStudent }));
+    return;
+  }
+
   const scheduleSlot = event.target.closest("[data-schedule-drag-slot]");
   if (scheduleSlot) {
     scheduleSlot.classList.add("dragging");
@@ -6653,6 +6663,18 @@ document.addEventListener("dragstart", (event) => {
 });
 
 document.addEventListener("dragover", (event) => {
+  const studentTabs = event.target.closest("#roomTabs");
+  if (studentTabs) {
+    const dragging = studentTabs.querySelector("[data-draggable-student].dragging");
+    if (!dragging) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const afterElement = getHorizontalDragAfterElement(studentTabs, event.clientX);
+    if (afterElement) studentTabs.insertBefore(dragging, afterElement);
+    else studentTabs.appendChild(dragging);
+    return;
+  }
+
   const scheduleColumn = event.target.closest("[data-schedule-drop-day]");
   if (scheduleColumn) {
     event.preventDefault();
@@ -6678,6 +6700,21 @@ document.addEventListener("dragover", (event) => {
 });
 
 document.addEventListener("drop", async (event) => {
+  const studentTabs = event.target.closest("#roomTabs");
+  if (studentTabs) {
+    const payload = safeJsonParse(event.dataTransfer.getData("text/plain"));
+    if (payload?.type !== "student-order") return;
+    event.preventDefault();
+    const orderedIds = [...studentTabs.querySelectorAll("[data-draggable-student]")].map((node) => node.dataset.draggableStudent);
+    const byId = new Map(state.students.map((student) => [student.id, student]));
+    if (orderedIds.length !== state.students.length || orderedIds.some((id) => !byId.has(id))) return;
+    state.students = orderedIds.map((id) => byId.get(id));
+    suppressStudentTabClickUntil = Date.now() + 350;
+    render();
+    saveStateInBackground({}, "학생 순서를 저장했습니다.");
+    return;
+  }
+
   const scheduleColumn = event.target.closest("[data-schedule-drop-day]");
   if (scheduleColumn) {
     event.preventDefault();
@@ -6708,6 +6745,7 @@ document.addEventListener("drop", async (event) => {
 });
 
 document.addEventListener("dragend", () => {
+  document.querySelectorAll("[data-draggable-student].dragging").forEach((node) => node.classList.remove("dragging"));
   document.querySelectorAll(".lesson-block.dragging").forEach((node) => node.classList.remove("dragging"));
   document.querySelectorAll(".selected-chord-pill.dragging").forEach((node) => node.classList.remove("dragging"));
   document.querySelectorAll(".schedule-timeline-slot.dragging").forEach((node) => node.classList.remove("dragging"));
@@ -7618,6 +7656,19 @@ function getDragAfterElement(container, y) {
       const box = child.getBoundingClientRect();
       const offset = y - box.top - box.height / 2;
       if (offset < 0 && offset > closest.offset) return { offset, element: child };
+      return closest;
+    },
+    { offset: Number.NEGATIVE_INFINITY, element: null },
+  ).element;
+}
+
+function getHorizontalDragAfterElement(container, x) {
+  const tabs = [...container.querySelectorAll("[data-draggable-student]:not(.dragging)")];
+  return tabs.reduce(
+    (closest, tab) => {
+      const box = tab.getBoundingClientRect();
+      const offset = x - box.left - box.width / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, element: tab };
       return closest;
     },
     { offset: Number.NEGATIVE_INFINITY, element: null },

@@ -1440,6 +1440,18 @@ textarea {
   width: 78px;
   min-width: 78px;
   white-space: nowrap;
+  cursor: grab;
+  user-select: none;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.student-tab:active {
+  cursor: grabbing;
+}
+
+.student-tab.dragging {
+  opacity: 0.45;
+  transform: scale(0.96);
 }
 
 .student-tab:hover .student-tab-masked,
