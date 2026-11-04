@@ -2209,7 +2209,11 @@ function setImageMarkupTool(tool) {
 function ensureImageMarkupActions(markup) {
   (markup?.actions || []).forEach((action) => {
     if (!action.id) action.id = uid("mark");
-    if (action.type === "text" && !Number.isFinite(Number(action.scale))) action.scale = 1;
+    if (action.type === "text") {
+      if (!Number.isFinite(Number(action.scale))) action.scale = 1;
+      if (!Number.isFinite(Number(action.width))) action.width = 24;
+      if (!Number.isFinite(Number(action.height))) action.height = 7;
+    }
   });
   return markup;
 }
@@ -2246,6 +2250,8 @@ function strokeBounds(action) {
 
 function renderImageMarkup() {
   if (!els.imageMarkupLayer || !els.imageMarkupTextLayer) return;
+  const canvasWidth = els.imageMarkupCanvas?.clientWidth || 0;
+  if (canvasWidth) els.imageMarkupCanvas.style.setProperty("--markup-base-font-size", `${Math.max(10, canvasWidth * 0.025)}px`);
   const markup = ensureImageMarkupActions(currentScoreMarkup(false) || { actions: [] });
   const strokes = markup.actions.filter((action) => action.type === "stroke" && Array.isArray(action.points));
   const texts = markup.actions.filter((action) => action.type === "text" && action.text);
@@ -2257,7 +2263,7 @@ function renderImageMarkup() {
       const bounds = selected ? strokeBounds(stroke) : null;
       return `<g data-markup-action-id="${id}" class="image-markup-stroke${selected ? " selected" : ""}">
         <polyline class="image-markup-stroke-hit" points="${points}" fill="none" stroke="transparent" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
-        <polyline points="${points}" fill="none" stroke="#d82f2f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+        <polyline points="${points}" fill="none" stroke="#d82f2f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></polyline>
         ${selected ? `<rect class="image-markup-selection-box" x="${bounds.left}" y="${bounds.top}" width="${bounds.width}" height="${bounds.height}"></rect><circle class="image-markup-resize-handle" data-markup-resize-id="${id}" cx="${bounds.left + bounds.width}" cy="${bounds.top + bounds.height}" r="10"></circle>` : ""}
       </g>`;
     })
@@ -2265,7 +2271,9 @@ function renderImageMarkup() {
   els.imageMarkupTextLayer.innerHTML = texts
     .map((action) => {
       const selected = imageMarkup.active && action.id === imageMarkup.selectedId;
-      return `<div class="image-markup-text${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" style="left:${Math.max(0, Math.min(100, action.x))}%;top:${Math.max(0, Math.min(100, action.y))}%;--markup-scale:${Math.max(0.5, Math.min(3, Number(action.scale) || 1))}">${escapeHTML(action.text)}${selected ? `<button class="image-markup-text-resize" data-markup-resize-id="${escapeHTML(action.id)}" type="button" title="크기 조절"></button>` : ""}</div>`;
+      const width = Math.max(6, Math.min(96 - Number(action.x || 0), Number(action.width) || 24));
+      const height = Math.max(3, Math.min(96 - Number(action.y || 0), Number(action.height) || 7));
+      return `<div class="image-markup-text${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-text-id="${escapeHTML(action.id)}" title="클릭하여 글씨 수정" style="left:${Math.max(0, Math.min(100, action.x))}%;top:${Math.max(0, Math.min(100, action.y))}%;width:${width}%;min-height:${height}%;--markup-scale:${Math.max(0.5, Math.min(3, Number(action.scale) || 1))}">${escapeHTML(action.text)}${selected ? `<button class="image-markup-text-resize" data-markup-resize-id="${escapeHTML(action.id)}" type="button" title="크기 조절"></button>` : ""}</div>`;
     })
     .join("");
   els.imageMarkupCanvas?.classList.toggle("has-markup", markup.actions.length > 0);
@@ -2288,27 +2296,45 @@ function saveImageMarkup(message = "필기를 저장했습니다.") {
   saveStateInBackground({}, message);
 }
 
-function addImageMarkupText(event) {
+function openImageMarkupTextEditor(action, position = null) {
+  if (!action && !position) return;
+  const wasEditing = Boolean(action);
   const rect = els.imageMarkupCanvas.getBoundingClientRect();
-  const x = Math.max(0, Math.min(94, ((event.clientX - rect.left) / rect.width) * 100));
-  const y = Math.max(0, Math.min(94, ((event.clientY - rect.top) / rect.height) * 100));
+  const x = action ? Number(action.x) : position.x;
+  const y = action ? Number(action.y) : position.y;
   const editor = document.createElement("textarea");
   editor.className = "image-markup-text-editor";
   editor.placeholder = "메모 입력";
   editor.style.left = `${x}%`;
   editor.style.top = `${y}%`;
+  if (action) {
+    editor.value = action.text || "";
+    editor.style.width = `${Math.max(6, Number(action.width) || 24)}%`;
+    editor.style.height = `${Math.max(3, Number(action.height) || 7)}%`;
+    editor.style.fontSize = `calc(var(--markup-base-font-size, 15px) * ${Math.max(0.5, Math.min(3, Number(action.scale) || 1))})`;
+  }
   els.imageMarkupTextLayer.append(editor);
   editor.focus();
+  editor.setSelectionRange(editor.value.length, editor.value.length);
+  let finished = false;
   const finish = () => {
+    if (finished) return;
+    finished = true;
     const text = editor.value.trim();
+    const width = Math.max(6, Math.min(96 - x, (editor.offsetWidth / rect.width) * 100));
+    const height = Math.max(3, Math.min(96 - y, (editor.offsetHeight / rect.height) * 100));
     editor.remove();
-    if (!text) return;
-    const action = { type: "text", id: uid("mark"), x, y, text, scale: 1 };
-    currentScoreMarkup(true).actions.push(action);
-    imageMarkup.selectedId = action.id;
+    if (action) {
+      if (!text) currentScoreMarkup(true).actions = currentScoreMarkup(true).actions.filter((entry) => entry.id !== action.id);
+      else Object.assign(action, { text, width, height });
+    } else if (text) {
+      action = { type: "text", id: uid("mark"), x, y, text, scale: 1, width, height };
+      currentScoreMarkup(true).actions.push(action);
+    }
+    imageMarkup.selectedId = action && text ? action.id : "";
     setImageMarkupTool("select");
     renderImageMarkup();
-    saveImageMarkup("텍스트 필기를 저장했습니다.");
+    saveImageMarkup(wasEditing ? "텍스트 필기를 수정했습니다." : "텍스트 필기를 저장했습니다.");
   };
   editor.addEventListener("blur", finish, { once: true });
   editor.addEventListener("keydown", (keyEvent) => {
@@ -2317,6 +2343,14 @@ function addImageMarkupText(event) {
       editor.value = "";
       editor.blur();
     }
+  });
+}
+
+function addImageMarkupText(event) {
+  const rect = els.imageMarkupCanvas.getBoundingClientRect();
+  openImageMarkupTextEditor(null, {
+    x: Math.max(0, Math.min(94, ((event.clientX - rect.left) / rect.width) * 100)),
+    y: Math.max(0, Math.min(94, ((event.clientY - rect.top) / rect.height) * 100)),
   });
 }
 
@@ -7083,7 +7117,9 @@ els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
       const scale = Math.max(0.2, Math.min(5, Math.max((point.x - bounds.left) / bounds.width, (point.y - bounds.top) / bounds.height)));
       action.points = snapshot.points.map((entry) => ({ x: bounds.left + (entry.x - bounds.left) * scale, y: bounds.top + (entry.y - bounds.top) * scale }));
     } else if (action.type === "text") {
-      action.scale = Math.max(0.5, Math.min(3, (Number(snapshot.scale) || 1) + dx / 180));
+      action.width = Math.max(6, Math.min(96 - Number(action.x || 0), (Number(snapshot.width) || 24) + dx / 10));
+      action.height = Math.max(3, Math.min(96 - Number(action.y || 0), (Number(snapshot.height) || 7) + dy / 10));
+      action.scale = Math.max(0.5, Math.min(3, (Number(snapshot.scale) || 1) + Math.max(dx, dy) / 260));
     }
     renderImageMarkup();
     return;
@@ -7098,9 +7134,20 @@ els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
 });
 const finishImageMarkupStroke = (event) => {
   if (imageMarkup.interaction) {
-    const duplicated = imageMarkup.interaction.duplicated;
+    const interaction = imageMarkup.interaction;
+    const duplicated = interaction.duplicated;
+    const end = markupPoint(event);
+    const editText = interaction.type === "move"
+      && interaction.snapshot?.type === "text"
+      && !duplicated
+      && Math.hypot(end.x - interaction.start.x, end.y - interaction.start.y) < 4;
     if (els.imageMarkupCanvas.hasPointerCapture?.(event.pointerId)) els.imageMarkupCanvas.releasePointerCapture(event.pointerId);
     imageMarkup.interaction = null;
+    if (editText) {
+      const action = selectedImageMarkupAction();
+      if (action) openImageMarkupTextEditor(action);
+      return;
+    }
     saveImageMarkup(duplicated ? "필기를 복사했습니다." : "필기 위치와 크기를 저장했습니다.");
     return;
   }
@@ -7114,6 +7161,24 @@ const finishImageMarkupStroke = (event) => {
 };
 els.imageMarkupCanvas.addEventListener("pointerup", finishImageMarkupStroke);
 els.imageMarkupCanvas.addEventListener("pointercancel", finishImageMarkupStroke);
+
+els.imageMarkupTextLayer.addEventListener("click", (event) => {
+  const textTarget = event.target.closest?.("[data-markup-text-id]");
+  if (!textTarget || event.target.closest?.("[data-markup-resize-id]") || event.detail > 1 || imageMarkup.active) return;
+  event.preventDefault();
+  setImageMarkupActive(true);
+  const action = currentScoreMarkup(true).actions.find((entry) => entry.id === textTarget.dataset.markupTextId);
+  if (action?.type === "text") openImageMarkupTextEditor(action);
+});
+
+els.imageMarkupTextLayer.addEventListener("dblclick", (event) => {
+  const textTarget = event.target.closest?.("[data-markup-text-id]");
+  if (!textTarget || event.target.closest?.("[data-markup-resize-id]")) return;
+  event.preventDefault();
+  if (!imageMarkup.active) setImageMarkupActive(true);
+  const action = currentScoreMarkup(true).actions.find((entry) => entry.id === textTarget.dataset.markupTextId);
+  if (action?.type === "text") openImageMarkupTextEditor(action);
+});
 
 els.imageViewerImage.addEventListener("load", () => {
   fitImageViewerToScreen();
@@ -7153,7 +7218,10 @@ els.imageViewerDialog.addEventListener("click", (event) => {
   if (event.target === els.imageViewerDialog) closeImageViewer();
 });
 window.addEventListener("resize", () => {
-  if (els.imageViewerDialog.open) fitImageViewerToScreen();
+  if (els.imageViewerDialog.open) {
+    fitImageViewerToScreen();
+    renderImageMarkup();
+  }
 });
 document.addEventListener("keydown", (event) => {
   if (!els.imageViewerDialog.open) return;

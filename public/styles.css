@@ -4426,17 +4426,20 @@ dialog::backdrop {
 
 .image-markup-text {
   position: absolute;
-  max-width: 46%;
+  box-sizing: border-box;
+  overflow: visible;
   padding: 3px 5px;
   border: 1px solid rgba(216, 47, 47, 0.28);
   border-radius: 3px;
   color: #c51f28;
   background: rgba(255, 255, 255, 0.84);
-  font-size: calc(clamp(11px, 1.6vw, 20px) * var(--markup-scale, 1));
+  font-size: calc(var(--markup-base-font-size, 15px) * var(--markup-scale, 1));
   font-weight: 900;
   line-height: 1.3;
   white-space: pre-wrap;
   transform: translateY(-10%);
+  pointer-events: auto;
+  cursor: text;
 }
 
 .image-markup-canvas.editing .image-markup-text {
@@ -4481,11 +4484,12 @@ dialog::backdrop {
   color: #b51e25;
   background: rgba(255, 255, 255, 0.96);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--markup-base-font-size, 15px);
   font-weight: 800;
   line-height: 1.35;
   resize: both;
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .image-viewer-scroll[hidden] {
