@@ -548,7 +548,10 @@ const DIATONIC_TYPES = {
   harmonicMinor: { label: "하모닉 마이너", description: "하모닉 마이너 스케일(Harmonic Minor Scale) : 내추럴 마이너 스케일의 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
   melodicMinor: { label: "멜로딕 마이너", description: "멜로딕 마이너 스케일(Melodic Minor Scale) : 내추럴 마이너 스케일의 6, 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
 };
+const THEORY_TRIAD_CHORDS = ["C", "D", "G", "E", "A", "Am", "Dm", "Em"];
+const THEORY_SEVENTH_CHORDS = ["CM7", "E7", "Dm7", "FM7", "F#m7", "B7"];
 let activeDiatonicType = "major";
+let activeTheoryTool = "fretboard";
 let suppressStudentTabClickUntil = 0;
 let activeTheoryStudentId = "";
 let activePracticeTool = "";
@@ -1107,7 +1110,9 @@ const els = {
   closeUsefulSites: $("#closeUsefulSites"),
   theoryToolsDialog: $("#theoryToolsDialog"),
   closeTheoryTools: $("#closeTheoryTools"),
-  theoryToolStudentName: $("#theoryToolStudentName"),
+  theoryFretboardWorkbook: $("#theoryFretboardWorkbook"),
+  theoryTriadWorkbook: $("#theoryTriadWorkbook"),
+  theorySeventhWorkbook: $("#theorySeventhWorkbook"),
   theoryDiatonicTable: $("#theoryDiatonicTable"),
   clearTheoryDiatonic: $("#clearTheoryDiatonic"),
   saveTheoryDiatonic: $("#saveTheoryDiatonic"),
@@ -1307,8 +1312,18 @@ function normalizeTheoryPractice(value = {}) {
       chords: Array.from({ length: 8 }, (_, index) => String(rows[key]?.chords?.[index] || rows[key]?.[index] || "")),
     },
   ]));
+  const normalizeChordRows = (keys, length, rows = {}) => Object.fromEntries(keys.map((key) => [
+    key,
+    Array.from({ length }, (_, index) => String(rows[key]?.[index] || "")),
+  ]));
   return {
     ...source,
+    fretboard: {
+      cells: Array.from({ length: 36 }, (_, index) => String(source.fretboard?.cells?.[index] || "")),
+      scaleNames: Array.from({ length: 7 }, (_, index) => String(source.fretboard?.scaleNames?.[index] || "")),
+    },
+    triads: { rows: normalizeChordRows(THEORY_TRIAD_CHORDS, 3, source.triads?.rows) },
+    sevenths: { rows: normalizeChordRows(THEORY_SEVENTH_CHORDS, 4, source.sevenths?.rows) },
     diatonic: {
       tables: Object.fromEntries(Object.entries(DIATONIC_TYPES).map(([type, config]) => [
         type,
@@ -1432,13 +1447,14 @@ function openTheoryToolsDialog(source = "room") {
   if (!student) return;
   activeTheoryStudentId = student.id;
   renderDiatonicPractice();
+  renderTheoryWorkbooks();
   els.theoryToolsDialog?.showModal();
 }
 
 async function persistTheoryPractice(student) {
   if (!student) return;
   if (!publicShareMode) {
-    saveStateInBackground({}, `${student.name}의 다이어토닉 표를 저장했습니다.`);
+    saveStateInBackground({}, `${student.name}의 이론 노트를 저장했습니다.`);
     return;
   }
   try {
@@ -1448,10 +1464,10 @@ async function persistTheoryPractice(student) {
       body: JSON.stringify({ theoryPractice: normalizeTheoryPractice(student.theoryPractice) }),
     });
     if (!response.ok) throw new Error(`Room save failed: ${response.status}`);
-    showToast("다이어토닉 표를 저장했습니다.");
+    showToast("이론 노트를 저장했습니다.");
   } catch (error) {
     console.error(error);
-    showToast("다이어토닉 표를 저장하지 못했습니다.");
+    showToast("이론 노트를 저장하지 못했습니다.");
   }
 }
 
@@ -2613,6 +2629,7 @@ function render() {
   renderRhythmDictionary();
   renderFretboardTrainer();
   renderDiatonicPractice();
+  renderTheoryWorkbooks();
   renderPracticeToolWorkspace();
   renderScalePractice();
   renderShare();
@@ -2764,12 +2781,75 @@ function renderDiatonicPractice() {
   if (els.diatonicPracticeTable) els.diatonicPracticeTable.innerHTML = diatonicTableMarkup(practiceStudent, "practice");
   const theoryStudent = theoryToolStudent();
   if (els.theoryDiatonicTable) els.theoryDiatonicTable.innerHTML = diatonicTableMarkup(theoryStudent, "theory");
-  if (els.theoryToolStudentName) els.theoryToolStudentName.textContent = theoryStudent ? `${theoryStudent.name}의 이론 노트` : "";
+  document.querySelectorAll("[data-theory-student-name]").forEach((node) => {
+    node.textContent = theoryStudent ? `${theoryStudent.name}의 이론 노트` : "";
+  });
+}
+
+function theoryPianoMarkup() {
+  return `<div class="theory-piano" aria-hidden="true">
+    ${Array.from({ length: 7 }, (_, index) => `<span class="white-key" style="--key:${index}"></span>`).join("")}
+    ${[0, 1, 3, 4, 5].map((index) => `<span class="black-key" style="--key:${index}"></span>`).join("")}
+  </div>`;
+}
+
+function theoryInput(value, path, label) {
+  return `<input data-theory-input="${escapeHTML(path)}" value="${escapeHTML(value)}" aria-label="${escapeHTML(label)}" autocomplete="off" />`;
+}
+
+function renderTheoryWorkbooks() {
+  const student = theoryToolStudent();
+  if (!student) return;
+  student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
+  const practice = student.theoryPractice;
+  if (els.theoryFretboardWorkbook) {
+    const fretLabels = ["개방현", "1fr", "2fr", "3fr", "4fr", "5fr"];
+    els.theoryFretboardWorkbook.innerHTML = `
+      <div class="theory-workbook-card">
+        <h4>1) 기타 지판 이해</h4>
+        <div class="theory-fretboard-table">
+          <div class="fretboard-corner">줄</div>${fretLabels.map((label) => `<div class="fretboard-head">${label}</div>`).join("")}
+          ${Array.from({ length: 6 }, (_, stringIndex) => `<div class="string-label">${stringIndex + 1}</div>${fretLabels.map((label, fretIndex) => `<div class="fret-cell">${theoryInput(practice.fretboard.cells[stringIndex * 6 + fretIndex], `fretboard.cells.${stringIndex * 6 + fretIndex}`, `${stringIndex + 1}번 줄 ${label}`)}</div>`).join("")}`).join("")}
+        </div>
+        <h4>2) 계이름과 음이름</h4>
+        <div class="theory-scale-name-table"><strong>계이름</strong>${["도", "레", "미", "파", "솔", "라", "시"].map((name) => `<b>${name}</b>`).join("")}<strong>알파벳</strong>${practice.fretboard.scaleNames.map((value, index) => theoryInput(value, `fretboard.scaleNames.${index}`, `${["도", "레", "미", "파", "솔", "라", "시"][index]} 알파벳`)).join("")}</div>
+      </div>`;
+  }
+  if (els.theoryTriadWorkbook) {
+    els.theoryTriadWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">Major 코드 (5+4) / Minor 코드 (4+5)</p><div class="theory-chord-exercise-grid">${THEORY_TRIAD_CHORDS.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.triads.rows[chord].map((value, index) => theoryInput(value, `triads.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</div></div>`;
+  }
+  if (els.theorySeventhWorkbook) {
+    els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">M7 코드 : 장7도 · 7 코드 : 단7도 · m7 코드 : 단3화음 + 단7도</p><div class="theory-chord-exercise-grid sevenths">${THEORY_SEVENTH_CHORDS.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.sevenths.rows[chord].map((value, index) => theoryInput(value, `sevenths.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</div></div>`;
+  }
+  document.querySelectorAll("[data-theory-tool]").forEach((button) => button.classList.toggle("active", button.dataset.theoryTool === activeTheoryTool));
+  document.querySelectorAll("[data-theory-tool-panel]").forEach((panel) => { panel.hidden = panel.dataset.theoryToolPanel !== activeTheoryTool; });
+}
+
+function setTheoryPracticeValue(student, path, value) {
+  if (!student) return;
+  student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
+  const parts = path.split(".");
+  let target = student.theoryPractice;
+  for (let index = 0; index < parts.length - 1; index += 1) target = target?.[parts[index]];
+  if (target) target[parts.at(-1)] = value;
+}
+
+function clearTheoryWorkbook(type, student = theoryToolStudent()) {
+  if (!student) return;
+  const normalized = normalizeTheoryPractice(student.theoryPractice);
+  const empty = normalizeTheoryPractice();
+  if (type === "fretboard") normalized.fretboard = empty.fretboard;
+  if (type === "triads") normalized.triads = empty.triads;
+  if (type === "sevenths") normalized.sevenths = empty.sevenths;
+  student.theoryPractice = normalized;
+  renderTheoryWorkbooks();
 }
 
 function clearDiatonicPractice(student = practiceToolStudent()) {
   if (!student) return;
-  student.theoryPractice = normalizeTheoryPractice();
+  const normalized = normalizeTheoryPractice(student.theoryPractice);
+  normalized.diatonic = normalizeTheoryPractice().diatonic;
+  student.theoryPractice = normalized;
   renderDiatonicPractice();
 }
 
@@ -6125,6 +6205,23 @@ function applyBulkCurriculumTags(mode = "add") {
 }
 
 document.addEventListener("click", (event) => {
+  const theoryTool = event.target.closest("[data-theory-tool]");
+  if (theoryTool) {
+    activeTheoryTool = theoryTool.dataset.theoryTool;
+    renderTheoryWorkbooks();
+    return;
+  }
+
+  const clearTheory = event.target.closest("[data-clear-theory-workbook]");
+  if (clearTheory) {
+    clearTheoryWorkbook(clearTheory.dataset.clearTheoryWorkbook);
+    return;
+  }
+
+  if (event.target.closest("[data-save-theory-workbook]")) {
+    persistTheoryPractice(theoryToolStudent());
+    return;
+  }
   const nav = event.target.closest("[data-view]");
   if (nav) switchView(nav.dataset.view);
 
@@ -6579,6 +6676,11 @@ document.addEventListener("toggle", (event) => {
 }, true);
 
 document.addEventListener("input", (event) => {
+  const theoryInput = event.target.closest("[data-theory-input]");
+  if (theoryInput) {
+    setTheoryPracticeValue(theoryToolStudent(), theoryInput.dataset.theoryInput, theoryInput.value);
+    return;
+  }
   const curriculumSearch = event.target.closest("#curriculumSkillSearch");
   if (curriculumSearch) {
     blockCurriculumSearch = curriculumSearch.value;

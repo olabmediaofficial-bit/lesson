@@ -49,8 +49,21 @@ function sanitizeTheoryPractice(value = {}) {
     },
   ]));
   return {
+    fretboard: {
+      cells: Array.from({ length: 36 }, (_, index) => String(value?.fretboard?.cells?.[index] || "").slice(0, 20)),
+      scaleNames: Array.from({ length: 7 }, (_, index) => String(value?.fretboard?.scaleNames?.[index] || "").slice(0, 20)),
+    },
+    triads: { rows: sanitizeChordRows(value?.triads?.rows, 3) },
+    sevenths: { rows: sanitizeChordRows(value?.sevenths?.rows, 4) },
     diatonic: {
       tables: Object.fromEntries(Object.entries(tables).slice(0, 4).map(([type, rows]) => [String(type).slice(0, 20), sanitizeRows(rows)])),
     },
   };
+}
+
+function sanitizeChordRows(rows = {}, length = 3) {
+  return Object.fromEntries(Object.entries(rows && typeof rows === "object" ? rows : {}).slice(0, 20).map(([key, values]) => [
+    String(key).slice(0, 20),
+    Array.from({ length }, (_, index) => String(values?.[index] || "").slice(0, 20)),
+  ]));
 }

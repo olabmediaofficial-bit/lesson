@@ -696,15 +696,42 @@
           <button class="icon-button" id="closeTheoryTools" type="button" aria-label="이론 닫기">×</button>
         </div>
         <div class="theory-tool-menu">
-          <button class="active" type="button" data-theory-tool="diatonic">다이어토닉</button>
+          <button class="active" type="button" data-theory-tool="fretboard">01 기타 구조 및 음계</button>
+          <button type="button" data-theory-tool="triads">02 3화음 코드</button>
+          <button type="button" data-theory-tool="sevenths">03 7th 코드</button>
+          <button type="button" data-theory-tool="diatonic">04 다이어토닉</button>
         </div>
-        <section class="theory-tool-panel" data-theory-tool-panel="diatonic">
+        <section class="theory-tool-panel" data-theory-tool-panel="fretboard">
+          <div class="theory-tool-head">
+            <div><h3>기타의 구조 및 음계</h3><p>각 줄의 개방현과 1~5프렛 음, 계이름에 해당하는 알파벳을 직접 채워보세요.</p></div>
+            <strong data-theory-student-name></strong>
+          </div>
+          <div id="theoryFretboardWorkbook"></div>
+          <div class="dialog-actions"><button class="secondary-button" data-clear-theory-workbook="fretboard" type="button">입력 지우기</button><button class="primary-button" data-save-theory-workbook type="button">저장</button></div>
+        </section>
+        <section class="theory-tool-panel" data-theory-tool-panel="triads" hidden>
+          <div class="theory-tool-head">
+            <div><h3>3화음 코드</h3><p>메이저·마이너 코드의 세 구성음을 직접 채워보세요.</p></div>
+            <strong data-theory-student-name></strong>
+          </div>
+          <div id="theoryTriadWorkbook"></div>
+          <div class="dialog-actions"><button class="secondary-button" data-clear-theory-workbook="triads" type="button">입력 지우기</button><button class="primary-button" data-save-theory-workbook type="button">저장</button></div>
+        </section>
+        <section class="theory-tool-panel" data-theory-tool-panel="sevenths" hidden>
+          <div class="theory-tool-head">
+            <div><h3>7th 코드</h3><p>M7·7·m7 코드의 네 구성음을 직접 채워보세요.</p></div>
+            <strong data-theory-student-name></strong>
+          </div>
+          <div id="theorySeventhWorkbook"></div>
+          <div class="dialog-actions"><button class="secondary-button" data-clear-theory-workbook="sevenths" type="button">입력 지우기</button><button class="primary-button" data-save-theory-workbook type="button">저장</button></div>
+        </section>
+        <section class="theory-tool-panel" data-theory-tool-panel="diatonic" hidden>
           <div class="theory-tool-head">
             <div>
               <h3>스케일과 다이어토닉 코드</h3>
               <p>각 키의 음계와 다이어토닉 코드를 직접 채워보세요.</p>
             </div>
-            <strong id="theoryToolStudentName"></strong>
+            <strong data-theory-student-name></strong>
           </div>
           <div class="diatonic-table-wrap" id="theoryDiatonicTable"></div>
           <div class="dialog-actions">
