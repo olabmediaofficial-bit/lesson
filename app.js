@@ -507,6 +507,7 @@ let imageMarkup = {
   active: false,
   tool: "select",
   drawing: null,
+  pendingDrawingId: "",
   selectedId: "",
   interaction: null,
 };
@@ -2208,8 +2209,10 @@ function currentImageViewerResourceBlock() {
 }
 
 function setImageMarkupActive(active) {
+  if (!active && imageMarkup.pendingDrawingId) finalizePendingImageMarkupDrawing();
   imageMarkup.active = Boolean(active && imageViewerMarkupContext() && !publicShareMode);
   imageMarkup.drawing = null;
+  imageMarkup.pendingDrawingId = "";
   imageMarkup.interaction = null;
   imageMarkup.selectedId = "";
   if (imageMarkup.active) setImageMarkupTool("select");
@@ -2233,9 +2236,10 @@ function ensureImageMarkupActions(markup) {
     if (!action.id) action.id = uid("mark");
     if (action.type === "text") {
       if (!Number.isFinite(Number(action.scale))) action.scale = 1;
-      if (!Number.isFinite(Number(action.width))) action.width = 24;
-      if (!Number.isFinite(Number(action.height))) action.height = 7;
+      if (!Number.isFinite(Number(action.width))) action.width = 10;
+      if (!Number.isFinite(Number(action.height))) action.height = 4;
     }
+    if (action.type === "drawing" && !Array.isArray(action.paths)) action.paths = [];
   });
   return markup;
 }
@@ -2258,8 +2262,10 @@ function deleteSelectedImageMarkup() {
 }
 
 function strokeBounds(action) {
-  const xs = action.points.map((point) => Number(point.x));
-  const ys = action.points.map((point) => Number(point.y));
+  const points = action.type === "drawing" ? (action.paths || []).flat() : (action.points || []);
+  const xs = points.map((point) => Number(point.x));
+  const ys = points.map((point) => Number(point.y));
+  if (!points.length) return { left: 0, top: 0, width: 20, height: 20 };
   const left = Math.min(...xs);
   const top = Math.min(...ys);
   return {
@@ -2270,22 +2276,41 @@ function strokeBounds(action) {
   };
 }
 
+function finalizePendingImageMarkupDrawing() {
+  if (!imageMarkup.pendingDrawingId) return false;
+  const markup = currentScoreMarkup(true);
+  const drawing = markup.actions.find((action) => action.id === imageMarkup.pendingDrawingId);
+  imageMarkup.drawing = null;
+  imageMarkup.pendingDrawingId = "";
+  if (!drawing) return false;
+  drawing.paths = (drawing.paths || []).filter((path) => Array.isArray(path) && path.length > 1);
+  if (!drawing.paths.length) {
+    markup.actions = markup.actions.filter((action) => action.id !== drawing.id);
+    return false;
+  }
+  imageMarkup.selectedId = drawing.id;
+  saveImageMarkup("펜 필기를 저장했습니다.");
+  return true;
+}
+
 function renderImageMarkup() {
   if (!els.imageMarkupLayer || !els.imageMarkupTextLayer) return;
   const canvasWidth = els.imageMarkupCanvas?.clientWidth || 0;
   if (canvasWidth) els.imageMarkupCanvas.style.setProperty("--markup-base-font-size", `${Math.max(10, canvasWidth * 0.025)}px`);
   const markup = ensureImageMarkupActions(currentScoreMarkup(false) || { actions: [] });
-  const strokes = markup.actions.filter((action) => action.type === "stroke" && Array.isArray(action.points));
+  const strokes = markup.actions.filter((action) => (action.type === "stroke" && Array.isArray(action.points)) || (action.type === "drawing" && Array.isArray(action.paths)));
   const texts = markup.actions.filter((action) => action.type === "text" && action.text);
   els.imageMarkupLayer.innerHTML = strokes
     .map((stroke) => {
-      const points = stroke.points.map((point) => `${Number(point.x).toFixed(1)},${Number(point.y).toFixed(1)}`).join(" ");
+      const paths = stroke.type === "drawing" ? stroke.paths : [stroke.points];
       const id = escapeHTML(stroke.id);
       const selected = imageMarkup.active && stroke.id === imageMarkup.selectedId;
       const bounds = selected ? strokeBounds(stroke) : null;
       return `<g data-markup-action-id="${id}" class="image-markup-stroke${selected ? " selected" : ""}">
-        <polyline class="image-markup-stroke-hit" points="${points}" fill="none" stroke="transparent" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
-        <polyline points="${points}" fill="none" stroke="#d82f2f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        ${paths.map((path) => {
+          const points = path.map((point) => `${Number(point.x).toFixed(1)},${Number(point.y).toFixed(1)}`).join(" ");
+          return `<polyline class="image-markup-stroke-hit" points="${points}" fill="none" stroke="transparent" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline><polyline points="${points}" fill="none" stroke="#d82f2f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></polyline>`;
+        }).join("")}
         ${selected ? `<rect class="image-markup-selection-box" x="${bounds.left}" y="${bounds.top}" width="${bounds.width}" height="${bounds.height}"></rect><circle class="image-markup-resize-handle" data-markup-resize-id="${id}" cx="${bounds.left + bounds.width}" cy="${bounds.top + bounds.height}" r="10"></circle>` : ""}
       </g>`;
     })
@@ -2293,9 +2318,9 @@ function renderImageMarkup() {
   els.imageMarkupTextLayer.innerHTML = texts
     .map((action) => {
       const selected = imageMarkup.active && action.id === imageMarkup.selectedId;
-      const width = Math.max(6, Math.min(96 - Number(action.x || 0), Number(action.width) || 24));
-      const height = Math.max(3, Math.min(96 - Number(action.y || 0), Number(action.height) || 7));
-      return `<div class="image-markup-text${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-text-id="${escapeHTML(action.id)}" title="클릭하여 글씨 수정" style="left:${Math.max(0, Math.min(100, action.x))}%;top:${Math.max(0, Math.min(100, action.y))}%;width:${width}%;min-height:${height}%;--markup-scale:${Math.max(0.5, Math.min(3, Number(action.scale) || 1))}">${escapeHTML(action.text)}${selected ? `<button class="image-markup-text-resize" data-markup-resize-id="${escapeHTML(action.id)}" type="button" title="크기 조절"></button>` : ""}</div>`;
+      const width = Math.max(2, Math.min(98 - Number(action.x || 0), Number(action.width) || 10));
+      const height = Math.max(2, Math.min(98 - Number(action.y || 0), Number(action.height) || 4));
+      return `<div class="image-markup-text${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-text-id="${escapeHTML(action.id)}" title="클릭하여 글씨 수정" style="left:${Math.max(0, Math.min(100, action.x))}%;top:${Math.max(0, Math.min(100, action.y))}%;width:${width}%;height:${height}%;--markup-scale:${Math.max(0.5, Math.min(3, Number(action.scale) || 1))}">${escapeHTML(action.text)}${selected ? `<button class="image-markup-text-resize" data-markup-resize-id="${escapeHTML(action.id)}" type="button" title="크기 조절"></button>` : ""}</div>`;
     })
     .join("");
   els.imageMarkupCanvas?.classList.toggle("has-markup", markup.actions.length > 0);
@@ -2320,7 +2345,8 @@ function saveImageMarkup(message = "필기를 저장했습니다.") {
 
 function openImageMarkupTextEditor(action, position = null) {
   if (!action && !position) return;
-  const wasEditing = Boolean(action);
+  const actionId = action?.id || "";
+  const wasEditing = Boolean(actionId);
   const rect = els.imageMarkupCanvas.getBoundingClientRect();
   const x = action ? Number(action.x) : position.x;
   const y = action ? Number(action.y) : position.y;
@@ -2329,13 +2355,26 @@ function openImageMarkupTextEditor(action, position = null) {
   editor.placeholder = "메모 입력";
   editor.style.left = `${x}%`;
   editor.style.top = `${y}%`;
-  if (action) {
+  if (actionId) {
     editor.value = action.text || "";
-    editor.style.width = `${Math.max(6, Number(action.width) || 24)}%`;
-    editor.style.height = `${Math.max(3, Number(action.height) || 7)}%`;
     editor.style.fontSize = `calc(var(--markup-base-font-size, 15px) * ${Math.max(0.5, Math.min(3, Number(action.scale) || 1))})`;
   }
   els.imageMarkupTextLayer.append(editor);
+  const fitEditorToText = () => {
+    const maxWidth = Math.max(120, rect.width - (x / 100) * rect.width - 12);
+    const measure = document.createElement("span");
+    measure.className = "image-markup-text-measure";
+    measure.style.fontSize = getComputedStyle(editor).fontSize;
+    measure.textContent = editor.value || editor.placeholder;
+    els.imageMarkupTextLayer.append(measure);
+    const naturalWidth = measure.getBoundingClientRect().width + 14;
+    measure.remove();
+    editor.style.width = `${Math.min(maxWidth, Math.max(36, naturalWidth))}px`;
+    editor.style.height = "1px";
+    editor.style.height = `${Math.max(28, editor.scrollHeight + 3)}px`;
+  };
+  fitEditorToText();
+  editor.addEventListener("input", fitEditorToText);
   editor.focus();
   editor.setSelectionRange(editor.value.length, editor.value.length);
   let finished = false;
@@ -2346,14 +2385,16 @@ function openImageMarkupTextEditor(action, position = null) {
     const width = Math.max(6, Math.min(96 - x, (editor.offsetWidth / rect.width) * 100));
     const height = Math.max(3, Math.min(96 - y, (editor.offsetHeight / rect.height) * 100));
     editor.remove();
-    if (action) {
-      if (!text) currentScoreMarkup(true).actions = currentScoreMarkup(true).actions.filter((entry) => entry.id !== action.id);
-      else Object.assign(action, { text, width, height });
+    const markup = currentScoreMarkup(true);
+    const currentAction = actionId ? markup.actions.find((entry) => entry.id === actionId) : null;
+    if (actionId) {
+      if (!text) markup.actions = markup.actions.filter((entry) => entry.id !== actionId);
+      else if (currentAction) Object.assign(currentAction, { text, width, height });
     } else if (text) {
       action = { type: "text", id: uid("mark"), x, y, text, scale: 1, width, height };
-      currentScoreMarkup(true).actions.push(action);
+      markup.actions.push(action);
     }
-    imageMarkup.selectedId = action && text ? action.id : "";
+    imageMarkup.selectedId = text ? (actionId || action?.id || "") : "";
     setImageMarkupTool("select");
     renderImageMarkup();
     saveImageMarkup(wasEditing ? "텍스트 필기를 수정했습니다." : "텍스트 필기를 저장했습니다.");
@@ -7201,8 +7242,17 @@ els.imageMarkupCanvas.addEventListener("pointerdown", (event) => {
     return;
   }
   els.imageMarkupCanvas.setPointerCapture(event.pointerId);
-  imageMarkup.drawing = { type: "stroke", id: uid("mark"), points: [markupPoint(event)] };
-  currentScoreMarkup(true).actions.push(imageMarkup.drawing);
+  let drawing = imageMarkup.pendingDrawingId
+    ? currentScoreMarkup(true).actions.find((action) => action.id === imageMarkup.pendingDrawingId)
+    : null;
+  if (!drawing) {
+    drawing = { type: "drawing", id: uid("mark"), paths: [] };
+    imageMarkup.pendingDrawingId = drawing.id;
+    currentScoreMarkup(true).actions.push(drawing);
+  }
+  const path = [markupPoint(event)];
+  drawing.paths.push(path);
+  imageMarkup.drawing = { action: drawing, points: path };
   renderImageMarkup();
 });
 els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
@@ -7217,17 +7267,19 @@ els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
     const dy = point.y - start.y;
     if (type === "move") {
       if (action.type === "stroke") action.points = snapshot.points.map((entry) => ({ x: Math.max(0, Math.min(1000, entry.x + dx)), y: Math.max(0, Math.min(1000, entry.y + dy)) }));
+      if (action.type === "drawing") action.paths = snapshot.paths.map((path) => path.map((entry) => ({ x: Math.max(0, Math.min(1000, entry.x + dx)), y: Math.max(0, Math.min(1000, entry.y + dy)) })));
       if (action.type === "text") {
         action.x = Math.max(0, Math.min(94, Number(snapshot.x) + dx / 10));
         action.y = Math.max(0, Math.min(94, Number(snapshot.y) + dy / 10));
       }
-    } else if (action.type === "stroke") {
+    } else if (action.type === "stroke" || action.type === "drawing") {
       const bounds = strokeBounds(snapshot);
       const scale = Math.max(0.2, Math.min(5, Math.max((point.x - bounds.left) / bounds.width, (point.y - bounds.top) / bounds.height)));
-      action.points = snapshot.points.map((entry) => ({ x: bounds.left + (entry.x - bounds.left) * scale, y: bounds.top + (entry.y - bounds.top) * scale }));
+      if (action.type === "stroke") action.points = snapshot.points.map((entry) => ({ x: bounds.left + (entry.x - bounds.left) * scale, y: bounds.top + (entry.y - bounds.top) * scale }));
+      else action.paths = snapshot.paths.map((path) => path.map((entry) => ({ x: bounds.left + (entry.x - bounds.left) * scale, y: bounds.top + (entry.y - bounds.top) * scale })));
     } else if (action.type === "text") {
-      action.width = Math.max(6, Math.min(96 - Number(action.x || 0), (Number(snapshot.width) || 24) + dx / 10));
-      action.height = Math.max(3, Math.min(96 - Number(action.y || 0), (Number(snapshot.height) || 7) + dy / 10));
+      action.width = Math.max(2, Math.min(98 - Number(action.x || 0), (Number(snapshot.width) || 10) + dx / 10));
+      action.height = Math.max(2, Math.min(98 - Number(action.y || 0), (Number(snapshot.height) || 4) + dy / 10));
       action.scale = Math.max(0.5, Math.min(3, (Number(snapshot.scale) || 1) + Math.max(dx, dy) / 260));
     }
     renderImageMarkup();
@@ -7262,11 +7314,10 @@ const finishImageMarkupStroke = (event) => {
   }
   if (!imageMarkup.drawing) return;
   if (els.imageMarkupCanvas.hasPointerCapture?.(event.pointerId)) els.imageMarkupCanvas.releasePointerCapture(event.pointerId);
-  imageMarkup.selectedId = imageMarkup.drawing.id;
+  if (imageMarkup.drawing.points.length < 2) imageMarkup.drawing.action.paths.pop();
+  imageMarkup.selectedId = imageMarkup.drawing.action.id;
   imageMarkup.drawing = null;
-  setImageMarkupTool("select");
   renderImageMarkup();
-  saveImageMarkup("펜 필기를 저장했습니다.");
 };
 els.imageMarkupCanvas.addEventListener("pointerup", finishImageMarkupStroke);
 els.imageMarkupCanvas.addEventListener("pointercancel", finishImageMarkupStroke);
