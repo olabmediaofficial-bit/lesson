@@ -1481,6 +1481,39 @@ textarea {
   flex: 1;
 }
 
+.composer-actions {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.lesson-picker-group {
+  display: grid;
+  grid-template-columns: 58px minmax(150px, 0.8fr) minmax(220px, 1.2fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.lesson-picker-group strong {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.lesson-picker-group input,
+.lesson-picker-group select {
+  min-width: 0;
+  height: 40px;
+}
+
+.lesson-picker-group select:disabled {
+  opacity: 0.55;
+}
+
+.lesson-creation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .lesson-list {
   display: grid;
   gap: 12px;
@@ -7042,6 +7075,23 @@ textarea,
   .room-toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .lesson-picker-group {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+  }
+
+  .lesson-picker-group select {
+    grid-column: 2 / -1;
+  }
+
+  .lesson-creation-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lesson-creation-actions .primary-button {
+    grid-column: 1 / -1;
   }
 
   .room-session-bar {

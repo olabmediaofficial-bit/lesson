@@ -1066,6 +1066,8 @@ const els = {
   lessonMemo: $("#lessonMemo"),
   lessonTheoryPicker: $("#lessonTheoryPicker"),
   lessonPracticePicker: $("#lessonPracticePicker"),
+  lessonTheorySearch: $("#lessonTheorySearch"),
+  lessonPracticeSearch: $("#lessonPracticeSearch"),
   drawLessonChord: $("#drawLessonChord"),
   drawLessonRhythm: $("#drawLessonRhythm"),
   pendingMaterialList: $("#pendingMaterialList"),
@@ -5821,8 +5823,8 @@ function deleteSchedulePerson(personId) {
 }
 
 function renderLessonPicker() {
-  renderKindPicker(els.lessonTheoryPicker, "theory");
-  renderKindPicker(els.lessonPracticePicker, "practice");
+  renderKindPicker(els.lessonTheoryPicker, "theory", els.lessonTheorySearch?.value || "");
+  renderKindPicker(els.lessonPracticePicker, "practice", els.lessonPracticeSearch?.value || "");
 
   const pending = [...pendingBlockIds].map(getBlock).filter(Boolean);
   els.pendingMaterialList.innerHTML = pending.length
@@ -5830,12 +5832,19 @@ function renderLessonPicker() {
     : `<span class="material-meta">아직 붙인 블럭이 없습니다.</span>`;
 }
 
-function renderKindPicker(picker, kind) {
-  const available = state.blocks.filter((block) => block.kind === kind && !pendingBlockIds.has(block.id));
+function renderKindPicker(picker, kind, searchQuery = "") {
+  const previousValue = picker.value;
+  const query = normalizeText(searchQuery);
+  const available = state.blocks
+    .filter((block) => block.kind === kind && !pendingBlockIds.has(block.id))
+    .filter((block) => !query || normalizeText(block.title).includes(query))
+    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "en", { numeric: true, sensitivity: "base" }));
   picker.innerHTML = available
     .map((block) => `<option value="${block.id}">${escapeHTML(String(block.title || "").normalize("NFC"))}</option>`)
     .join("");
+  if (available.some((block) => block.id === previousValue)) picker.value = previousValue;
   picker.disabled = !available.length;
+  picker.title = available.length ? `${available.length}개 블럭` : "검색 결과 없음";
 }
 
 function renderLessonList(student) {
@@ -8086,6 +8095,8 @@ function attachPickedBlock(kind) {
 
 $("#attachTheoryMaterial").addEventListener("click", () => attachPickedBlock("theory"));
 $("#attachPracticeMaterial").addEventListener("click", () => attachPickedBlock("practice"));
+els.lessonTheorySearch?.addEventListener("input", () => renderKindPicker(els.lessonTheoryPicker, "theory", els.lessonTheorySearch.value));
+els.lessonPracticeSearch?.addEventListener("input", () => renderKindPicker(els.lessonPracticePicker, "practice", els.lessonPracticeSearch.value));
 els.drawLessonChord?.addEventListener("click", () => openChordBuilder({ attachToLesson: true, studentId: activeStudentId }));
 els.drawLessonRhythm?.addEventListener("click", () => openRhythmBuilder({ attachToLesson: true }));
 

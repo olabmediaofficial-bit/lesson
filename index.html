@@ -214,13 +214,23 @@
                 <input id="lessonDate" type="date" aria-label="수업 날짜" />
                 <textarea id="lessonMemo" rows="3" placeholder="오늘 수업 메모 또는 다음 과제"></textarea>
                 <div class="composer-actions">
-                  <select id="lessonTheoryPicker" aria-label="이론 블럭 선택"></select>
-                  <button class="secondary-button" id="attachTheoryMaterial" type="button">이론 붙이기</button>
-                  <select id="lessonPracticePicker" aria-label="실습 블럭 선택"></select>
-                  <button class="secondary-button" id="attachPracticeMaterial" type="button">실습 붙이기</button>
-                  <button class="secondary-button" id="drawLessonChord" type="button">코드 그리기</button>
-                  <button class="secondary-button" id="drawLessonRhythm" type="button">리듬 그리기</button>
-                  <button class="primary-button" id="saveLesson" type="button">날짜에 저장</button>
+                  <div class="lesson-picker-group">
+                    <strong>이론</strong>
+                    <input id="lessonTheorySearch" type="search" placeholder="이론 블럭 검색" aria-label="이론 블럭 검색" autocomplete="off" />
+                    <select id="lessonTheoryPicker" aria-label="이론 블럭 선택"></select>
+                    <button class="secondary-button" id="attachTheoryMaterial" type="button">붙이기</button>
+                  </div>
+                  <div class="lesson-picker-group">
+                    <strong>실습</strong>
+                    <input id="lessonPracticeSearch" type="search" placeholder="실습곡 검색" aria-label="실습 블럭 검색" autocomplete="off" />
+                    <select id="lessonPracticePicker" aria-label="실습 블럭 선택"></select>
+                    <button class="secondary-button" id="attachPracticeMaterial" type="button">붙이기</button>
+                  </div>
+                  <div class="lesson-creation-actions">
+                    <button class="secondary-button" id="drawLessonChord" type="button">코드 그리기</button>
+                    <button class="secondary-button" id="drawLessonRhythm" type="button">리듬 그리기</button>
+                    <button class="primary-button" id="saveLesson" type="button">날짜에 저장</button>
+                  </div>
                 </div>
                 <div class="pending-materials" id="pendingMaterialList"></div>
               </div>
