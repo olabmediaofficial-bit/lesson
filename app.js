@@ -559,6 +559,7 @@ const THEORY_TRIAD_CHORDS = ["C", "D", "G", "E", "A", "Am", "Dm", "Em"];
 const THEORY_SEVENTH_CHORDS = ["CM7", "E7", "Dm7", "FM7", "F#m7", "B7"];
 let activeDiatonicType = "major";
 let activeTheoryTool = "fretboard";
+let theoryFretStart = 1;
 let suppressStudentTabClickUntil = 0;
 let activeTheoryStudentId = "";
 let activePracticeTool = "";
@@ -1332,10 +1333,17 @@ function normalizeTheoryPractice(value = {}) {
     key,
     Array.from({ length }, (_, index) => String(rows[key]?.[index] || "")),
   ]));
+  const sourceFretCells = Array.isArray(source.fretboard?.cells) ? source.fretboard.cells : [];
+  const fretCells = Array.from({ length: 78 }, (_, index) => {
+    if (sourceFretCells.length > 36) return String(sourceFretCells[index] || "");
+    const stringIndex = Math.floor(index / 13);
+    const fret = index % 13;
+    return fret <= 5 ? String(sourceFretCells[stringIndex * 6 + fret] || "") : "";
+  });
   return {
     ...source,
     fretboard: {
-      cells: Array.from({ length: 36 }, (_, index) => String(source.fretboard?.cells?.[index] || "")),
+      cells: fretCells,
       scaleNames: Array.from({ length: 7 }, (_, index) => String(source.fretboard?.scaleNames?.[index] || "")),
     },
     triads: { rows: normalizeChordRows(THEORY_TRIAD_CHORDS, 3, source.triads?.rows) },
@@ -1442,13 +1450,17 @@ function usefulSites() {
 function renderUsefulSitesDialog() {
   const sites = usefulSites();
   els.usefulSitesList.innerHTML = sites.length
-    ? sites.map((site) => `
+    ? sites.map((site, index) => `
         <div class="useful-site-item">
           <a href="${escapeHTML(site.url)}" target="_blank" rel="noopener noreferrer">
             <strong>${escapeHTML(site.name)}</strong>
             <small>${escapeHTML(usefulSiteHost(site.url))}</small>
           </a>
-          ${publicShareMode ? "" : `<button class="icon-button tiny-button danger" type="button" data-delete-useful-site="${escapeHTML(site.id)}" title="삭제">×</button>`}
+          ${publicShareMode ? "" : `<div class="useful-site-actions">
+            <button class="icon-button tiny-button" type="button" data-move-useful-site="${escapeHTML(site.id)}" data-direction="up" ${index === 0 ? "disabled" : ""} title="위로">↑</button>
+            <button class="icon-button tiny-button" type="button" data-move-useful-site="${escapeHTML(site.id)}" data-direction="down" ${index === sites.length - 1 ? "disabled" : ""} title="아래로">↓</button>
+            <button class="icon-button tiny-button danger" type="button" data-delete-useful-site="${escapeHTML(site.id)}" title="삭제">×</button>
+          </div>`}
         </div>`).join("")
     : `<div class="empty">아직 등록된 사이트가 없습니다.</div>`;
   els.usefulSiteForm.hidden = publicShareMode;
@@ -1498,6 +1510,18 @@ function deleteUsefulSite(siteId) {
   state.usefulSites = usefulSites().filter((item) => item.id !== siteId);
   renderUsefulSitesDialog();
   saveStateInBackground({}, "유용한 사이트를 삭제했습니다.");
+}
+
+function moveUsefulSite(siteId, direction) {
+  const sites = usefulSites();
+  const index = sites.findIndex((site) => site.id === siteId);
+  const nextIndex = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || nextIndex < 0 || nextIndex >= sites.length) return;
+  const [moved] = sites.splice(index, 1);
+  sites.splice(nextIndex, 0, moved);
+  state.usefulSites = sites;
+  renderUsefulSitesDialog();
+  saveStateInBackground({ mode: "overwrite" }, "유용한 사이트 순서를 저장했습니다.");
 }
 
 function addUsefulSite(event) {
@@ -2935,16 +2959,30 @@ function renderTheoryWorkbooks() {
   student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
   const practice = student.theoryPractice;
   if (els.theoryFretboardWorkbook) {
-    const fretLabels = ["개방현", "1fr", "2fr", "3fr", "4fr", "5fr"];
+    const frets = Array.from({ length: 5 }, (_, index) => theoryFretStart + index);
     els.theoryFretboardWorkbook.innerHTML = `
-      <div class="theory-workbook-card">
-        <h4>1) 기타 지판 이해</h4>
-        <div class="theory-fretboard-table">
-          <div class="fretboard-corner">줄</div>${fretLabels.map((label) => `<div class="fretboard-head">${label}</div>`).join("")}
-          ${Array.from({ length: 6 }, (_, stringIndex) => `<div class="string-label">${stringIndex + 1}</div>${fretLabels.map((label, fretIndex) => `<div class="fret-cell">${theoryInput(practice.fretboard.cells[stringIndex * 6 + fretIndex], `fretboard.cells.${stringIndex * 6 + fretIndex}`, `${stringIndex + 1}번 줄 ${label}`)}</div>`).join("")}`).join("")}
+      <div class="theory-workbook-card theory-fretboard-workbook">
+        <div class="theory-fretboard-heading">
+          <h4>기타 지판 음계</h4>
+          <span>${theoryFretStart}–${theoryFretStart + 4}프렛</span>
         </div>
-        <h4>2) 계이름과 음이름</h4>
-        <div class="theory-scale-name-table"><strong>계이름</strong>${["도", "레", "미", "파", "솔", "라", "시"].map((name) => `<b>${name}</b>`).join("")}<strong>알파벳</strong>${practice.fretboard.scaleNames.map((value, index) => theoryInput(value, `fretboard.scaleNames.${index}`, `${["도", "레", "미", "파", "솔", "라", "시"][index]} 알파벳`)).join("")}</div>
+        <div class="theory-fretboard-board">
+          <div class="theory-fretboard-fret-labels">${frets.map((fret) => `<span>${fret}fr</span>`).join("")}</div>
+          <div class="theory-fretboard-strings">
+            ${Array.from({ length: 6 }, (_, stringIndex) => `
+              <div class="theory-fretboard-string-label"><strong>${stringIndex + 1}</strong></div>
+              <div class="theory-fretboard-open-note">${theoryInput(practice.fretboard.cells[stringIndex * 13], `fretboard.cells.${stringIndex * 13}`, `${stringIndex + 1}번 줄 개방현`)}</div>
+              <div class="theory-fretboard-string-row">
+                ${frets.map((fret) => `<div class="theory-fretboard-note">${theoryInput(practice.fretboard.cells[stringIndex * 13 + fret], `fretboard.cells.${stringIndex * 13 + fret}`, `${stringIndex + 1}번 줄 ${fret}프렛`)}</div>`).join("")}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+        <div class="theory-fretboard-controls">
+          <button class="icon-button" type="button" data-theory-fret-shift="-1" ${theoryFretStart <= 1 ? "disabled" : ""} title="이전 프렛">←</button>
+          <span>${theoryFretStart}–${theoryFretStart + 4}프렛</span>
+          <button class="icon-button" type="button" data-theory-fret-shift="1" ${theoryFretStart >= 8 ? "disabled" : ""} title="다음 프렛">→</button>
+        </div>
       </div>`;
   }
   if (els.theoryTriadWorkbook) {
@@ -4346,7 +4384,7 @@ function renderBlockChordDictionary(block, { editable = false } = {}) {
   `;
 }
 
-function renderBlockRhythmDictionary(block, { editable = false } = {}) {
+function renderBlockRhythmDictionary(block, { editable = false, studentId = "", lessonId = "" } = {}) {
   const rhythmIds = normalizeRhythmIds(block.rhythms || []);
   if (!rhythmIds.length && !editable) return "";
   const rhythms = rhythmIds.map(getRhythmById).filter(Boolean);
@@ -4362,10 +4400,16 @@ function renderBlockRhythmDictionary(block, { editable = false } = {}) {
         ${rhythms
           .map(
             (rhythm) => `
-              <button class="rhythm-card compact" type="button" data-view-rhythm="${escapeHTML(rhythm.id)}">
-                <strong>${escapeHTML(rhythm.name)}</strong>
-                <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
-              </button>
+              <article class="linked-rhythm-card">
+                <button class="rhythm-card compact" type="button" data-view-rhythm="${escapeHTML(rhythm.id)}">
+                  <strong>${escapeHTML(rhythm.name)}</strong>
+                  <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
+                </button>
+                ${editable ? `<div class="linked-rhythm-actions">
+                  <button type="button" data-edit-rhythm="${escapeHTML(rhythm.id)}">수정</button>
+                  <button class="danger-text" type="button" data-detach-block-rhythm="${escapeHTML(rhythm.id)}" data-block-id="${escapeHTML(block.id)}" data-student-id="${escapeHTML(studentId)}" data-lesson-id="${escapeHTML(lessonId)}">삭제</button>
+                </div>` : ""}
+              </article>
             `,
           )
           .join("")}
@@ -4522,6 +4566,35 @@ function saveRhythmPickerSelection() {
   els.rhythmPickerDialog.close();
   render();
   saveStateInBackground({}, "리듬표를 연결했습니다.");
+}
+
+function detachRhythmFromBlock(button) {
+  const rhythmId = button.dataset.detachBlockRhythm;
+  const blockId = button.dataset.blockId;
+  const studentId = button.dataset.studentId || "";
+  const lessonId = button.dataset.lessonId || "";
+  const rhythm = getRhythmById(rhythmId);
+  const local = studentId && lessonId ? lessonBlockAssets(studentId, lessonId, blockId, false) : null;
+  let changed = false;
+  if (local?.assets.rhythms.includes(rhythmId)) {
+    local.assets.rhythms = local.assets.rhythms.filter((id) => id !== rhythmId);
+    local.lesson.updatedAt = nowIso();
+    changed = true;
+  } else {
+    const block = getBlock(blockId);
+    if (block?.rhythms?.includes(rhythmId)) {
+      block.rhythms = normalizeRhythmIds(block.rhythms).filter((id) => id !== rhythmId);
+      block.updatedAt = nowIso();
+      changed = true;
+    }
+  }
+  if (!changed) return;
+  render();
+  if (els.blockViewerDialog?.open && els.blockViewerDialog.dataset.blockId === blockId) {
+    const block = getBlock(blockId);
+    if (block) els.blockViewerContent.innerHTML = renderBlockViewerContent(block);
+  }
+  saveStateInBackground({ mode: "overwrite" }, `${rhythm?.name || "리듬표"}를 블럭에서 삭제했습니다.`);
 }
 
 function reorderSelectedChord(fromIndex, toIndex) {
@@ -6152,7 +6225,7 @@ function renderLessonResourceChips(block, { editable = false, studentId = "", le
   const resourceBlock = lessonResourceBlock(block, studentId, lessonId);
   const audio = block.audioLink ? renderAudioButton(block.audioLink) : "";
   const chords = renderBlockChordDictionary(resourceBlock, { editable });
-  const rhythms = renderBlockRhythmDictionary(resourceBlock, { editable });
+  const rhythms = renderBlockRhythmDictionary(resourceBlock, { editable, studentId, lessonId });
   if (!audio && !chords && !rhythms) return "";
   return `<div class="lesson-resource-chips">${audio}${chords}${rhythms}</div>`;
 }
@@ -6344,6 +6417,12 @@ function applyBulkCurriculumTags(mode = "add") {
 }
 
 document.addEventListener("click", (event) => {
+  const fretShift = event.target.closest("[data-theory-fret-shift]");
+  if (fretShift) {
+    theoryFretStart = Math.max(1, Math.min(8, theoryFretStart + Number(fretShift.dataset.theoryFretShift || 0)));
+    renderTheoryWorkbooks();
+    return;
+  }
   const theoryTool = event.target.closest("[data-theory-tool]");
   if (theoryTool) {
     activeTheoryTool = theoryTool.dataset.theoryTool;
@@ -6508,6 +6587,12 @@ document.addEventListener("click", (event) => {
   const editRhythm = event.target.closest("[data-edit-rhythm]");
   if (editRhythm) {
     editCustomRhythm(editRhythm.dataset.editRhythm);
+    return;
+  }
+
+  const detachRhythm = event.target.closest("[data-detach-block-rhythm]");
+  if (detachRhythm) {
+    detachRhythmFromBlock(detachRhythm);
     return;
   }
 
@@ -7739,6 +7824,7 @@ function renderBlockAssetLists() {
             return `
               <span class="selected-chord-pill">
                 <b>${escapeHTML(label)}</b>
+                ${rhythm ? `<button class="asset-pill-edit" type="button" data-edit-rhythm="${escapeHTML(id)}">수정</button>` : ""}
                 <button class="icon-button tiny-button" type="button" data-remove-editing-rhythm="${escapeHTML(id)}" aria-label="${escapeHTML(label)} 제거">×</button>
               </span>
             `;
@@ -8298,6 +8384,11 @@ els.clearTheoryDiatonic?.addEventListener("click", () => clearDiatonicPractice(t
 els.saveTheoryDiatonic?.addEventListener("click", () => persistTheoryPractice(theoryToolStudent()));
 els.usefulSiteForm?.addEventListener("submit", addUsefulSite);
 els.usefulSitesList?.addEventListener("click", (event) => {
+  const moveButton = event.target.closest("[data-move-useful-site]");
+  if (moveButton) {
+    moveUsefulSite(moveButton.dataset.moveUsefulSite, moveButton.dataset.direction);
+    return;
+  }
   const button = event.target.closest("[data-delete-useful-site]");
   if (button) deleteUsefulSite(button.dataset.deleteUsefulSite);
 });

@@ -3208,6 +3208,116 @@ textarea {
   background: #fff;
 }
 
+.theory-fretboard-workbook {
+  min-width: min(860px, 100%);
+  border-color: rgba(185, 130, 85, 0.32);
+  border-radius: 8px;
+  background: #fffaf4;
+}
+
+.theory-fretboard-heading,
+.theory-fretboard-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.theory-fretboard-heading span,
+.theory-fretboard-controls span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.theory-fretboard-board {
+  display: grid;
+  grid-template-columns: 36px 58px minmax(560px, 1fr);
+  grid-template-rows: 28px auto;
+  gap: 6px 10px;
+  overflow-x: auto;
+}
+
+.theory-fretboard-fret-labels {
+  display: grid;
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 560px;
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  color: #9a7a61;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.theory-fretboard-strings {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 680px;
+  grid-template-columns: 36px 58px minmax(560px, 1fr);
+  grid-template-rows: repeat(6, 52px);
+  gap: 0 10px;
+  align-items: center;
+}
+
+.theory-fretboard-string-label {
+  display: grid;
+  height: 52px;
+  place-items: center;
+  color: #7b4529;
+  font-size: 13px;
+}
+
+.theory-fretboard-open-note {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-self: center;
+  place-items: center;
+  border: 2px solid #b98255;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.theory-fretboard-string-row {
+  position: relative;
+  display: grid;
+  height: 52px;
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  background: linear-gradient(to bottom, transparent 48%, #704b35 48%, #704b35 53%, transparent 53%);
+}
+
+.theory-fretboard-note {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-left: 2px solid rgba(181, 139, 105, 0.62);
+}
+
+.theory-fretboard-note:last-child {
+  border-right: 2px solid rgba(181, 139, 105, 0.72);
+}
+
+.theory-fretboard-open-note input,
+.theory-fretboard-note input {
+  position: relative;
+  z-index: 1;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(185, 130, 85, 0.36);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  color: #6f4329;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.theory-fretboard-controls {
+  justify-content: center;
+}
+
 .theory-scale-name-table {
   display: grid;
   grid-template-columns: 92px repeat(7, minmax(70px, 1fr));
@@ -6920,6 +7030,37 @@ textarea,
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fffaf5;
+}
+
+.useful-site-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.linked-rhythm-card {
+  display: grid;
+  gap: 5px;
+}
+
+.linked-rhythm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.linked-rhythm-actions button,
+.asset-pill-edit {
+  min-height: 26px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fffaf5;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .useful-site-item a {
