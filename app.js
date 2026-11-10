@@ -509,6 +509,8 @@ let imageMarkup = {
   stampKind: "major",
   stampDegree: 1,
   stampAccidental: 0,
+  stampSize: 1,
+  stampPreview: null,
   drawing: null,
   pendingDrawingId: "",
   selectedId: "",
@@ -1139,6 +1141,9 @@ const els = {
   imageMarkupStampMinor: $("#imageMarkupStampMinor"),
   imageMarkupStampDominant: $("#imageMarkupStampDominant"),
   imageMarkupStampStatus: $("#imageMarkupStampStatus"),
+  imageMarkupStampSizeWrap: $("#imageMarkupStampSizeWrap"),
+  imageMarkupStampSize: $("#imageMarkupStampSize"),
+  imageMarkupStampSizeLabel: $("#imageMarkupStampSizeLabel"),
   imageMarkupDelete: $("#imageMarkupDelete"),
   imageMarkupUndo: $("#imageMarkupUndo"),
   imageMarkupClear: $("#imageMarkupClear"),
@@ -2233,6 +2238,7 @@ function setImageMarkupActive(active) {
 
 function setImageMarkupTool(tool) {
   imageMarkup.tool = ["select", "text", "stamp"].includes(tool) ? tool : "pen";
+  if (imageMarkup.tool !== "stamp") imageMarkup.stampPreview = null;
   els.imageMarkupSelect?.classList.toggle("active", imageMarkup.tool === "select");
   els.imageMarkupPen?.classList.toggle("active", imageMarkup.tool === "pen");
   els.imageMarkupText?.classList.toggle("active", imageMarkup.tool === "text");
@@ -2260,8 +2266,12 @@ function imageMarkupStampLabel(action = imageMarkup) {
 
 function renderImageMarkupStampStatus() {
   if (!els.imageMarkupStampStatus) return;
-  els.imageMarkupStampStatus.hidden = imageMarkup.tool !== "stamp";
+  const stampActive = imageMarkup.tool === "stamp";
+  els.imageMarkupStampStatus.hidden = !stampActive;
   els.imageMarkupStampStatus.textContent = imageMarkupStampLabel();
+  if (els.imageMarkupStampSizeWrap) els.imageMarkupStampSizeWrap.hidden = !stampActive;
+  if (els.imageMarkupStampSize) els.imageMarkupStampSize.value = String(Math.round(imageMarkup.stampSize * 100));
+  if (els.imageMarkupStampSizeLabel) els.imageMarkupStampSizeLabel.value = `${Math.round(imageMarkup.stampSize * 100)}%`;
 }
 
 function setImageMarkupStamp(kind) {
@@ -2281,6 +2291,7 @@ function ensureImageMarkupActions(markup) {
       action.kind = ["minor", "dominant"].includes(action.kind) ? action.kind : "major";
       action.degree = Math.max(1, Math.min(7, Number(action.degree) || 1));
       action.accidental = Math.max(-1, Math.min(1, Number(action.accidental) || 0));
+      action.size = Math.max(0.6, Math.min(1.8, Number(action.size) || 1));
     }
     if (action.type === "drawing" && !Array.isArray(action.paths)) action.paths = [];
   });
@@ -2368,8 +2379,10 @@ function renderImageMarkup() {
     })
     .join("") + stamps.map((action) => {
       const selected = imageMarkup.active && action.id === imageMarkup.selectedId;
-      return `<div class="image-markup-stamp${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-stamp-id="${escapeHTML(action.id)}" title="${escapeHTML(imageMarkupStampLabel(action))} 코드 분석 도장" style="left:${Math.max(0, Math.min(96, Number(action.x) || 0))}%;top:${Math.max(0, Math.min(96, Number(action.y) || 0))}%">${escapeHTML(imageMarkupStampLabel(action))}</div>`;
-    }).join("");
+      return `<div class="image-markup-stamp${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-stamp-id="${escapeHTML(action.id)}" title="${escapeHTML(imageMarkupStampLabel(action))} 코드 분석 도장" style="left:${Math.max(0, Math.min(96, Number(action.x) || 0))}%;top:${Math.max(0, Math.min(96, Number(action.y) || 0))}%;--stamp-scale:${Math.max(0.6, Math.min(1.8, Number(action.size) || 1))}">${escapeHTML(imageMarkupStampLabel(action))}</div>`;
+    }).join("") + (imageMarkup.active && imageMarkup.tool === "stamp" && imageMarkup.stampPreview
+      ? `<div class="image-markup-stamp preview" aria-hidden="true" style="left:${imageMarkup.stampPreview.x}%;top:${imageMarkup.stampPreview.y}%;--stamp-scale:${imageMarkup.stampSize}">${escapeHTML(imageMarkupStampLabel())}</div>`
+      : "");
   els.imageMarkupCanvas?.classList.toggle("has-markup", markup.actions.length > 0);
   if (els.imageMarkupDelete) els.imageMarkupDelete.disabled = !selectedImageMarkupAction();
   if (els.imageMarkupToolbar) els.imageMarkupToolbar.hidden = !imageMarkup.active;
@@ -7268,6 +7281,11 @@ els.imageMarkupText.addEventListener("click", () => setImageMarkupTool("text"));
 els.imageMarkupStampMajor?.addEventListener("click", () => setImageMarkupStamp("major"));
 els.imageMarkupStampMinor?.addEventListener("click", () => setImageMarkupStamp("minor"));
 els.imageMarkupStampDominant?.addEventListener("click", () => setImageMarkupStamp("dominant"));
+els.imageMarkupStampSize?.addEventListener("input", () => {
+  imageMarkup.stampSize = Math.max(0.6, Math.min(1.8, Number(els.imageMarkupStampSize.value) / 100 || 1));
+  renderImageMarkupStampStatus();
+  renderImageMarkup();
+});
 els.imageMarkupDone.addEventListener("click", () => setImageMarkupActive(false));
 els.imageMarkupDelete.addEventListener("click", deleteSelectedImageMarkup);
 els.imageMarkupUndo.addEventListener("click", () => {
@@ -7295,6 +7313,19 @@ els.imageMarkupCanvas.addEventListener("pointerdown", (event) => {
     imageMarkup.selectedId = targetId;
     let action = selectedImageMarkupAction();
     if (!action) return;
+    if (action.type === "text" && !resizeTarget && !event.altKey) {
+      const textRect = actionTarget.getBoundingClientRect();
+      const edge = Math.min(
+        Math.abs(event.clientX - textRect.left),
+        Math.abs(textRect.right - event.clientX),
+        Math.abs(event.clientY - textRect.top),
+        Math.abs(textRect.bottom - event.clientY),
+      );
+      if (edge > 8) {
+        openImageMarkupTextEditor(action);
+        return;
+      }
+    }
     const shouldDuplicate = !resizeTarget && event.altKey;
     if (shouldDuplicate) {
       const duplicate = structuredClone(action);
@@ -7333,10 +7364,12 @@ els.imageMarkupCanvas.addEventListener("pointerdown", (event) => {
       kind: imageMarkup.stampKind,
       degree: imageMarkup.stampDegree,
       accidental: imageMarkup.stampAccidental,
+      size: imageMarkup.stampSize,
       updatedAt: nowIso(),
     };
     currentScoreMarkup(true).actions.push(action);
     imageMarkup.selectedId = action.id;
+    imageMarkup.stampPreview = null;
     renderImageMarkup();
     saveImageMarkup(`${imageMarkupStampLabel(action)} 도장을 찍었습니다.`);
     return;
@@ -7390,6 +7423,15 @@ els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
     renderImageMarkup();
     return;
   }
+  if (imageMarkup.tool === "stamp") {
+    const rect = els.imageMarkupCanvas.getBoundingClientRect();
+    imageMarkup.stampPreview = {
+      x: Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)),
+      y: Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100)),
+    };
+    renderImageMarkup();
+    return;
+  }
   if (!imageMarkup.drawing) return;
   event.preventDefault();
   const point = markupPoint(event);
@@ -7402,18 +7444,8 @@ const finishImageMarkupStroke = (event) => {
   if (imageMarkup.interaction) {
     const interaction = imageMarkup.interaction;
     const duplicated = interaction.duplicated;
-    const end = markupPoint(event);
-    const editText = interaction.type === "move"
-      && interaction.snapshot?.type === "text"
-      && !duplicated
-      && Math.hypot(end.x - interaction.start.x, end.y - interaction.start.y) < 4;
     if (els.imageMarkupCanvas.hasPointerCapture?.(event.pointerId)) els.imageMarkupCanvas.releasePointerCapture(event.pointerId);
     imageMarkup.interaction = null;
-    if (editText) {
-      const action = selectedImageMarkupAction();
-      if (action) openImageMarkupTextEditor(action);
-      return;
-    }
     saveImageMarkup(duplicated ? "필기를 복사했습니다." : "필기 위치와 크기를 저장했습니다.");
     return;
   }
@@ -7426,6 +7458,12 @@ const finishImageMarkupStroke = (event) => {
 };
 els.imageMarkupCanvas.addEventListener("pointerup", finishImageMarkupStroke);
 els.imageMarkupCanvas.addEventListener("pointercancel", finishImageMarkupStroke);
+els.imageMarkupCanvas.addEventListener("pointerleave", () => {
+  if (!imageMarkup.interaction && !imageMarkup.drawing && imageMarkup.stampPreview) {
+    imageMarkup.stampPreview = null;
+    renderImageMarkup();
+  }
+});
 
 els.imageMarkupTextLayer.addEventListener("click", (event) => {
   const textTarget = event.target.closest?.("[data-markup-text-id]");

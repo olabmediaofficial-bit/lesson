@@ -4569,6 +4569,34 @@ dialog::backdrop {
   display: none !important;
 }
 
+.image-markup-stamp-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.image-markup-stamp-size[hidden] {
+  display: none !important;
+}
+
+.image-markup-stamp-size input {
+  width: 92px;
+  accent-color: #e34b4b;
+}
+
+.image-markup-stamp-size output {
+  min-width: 34px;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: right;
+}
+
 .image-markup-toolbar .primary-button {
   margin-left: auto;
   border-color: #fff;
@@ -4698,6 +4726,15 @@ dialog::backdrop {
   pointer-events: auto;
 }
 
+.image-markup-canvas.editing .image-markup-text::after {
+  position: absolute;
+  inset: 8px;
+  border-radius: 2px;
+  content: "";
+  cursor: text;
+  pointer-events: none;
+}
+
 .image-markup-text.selected {
   outline: 2px dashed #3189e8;
   outline-offset: 3px;
@@ -4720,10 +4757,19 @@ dialog::backdrop {
   font-size: calc(var(--markup-base-font-size, 15px) * 1.05);
   font-weight: 900;
   line-height: 1;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--stamp-scale, 1));
+  transform-origin: center;
   pointer-events: auto;
   cursor: move;
   user-select: none;
+}
+
+.image-markup-stamp.preview {
+  z-index: 4;
+  opacity: 0.48;
+  border-style: dashed;
+  pointer-events: none;
+  cursor: none;
 }
 
 .image-markup-stamp.selected {

@@ -802,11 +802,16 @@
             <button id="imageMarkupStampDominant" type="button" title="도미넌트 코드 분석 도장">7</button>
           </div>
           <strong class="image-markup-stamp-status" id="imageMarkupStampStatus" hidden>I</strong>
+          <label class="image-markup-stamp-size" id="imageMarkupStampSizeWrap" hidden>
+            <span>도장 크기</span>
+            <input id="imageMarkupStampSize" type="range" min="60" max="180" step="10" value="100" />
+            <output id="imageMarkupStampSizeLabel">100%</output>
+          </label>
           <button id="imageMarkupDelete" type="button" disabled>선택 삭제</button>
           <button id="imageMarkupUndo" type="button">실행 취소</button>
           <button id="imageMarkupClear" type="button">모두 지우기</button>
           <button class="primary-button" id="imageMarkupDone" type="button">완료</button>
-          <span>도장: 1–7 도수 · ⌘+ / ⌘− 조표 변경</span>
+          <span>도장: 1–7 도수 · ⌘+ / ⌘− 조표 변경 · 필기: 테두리 이동 · Option 드래그 복제 · Delete 삭제</span>
         </div>
         <div class="image-viewer-stage">
           <button class="image-viewer-nav prev" id="imageViewerPrev" type="button" title="이전 악보">‹</button>
