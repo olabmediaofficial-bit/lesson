@@ -4535,6 +4535,40 @@ dialog::backdrop {
   background: #c93636;
 }
 
+.image-markup-stamps {
+  display: inline-flex;
+  gap: 3px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+}
+
+.image-markup-stamps button {
+  width: 32px;
+  min-width: 32px;
+  padding-inline: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+}
+
+.image-markup-stamp-status {
+  display: inline-grid;
+  min-width: 38px;
+  min-height: 32px;
+  place-items: center;
+  padding: 4px 7px;
+  border: 1px solid #ff8a82;
+  border-radius: 7px;
+  color: #fff;
+  background: rgba(201, 54, 54, 0.32);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+}
+
+.image-markup-stamp-status[hidden] {
+  display: none !important;
+}
+
 .image-markup-toolbar .primary-button {
   margin-left: auto;
   border-color: #fff;
@@ -4595,6 +4629,10 @@ dialog::backdrop {
 
 .image-markup-canvas.editing.text-tool {
   cursor: text;
+}
+
+.image-markup-canvas.editing.stamp-tool {
+  cursor: copy;
 }
 
 .image-markup-canvas.editing.select-tool {
@@ -4661,6 +4699,34 @@ dialog::backdrop {
 }
 
 .image-markup-text.selected {
+  outline: 2px dashed #3189e8;
+  outline-offset: 3px;
+}
+
+.image-markup-stamp {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  min-width: 30px;
+  min-height: 30px;
+  place-items: center;
+  padding: 3px 6px;
+  border: 2px solid #bd2831;
+  border-radius: 50%;
+  color: #ad1822;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(72, 20, 20, 0.18);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: calc(var(--markup-base-font-size, 15px) * 1.05);
+  font-weight: 900;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: move;
+  user-select: none;
+}
+
+.image-markup-stamp.selected {
   outline: 2px dashed #3189e8;
   outline-offset: 3px;
 }

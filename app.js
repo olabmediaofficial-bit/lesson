@@ -506,6 +506,9 @@ let imageViewerStack = [];
 let imageMarkup = {
   active: false,
   tool: "select",
+  stampKind: "major",
+  stampDegree: 1,
+  stampAccidental: 0,
   drawing: null,
   pendingDrawingId: "",
   selectedId: "",
@@ -1132,6 +1135,10 @@ const els = {
   imageMarkupSelect: $("#imageMarkupSelect"),
   imageMarkupPen: $("#imageMarkupPen"),
   imageMarkupText: $("#imageMarkupText"),
+  imageMarkupStampMajor: $("#imageMarkupStampMajor"),
+  imageMarkupStampMinor: $("#imageMarkupStampMinor"),
+  imageMarkupStampDominant: $("#imageMarkupStampDominant"),
+  imageMarkupStampStatus: $("#imageMarkupStampStatus"),
   imageMarkupDelete: $("#imageMarkupDelete"),
   imageMarkupUndo: $("#imageMarkupUndo"),
   imageMarkupClear: $("#imageMarkupClear"),
@@ -2225,12 +2232,41 @@ function setImageMarkupActive(active) {
 }
 
 function setImageMarkupTool(tool) {
-  imageMarkup.tool = ["select", "text"].includes(tool) ? tool : "pen";
+  imageMarkup.tool = ["select", "text", "stamp"].includes(tool) ? tool : "pen";
   els.imageMarkupSelect?.classList.toggle("active", imageMarkup.tool === "select");
   els.imageMarkupPen?.classList.toggle("active", imageMarkup.tool === "pen");
   els.imageMarkupText?.classList.toggle("active", imageMarkup.tool === "text");
+  els.imageMarkupStampMajor?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "major");
+  els.imageMarkupStampMinor?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "minor");
+  els.imageMarkupStampDominant?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "dominant");
   els.imageMarkupCanvas?.classList.toggle("text-tool", imageMarkup.tool === "text");
+  els.imageMarkupCanvas?.classList.toggle("stamp-tool", imageMarkup.tool === "stamp");
   els.imageMarkupCanvas?.classList.toggle("select-tool", imageMarkup.tool === "select");
+  renderImageMarkupStampStatus();
+}
+
+const ROMAN_DEGREES = ["I", "II", "III", "IV", "V", "VI", "VII"];
+
+function imageMarkupStampLabel(action = imageMarkup) {
+  const degree = Math.max(1, Math.min(7, Number(action.degree ?? action.stampDegree) || 1));
+  const kind = action.kind || action.stampKind || "major";
+  const accidental = Math.max(-1, Math.min(1, Number(action.accidental ?? action.stampAccidental) || 0));
+  const prefix = accidental < 0 ? "♭" : accidental > 0 ? "♯" : "";
+  const roman = ROMAN_DEGREES[degree - 1];
+  if (kind === "minor") return `${prefix}${roman.toLowerCase()}m`;
+  if (kind === "dominant") return `${prefix}${roman}7`;
+  return `${prefix}${roman}`;
+}
+
+function renderImageMarkupStampStatus() {
+  if (!els.imageMarkupStampStatus) return;
+  els.imageMarkupStampStatus.hidden = imageMarkup.tool !== "stamp";
+  els.imageMarkupStampStatus.textContent = imageMarkupStampLabel();
+}
+
+function setImageMarkupStamp(kind) {
+  imageMarkup.stampKind = ["minor", "dominant"].includes(kind) ? kind : "major";
+  setImageMarkupTool("stamp");
 }
 
 function ensureImageMarkupActions(markup) {
@@ -2240,6 +2276,11 @@ function ensureImageMarkupActions(markup) {
       if (!Number.isFinite(Number(action.scale))) action.scale = 1;
       if (!Number.isFinite(Number(action.width))) action.width = 10;
       if (!Number.isFinite(Number(action.height))) action.height = 4;
+    }
+    if (action.type === "stamp") {
+      action.kind = ["minor", "dominant"].includes(action.kind) ? action.kind : "major";
+      action.degree = Math.max(1, Math.min(7, Number(action.degree) || 1));
+      action.accidental = Math.max(-1, Math.min(1, Number(action.accidental) || 0));
     }
     if (action.type === "drawing" && !Array.isArray(action.paths)) action.paths = [];
   });
@@ -2302,6 +2343,7 @@ function renderImageMarkup() {
   const markup = ensureImageMarkupActions(currentScoreMarkup(false) || { actions: [] });
   const strokes = markup.actions.filter((action) => (action.type === "stroke" && Array.isArray(action.points)) || (action.type === "drawing" && Array.isArray(action.paths)));
   const texts = markup.actions.filter((action) => action.type === "text" && action.text);
+  const stamps = markup.actions.filter((action) => action.type === "stamp");
   els.imageMarkupLayer.innerHTML = strokes
     .map((stroke) => {
       const paths = stroke.type === "drawing" ? stroke.paths : [stroke.points];
@@ -2324,7 +2366,10 @@ function renderImageMarkup() {
       const height = Math.max(2, Math.min(98 - Number(action.y || 0), Number(action.height) || 4));
       return `<div class="image-markup-text${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-text-id="${escapeHTML(action.id)}" title="클릭하여 글씨 수정" style="left:${Math.max(0, Math.min(100, action.x))}%;top:${Math.max(0, Math.min(100, action.y))}%;width:${width}%;height:${height}%;--markup-scale:${Math.max(0.5, Math.min(3, Number(action.scale) || 1))}">${escapeHTML(action.text)}${selected ? `<button class="image-markup-text-resize" data-markup-resize-id="${escapeHTML(action.id)}" type="button" title="크기 조절"></button>` : ""}</div>`;
     })
-    .join("");
+    .join("") + stamps.map((action) => {
+      const selected = imageMarkup.active && action.id === imageMarkup.selectedId;
+      return `<div class="image-markup-stamp${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-stamp-id="${escapeHTML(action.id)}" title="${escapeHTML(imageMarkupStampLabel(action))} 코드 분석 도장" style="left:${Math.max(0, Math.min(96, Number(action.x) || 0))}%;top:${Math.max(0, Math.min(96, Number(action.y) || 0))}%">${escapeHTML(imageMarkupStampLabel(action))}</div>`;
+    }).join("");
   els.imageMarkupCanvas?.classList.toggle("has-markup", markup.actions.length > 0);
   if (els.imageMarkupDelete) els.imageMarkupDelete.disabled = !selectedImageMarkupAction();
   if (els.imageMarkupToolbar) els.imageMarkupToolbar.hidden = !imageMarkup.active;
@@ -2341,14 +2386,18 @@ function markupPoint(event) {
 function saveImageMarkup(message = "필기를 저장했습니다.") {
   const context = imageViewerMarkupContext();
   if (!context) return;
+  const markup = currentScoreMarkup(true);
+  markup.updatedAt = nowIso();
+  markup.revision = Math.max(0, Number(markup.revision) || 0) + 1;
   context.lesson.updatedAt = nowIso();
-  saveStateInBackground({}, message);
+  saveStateInBackground({ mode: "overwrite" }, message);
 }
 
 function openImageMarkupTextEditor(action, position = null) {
   if (!action && !position) return;
   const actionId = action?.id || "";
   const wasEditing = Boolean(actionId);
+  const originalAction = actionId ? structuredClone(action) : null;
   const rect = els.imageMarkupCanvas.getBoundingClientRect();
   const x = action ? Number(action.x) : position.x;
   const y = action ? Number(action.y) : position.y;
@@ -2375,14 +2424,35 @@ function openImageMarkupTextEditor(action, position = null) {
     editor.style.height = "1px";
     editor.style.height = `${Math.max(28, editor.scrollHeight + 3)}px`;
   };
-  fitEditorToText();
-  editor.addEventListener("input", fitEditorToText);
+  const syncEditorDraft = () => {
+    fitEditorToText();
+    if (!actionId) return;
+    const currentAction = currentScoreMarkup(true).actions.find((entry) => entry.id === actionId);
+    if (!currentAction) return;
+    Object.assign(currentAction, {
+      text: editor.value,
+      width: Math.max(2, Math.min(98 - x, (editor.offsetWidth / rect.width) * 100)),
+      height: Math.max(2, Math.min(98 - y, (editor.offsetHeight / rect.height) * 100)),
+      updatedAt: nowIso(),
+    });
+  };
+  syncEditorDraft();
+  editor.addEventListener("input", syncEditorDraft);
   editor.focus();
   editor.setSelectionRange(editor.value.length, editor.value.length);
   let finished = false;
-  const finish = () => {
+  const finish = (cancelled = false) => {
     if (finished) return;
     finished = true;
+    if (cancelled) {
+      if (actionId && originalAction) {
+        const currentAction = currentScoreMarkup(true).actions.find((entry) => entry.id === actionId);
+        if (currentAction) Object.assign(currentAction, originalAction);
+      }
+      editor.remove();
+      renderImageMarkup();
+      return;
+    }
     const text = editor.value.trim();
     const width = Math.max(6, Math.min(96 - x, (editor.offsetWidth / rect.width) * 100));
     const height = Math.max(3, Math.min(96 - y, (editor.offsetHeight / rect.height) * 100));
@@ -2391,9 +2461,9 @@ function openImageMarkupTextEditor(action, position = null) {
     const currentAction = actionId ? markup.actions.find((entry) => entry.id === actionId) : null;
     if (actionId) {
       if (!text) markup.actions = markup.actions.filter((entry) => entry.id !== actionId);
-      else if (currentAction) Object.assign(currentAction, { text, width, height });
+      else if (currentAction) Object.assign(currentAction, { text, width, height, updatedAt: nowIso() });
     } else if (text) {
-      action = { type: "text", id: uid("mark"), x, y, text, scale: 1, width, height };
+      action = { type: "text", id: uid("mark"), x, y, text, scale: 1, width, height, updatedAt: nowIso() };
       markup.actions.push(action);
     }
     imageMarkup.selectedId = text ? (actionId || action?.id || "") : "";
@@ -2401,12 +2471,12 @@ function openImageMarkupTextEditor(action, position = null) {
     renderImageMarkup();
     saveImageMarkup(wasEditing ? "텍스트 필기를 수정했습니다." : "텍스트 필기를 저장했습니다.");
   };
-  editor.addEventListener("blur", finish, { once: true });
+  editor.addEventListener("blur", () => finish(false), { once: true });
   editor.addEventListener("keydown", (keyEvent) => {
     if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key === "Enter") editor.blur();
     if (keyEvent.key === "Escape") {
-      editor.value = "";
-      editor.blur();
+      keyEvent.preventDefault();
+      finish(true);
     }
   });
 }
@@ -7195,6 +7265,9 @@ els.imageViewerMarkup.addEventListener("click", () => setImageMarkupActive(!imag
 els.imageMarkupSelect.addEventListener("click", () => setImageMarkupTool("select"));
 els.imageMarkupPen.addEventListener("click", () => setImageMarkupTool("pen"));
 els.imageMarkupText.addEventListener("click", () => setImageMarkupTool("text"));
+els.imageMarkupStampMajor?.addEventListener("click", () => setImageMarkupStamp("major"));
+els.imageMarkupStampMinor?.addEventListener("click", () => setImageMarkupStamp("minor"));
+els.imageMarkupStampDominant?.addEventListener("click", () => setImageMarkupStamp("dominant"));
 els.imageMarkupDone.addEventListener("click", () => setImageMarkupActive(false));
 els.imageMarkupDelete.addEventListener("click", deleteSelectedImageMarkup);
 els.imageMarkupUndo.addEventListener("click", () => {
@@ -7250,6 +7323,24 @@ els.imageMarkupCanvas.addEventListener("pointerdown", (event) => {
     addImageMarkupText(event);
     return;
   }
+  if (imageMarkup.tool === "stamp") {
+    const rect = els.imageMarkupCanvas.getBoundingClientRect();
+    const action = {
+      type: "stamp",
+      id: uid("mark"),
+      x: Math.max(0, Math.min(96, ((event.clientX - rect.left) / rect.width) * 100)),
+      y: Math.max(0, Math.min(96, ((event.clientY - rect.top) / rect.height) * 100)),
+      kind: imageMarkup.stampKind,
+      degree: imageMarkup.stampDegree,
+      accidental: imageMarkup.stampAccidental,
+      updatedAt: nowIso(),
+    };
+    currentScoreMarkup(true).actions.push(action);
+    imageMarkup.selectedId = action.id;
+    renderImageMarkup();
+    saveImageMarkup(`${imageMarkupStampLabel(action)} 도장을 찍었습니다.`);
+    return;
+  }
   els.imageMarkupCanvas.setPointerCapture(event.pointerId);
   let drawing = imageMarkup.pendingDrawingId
     ? currentScoreMarkup(true).actions.find((action) => action.id === imageMarkup.pendingDrawingId)
@@ -7280,6 +7371,11 @@ els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
       if (action.type === "text") {
         action.x = Math.max(0, Math.min(94, Number(snapshot.x) + dx / 10));
         action.y = Math.max(0, Math.min(94, Number(snapshot.y) + dy / 10));
+      }
+      if (action.type === "stamp") {
+        action.x = Math.max(0, Math.min(96, Number(snapshot.x) + dx / 10));
+        action.y = Math.max(0, Math.min(96, Number(snapshot.y) + dy / 10));
+        action.updatedAt = nowIso();
       }
     } else if (action.type === "stroke" || action.type === "drawing") {
       const bounds = strokeBounds(snapshot);
@@ -7333,6 +7429,14 @@ els.imageMarkupCanvas.addEventListener("pointercancel", finishImageMarkupStroke)
 
 els.imageMarkupTextLayer.addEventListener("click", (event) => {
   const textTarget = event.target.closest?.("[data-markup-text-id]");
+  const stampTarget = event.target.closest?.("[data-markup-stamp-id]");
+  if (stampTarget && !imageMarkup.active) {
+    event.preventDefault();
+    setImageMarkupActive(true);
+    imageMarkup.selectedId = stampTarget.dataset.markupStampId;
+    renderImageMarkup();
+    return;
+  }
   if (!textTarget || event.target.closest?.("[data-markup-resize-id]") || event.detail > 1 || imageMarkup.active) return;
   event.preventDefault();
   setImageMarkupActive(true);
@@ -7394,7 +7498,22 @@ window.addEventListener("resize", () => {
 });
 document.addEventListener("keydown", (event) => {
   if (!els.imageViewerDialog.open) return;
-  if (imageMarkup.active && imageMarkup.selectedId && ["Backspace", "Delete"].includes(event.key) && !event.target.matches("input, textarea, [contenteditable='true']")) {
+  const isEditingField = event.target.matches("input, textarea, [contenteditable='true']");
+  if (imageMarkup.active && imageMarkup.tool === "stamp" && !isEditingField) {
+    if (/^[1-7]$/.test(event.key)) {
+      event.preventDefault();
+      imageMarkup.stampDegree = Number(event.key);
+      renderImageMarkupStampStatus();
+      return;
+    }
+    if (event.metaKey && ["+", "=", "-"].includes(event.key)) {
+      event.preventDefault();
+      imageMarkup.stampAccidental = Math.max(-1, Math.min(1, imageMarkup.stampAccidental + (event.key === "-" ? -1 : 1)));
+      renderImageMarkupStampStatus();
+      return;
+    }
+  }
+  if (imageMarkup.active && imageMarkup.selectedId && ["Backspace", "Delete"].includes(event.key) && !isEditingField) {
     event.preventDefault();
     deleteSelectedImageMarkup();
     return;

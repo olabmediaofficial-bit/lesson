@@ -796,11 +796,17 @@
           <button class="active" id="imageMarkupSelect" type="button">선택</button>
           <button id="imageMarkupPen" type="button">빨간 펜</button>
           <button id="imageMarkupText" type="button">텍스트</button>
+          <div class="image-markup-stamps" aria-label="코드 분석 도장">
+            <button id="imageMarkupStampMajor" type="button" title="메이저 코드 분석 도장">M</button>
+            <button id="imageMarkupStampMinor" type="button" title="마이너 코드 분석 도장">m</button>
+            <button id="imageMarkupStampDominant" type="button" title="도미넌트 코드 분석 도장">7</button>
+          </div>
+          <strong class="image-markup-stamp-status" id="imageMarkupStampStatus" hidden>I</strong>
           <button id="imageMarkupDelete" type="button" disabled>선택 삭제</button>
           <button id="imageMarkupUndo" type="button">실행 취소</button>
           <button id="imageMarkupClear" type="button">모두 지우기</button>
           <button class="primary-button" id="imageMarkupDone" type="button">완료</button>
-          <span>필기는 이 학생의 이번 수업에만 저장됩니다.</span>
+          <span>도장: 1–7 도수 · ⌘+ / ⌘− 조표 변경</span>
         </div>
         <div class="image-viewer-stage">
           <button class="image-viewer-nav prev" id="imageViewerPrev" type="button" title="이전 악보">‹</button>
