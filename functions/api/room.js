@@ -33,6 +33,7 @@ export async function onRequest(context) {
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
       usefulSites: state.usefulSites,
+      theoryToolOrder: state.theoryToolOrder,
     });
   } catch (error) {
     return json({ error: "Room storage unavailable", detail: error.message || String(error) }, 500);

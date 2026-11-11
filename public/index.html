@@ -206,6 +206,10 @@
                       <input data-advanced-metronome type="checkbox" />
                       고급
                     </label>
+                    <label class="advanced-metronome-toggle">
+                      <input data-backbeat-metronome type="checkbox" />
+                      백비트
+                    </label>
                   </div>
                 </div>
               </div>
@@ -492,6 +496,10 @@
                       <input data-advanced-metronome type="checkbox" />
                       고급
                     </label>
+                    <label class="advanced-metronome-toggle">
+                      <input data-backbeat-metronome type="checkbox" />
+                      백비트
+                    </label>
                   </div>
                 </div>
               </div>
@@ -705,12 +713,7 @@
           </div>
           <button class="icon-button" id="closeTheoryTools" type="button" aria-label="이론 닫기">×</button>
         </div>
-        <div class="theory-tool-menu">
-          <button class="active" type="button" data-theory-tool="fretboard">01 기타 구조 및 음계</button>
-          <button type="button" data-theory-tool="triads">02 3화음 코드</button>
-          <button type="button" data-theory-tool="sevenths">03 7th 코드</button>
-          <button type="button" data-theory-tool="diatonic">04 다이어토닉</button>
-        </div>
+        <div class="theory-tool-menu" id="theoryToolMenu"></div>
         <section class="theory-tool-panel" data-theory-tool-panel="fretboard">
           <div class="theory-tool-head">
             <div><h3>기타의 구조 및 음계</h3><p>각 줄의 개방현부터 12프렛까지 음이름을 직접 채워보세요.</p></div>
@@ -749,6 +752,29 @@
             <button class="primary-button" id="saveTheoryDiatonic" type="button">저장</button>
           </div>
         </section>
+        <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="diatonic-function" hidden>
+          <div class="theory-tool-head"><div><h3>다이어토닉 · 펑션 · 세컨더리 도미넌트</h3><p>코드 도수와 기능, 화성 분석 표기법을 한 장에서 확인합니다.</p></div></div>
+          <img src="theory-materials/diatonic-function-secondary.png" alt="다이어토닉, 펑션, 세컨더리 도미넌트와 화성 분석 표기법" />
+        </section>
+        <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="code-expansion" hidden>
+          <div class="theory-tool-head"><div><h3>코드 확장 및 활용</h3><p>차용 화음, 대리코드, 클리셰와 페달 포인트를 살펴봅니다.</p></div></div>
+          <img src="theory-materials/code-expansion.png" alt="코드 확장 및 활용 이론 자료" />
+        </section>
+        <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="chord-progression" hidden>
+          <div class="theory-tool-head"><div><h3>코드 진행</h3><p>펑션, 대리코드, 도미넌트 모션과 2-5-1 진행을 정리합니다.</p></div></div>
+          <img src="theory-materials/chord-progression.png" alt="코드 진행 이론 자료" />
+        </section>
+        <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="harmony-application" hidden>
+          <div class="theory-tool-head"><div><h3>하모니 코드의 응용</h3><p>컴파운드 코드, 그 외 코드와 보이싱을 정리합니다.</p></div></div>
+          <div class="theory-reference-with-notes">
+            <img src="theory-materials/harmony-application.png" alt="하모니 코드의 응용 이론 자료" />
+            <aside class="compound-examples"><strong>컴파운드 코드 예시</strong><p>C/D: D C E G = Dsus4(9) → D7 (G key)</p><p>C/F = F C E G = F no3</p><p>C/A = A C E G = Am7</p></aside>
+          </div>
+        </section>
+        <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="harmony-code" hidden>
+          <div class="theory-tool-head"><div><h3>하모니 코드</h3><p>도수별 역할과 코드 표기법의 기초를 확인합니다.</p></div></div>
+          <img src="theory-materials/harmony-code.png" alt="하모니 코드 기초 이론 자료" />
+        </section>
       </div>
     </dialog>
 
@@ -783,6 +809,10 @@
                   <input data-advanced-metronome type="checkbox" />
                   고급
                 </label>
+                <label class="advanced-metronome-toggle">
+                  <input data-backbeat-metronome type="checkbox" />
+                  백비트
+                </label>
               </div>
             </div>
             <a class="secondary-button random-practice-button viewer-random-button" href="#viewer-random" data-random-practice="viewer">랜덤</a>
@@ -800,6 +830,8 @@
             <button id="imageMarkupStampMajor" type="button" title="메이저 코드 분석 도장">M</button>
             <button id="imageMarkupStampMinor" type="button" title="마이너 코드 분석 도장">m</button>
             <button id="imageMarkupStampDominant" type="button" title="도미넌트 코드 분석 도장">7</button>
+            <button id="imageMarkupStampTwoFive" type="button" title="2-5 관계 도장">2-5</button>
+            <button id="imageMarkupStampMotion" type="button" title="5-1 도미넌트 모션 도장">5→1</button>
           </div>
           <strong class="image-markup-stamp-status" id="imageMarkupStampStatus" hidden>I</strong>
           <label class="image-markup-stamp-size" id="imageMarkupStampSizeWrap" hidden>

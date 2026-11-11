@@ -3084,6 +3084,34 @@ textarea {
   background: #f4ede6;
 }
 
+.theory-tool-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 3px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+
+.theory-tool-tab-item:has(> button.active) {
+  border-color: var(--line-strong);
+  background: #fff;
+}
+
+.theory-tool-order-actions {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.theory-tool-menu .theory-tool-order-actions button {
+  min-width: 24px;
+  min-height: 26px;
+  padding: 0;
+  border-color: var(--line);
+  background: #f8f3ee;
+  font-size: 11px;
+}
+
 .theory-tool-menu button {
   min-height: 34px;
   padding: 0 13px;
@@ -3095,9 +3123,52 @@ textarea {
 }
 
 .theory-tool-menu button.active {
-  border-color: var(--line-strong);
-  background: #fff;
+  border-color: transparent;
+  background: transparent;
   color: var(--accent-strong);
+}
+
+.theory-reference-panel {
+  overflow: auto;
+}
+
+.theory-reference-panel > img,
+.theory-reference-with-notes > img {
+  display: block;
+  width: min(760px, 100%);
+  max-height: calc(100dvh - 260px);
+  margin: 0 auto;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.theory-reference-with-notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 14px;
+}
+
+.compound-examples {
+  padding: 16px;
+  border: 1px solid #d7b99d;
+  border-radius: 8px;
+  background: #fff8f0;
+  color: #563824;
+}
+
+.compound-examples strong {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.compound-examples p {
+  margin: 7px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .theory-tool-head {
@@ -4859,7 +4930,7 @@ dialog::backdrop {
   place-items: center;
   padding: 3px 6px;
   border: 2px solid #bd2831;
-  border-radius: 50%;
+  border-radius: 4px;
   color: #ad1822;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 1px 4px rgba(72, 20, 20, 0.18);
@@ -4872,6 +4943,49 @@ dialog::backdrop {
   pointer-events: auto;
   cursor: move;
   user-select: none;
+}
+
+.image-markup-stamp.stamp-twofive,
+.image-markup-stamp.stamp-motion {
+  min-width: 58px;
+  min-height: 24px;
+  padding: 2px 4px;
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: none;
+}
+
+.analysis-relationship {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 14px;
+}
+
+.analysis-twofive {
+  border-right: 2px solid #ad1822;
+  border-bottom: 2px solid #ad1822;
+  border-left: 2px solid #ad1822;
+}
+
+.analysis-motion {
+  width: 52px;
+  height: 20px;
+  border-top: 2px solid #ad1822;
+  border-radius: 50% 50% 0 0;
+  transform: rotate(8deg);
+}
+
+.analysis-motion::after {
+  position: absolute;
+  right: -1px;
+  top: -5px;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid #ad1822;
+  border-right: 2px solid #ad1822;
+  content: "";
+  transform: rotate(48deg);
 }
 
 .image-markup-stamp.preview {

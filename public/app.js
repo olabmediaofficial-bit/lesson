@@ -357,10 +357,24 @@ const DEFAULT_USEFUL_SITES = [
   },
 ];
 
+const THEORY_TOOLS = [
+  { id: "fretboard", label: "기타 구조 및 음계" },
+  { id: "triads", label: "3화음 코드" },
+  { id: "sevenths", label: "7th 코드" },
+  { id: "diatonic", label: "다이어토닉" },
+  { id: "diatonic-function", label: "다이어토닉·펑션·세컨더리 도미넌트" },
+  { id: "code-expansion", label: "코드 확장 및 활용" },
+  { id: "chord-progression", label: "코드 진행" },
+  { id: "harmony-application", label: "하모니 코드의 응용" },
+  { id: "harmony-code", label: "하모니 코드" },
+];
+const DEFAULT_THEORY_TOOL_ORDER = THEORY_TOOLS.map((tool) => tool.id);
+
 const starterData = {
   practiceProgressScale: "four-step",
   resourceLibraryUrl: "",
   usefulSites: structuredClone(DEFAULT_USEFUL_SITES),
+  theoryToolOrder: [...DEFAULT_THEORY_TOOL_ORDER],
   schedule: [],
   schedulePeople: [],
   customChords: [],
@@ -525,6 +539,7 @@ let metronome = {
   beat: 0,
   bar: 0,
   advanced: false,
+  backbeat: false,
   visibleBeat: 0,
 };
 let rhythmBuilder = {
@@ -1119,6 +1134,7 @@ const els = {
   newUsefulSiteUrl: $("#newUsefulSiteUrl"),
   closeUsefulSites: $("#closeUsefulSites"),
   theoryToolsDialog: $("#theoryToolsDialog"),
+  theoryToolMenu: $("#theoryToolMenu"),
   closeTheoryTools: $("#closeTheoryTools"),
   theoryFretboardWorkbook: $("#theoryFretboardWorkbook"),
   theoryTriadWorkbook: $("#theoryTriadWorkbook"),
@@ -1141,6 +1157,8 @@ const els = {
   imageMarkupStampMajor: $("#imageMarkupStampMajor"),
   imageMarkupStampMinor: $("#imageMarkupStampMinor"),
   imageMarkupStampDominant: $("#imageMarkupStampDominant"),
+  imageMarkupStampTwoFive: $("#imageMarkupStampTwoFive"),
+  imageMarkupStampMotion: $("#imageMarkupStampMotion"),
   imageMarkupStampStatus: $("#imageMarkupStampStatus"),
   imageMarkupStampSizeWrap: $("#imageMarkupStampSizeWrap"),
   imageMarkupStampSize: $("#imageMarkupStampSize"),
@@ -1360,6 +1378,10 @@ function normalizeTheoryPractice(value = {}) {
 function migrateState(data) {
   if (!data.blocks) return structuredClone(starterData);
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
+  const savedTheoryOrder = Array.isArray(data.theoryToolOrder)
+    ? data.theoryToolOrder.filter((id) => DEFAULT_THEORY_TOOL_ORDER.includes(id))
+    : [];
+  data.theoryToolOrder = [...new Set([...savedTheoryOrder, ...DEFAULT_THEORY_TOOL_ORDER])];
   data.usefulSites = Array.isArray(data.usefulSites)
     ? data.usefulSites
         .map(normalizeUsefulSite)
@@ -1466,6 +1488,40 @@ function renderUsefulSitesDialog() {
   els.usefulSiteForm.hidden = publicShareMode;
 }
 
+function theoryToolOrder() {
+  const saved = Array.isArray(state.theoryToolOrder) ? state.theoryToolOrder : [];
+  return [...new Set([...saved.filter((id) => DEFAULT_THEORY_TOOL_ORDER.includes(id)), ...DEFAULT_THEORY_TOOL_ORDER])];
+}
+
+function renderTheoryToolMenu() {
+  if (!els.theoryToolMenu) return;
+  const order = theoryToolOrder();
+  const toolsById = new Map(THEORY_TOOLS.map((tool) => [tool.id, tool]));
+  els.theoryToolMenu.innerHTML = order.map((id, index) => {
+    const tool = toolsById.get(id);
+    if (!tool) return "";
+    return `<div class="theory-tool-tab-item">
+      <button class="${id === activeTheoryTool ? "active" : ""}" type="button" data-theory-tool="${escapeHTML(id)}">${String(index + 1).padStart(2, "0")} ${escapeHTML(tool.label)}</button>
+      ${publicShareMode ? "" : `<span class="theory-tool-order-actions">
+        <button class="icon-button tiny-button" type="button" data-move-theory-tool="${escapeHTML(id)}" data-direction="up" ${index === 0 ? "disabled" : ""} title="앞으로 이동">←</button>
+        <button class="icon-button tiny-button" type="button" data-move-theory-tool="${escapeHTML(id)}" data-direction="down" ${index === order.length - 1 ? "disabled" : ""} title="뒤로 이동">→</button>
+      </span>`}
+    </div>`;
+  }).join("");
+}
+
+function moveTheoryTool(toolId, direction) {
+  const order = theoryToolOrder();
+  const index = order.indexOf(toolId);
+  const nextIndex = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || nextIndex < 0 || nextIndex >= order.length) return;
+  const [moved] = order.splice(index, 1);
+  order.splice(nextIndex, 0, moved);
+  state.theoryToolOrder = order;
+  renderTheoryToolMenu();
+  saveStateInBackground({ mode: "overwrite" }, "이론 탭 순서를 저장했습니다.");
+}
+
 function openUsefulSitesDialog() {
   renderUsefulSitesDialog();
   els.usefulSitesDialog.showModal();
@@ -1479,6 +1535,7 @@ function openTheoryToolsDialog(source = "room") {
       : getActiveStudent();
   if (!student) return;
   activeTheoryStudentId = student.id;
+  renderTheoryToolMenu();
   renderDiatonicPractice();
   renderTheoryWorkbooks();
   els.theoryToolsDialog?.showModal();
@@ -2269,6 +2326,8 @@ function setImageMarkupTool(tool) {
   els.imageMarkupStampMajor?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "major");
   els.imageMarkupStampMinor?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "minor");
   els.imageMarkupStampDominant?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "dominant");
+  els.imageMarkupStampTwoFive?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "twofive");
+  els.imageMarkupStampMotion?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "motion");
   els.imageMarkupCanvas?.classList.toggle("text-tool", imageMarkup.tool === "text");
   els.imageMarkupCanvas?.classList.toggle("stamp-tool", imageMarkup.tool === "stamp");
   els.imageMarkupCanvas?.classList.toggle("select-tool", imageMarkup.tool === "select");
@@ -2280,12 +2339,21 @@ const ROMAN_DEGREES = ["I", "II", "III", "IV", "V", "VI", "VII"];
 function imageMarkupStampLabel(action = imageMarkup) {
   const degree = Math.max(1, Math.min(7, Number(action.degree ?? action.stampDegree) || 1));
   const kind = action.kind || action.stampKind || "major";
+  if (kind === "twofive") return "II–V";
+  if (kind === "motion") return "V→I";
   const accidental = Math.max(-1, Math.min(1, Number(action.accidental ?? action.stampAccidental) || 0));
   const prefix = accidental < 0 ? "♭" : accidental > 0 ? "♯" : "";
   const roman = ROMAN_DEGREES[degree - 1];
   if (kind === "minor") return `${prefix}${roman.toLowerCase()}m`;
   if (kind === "dominant") return `${prefix}${roman}7`;
   return `${prefix}${roman}`;
+}
+
+function imageMarkupStampContent(action = imageMarkup) {
+  const kind = action.kind || action.stampKind || "major";
+  if (kind === "twofive") return `<span class="analysis-relationship analysis-twofive" aria-label="2-5 관계"></span>`;
+  if (kind === "motion") return `<span class="analysis-relationship analysis-motion" aria-label="5-1 도미넌트 모션"></span>`;
+  return escapeHTML(imageMarkupStampLabel(action));
 }
 
 function renderImageMarkupStampStatus() {
@@ -2299,7 +2367,7 @@ function renderImageMarkupStampStatus() {
 }
 
 function setImageMarkupStamp(kind) {
-  imageMarkup.stampKind = ["minor", "dominant"].includes(kind) ? kind : "major";
+  imageMarkup.stampKind = ["minor", "dominant", "twofive", "motion"].includes(kind) ? kind : "major";
   setImageMarkupTool("stamp");
 }
 
@@ -2312,7 +2380,7 @@ function ensureImageMarkupActions(markup) {
       if (!Number.isFinite(Number(action.height))) action.height = 4;
     }
     if (action.type === "stamp") {
-      action.kind = ["minor", "dominant"].includes(action.kind) ? action.kind : "major";
+      action.kind = ["minor", "dominant", "twofive", "motion"].includes(action.kind) ? action.kind : "major";
       action.degree = Math.max(1, Math.min(7, Number(action.degree) || 1));
       action.accidental = Math.max(-1, Math.min(1, Number(action.accidental) || 0));
       action.size = Math.max(0.6, Math.min(1.8, Number(action.size) || 1));
@@ -2403,9 +2471,9 @@ function renderImageMarkup() {
     })
     .join("") + stamps.map((action) => {
       const selected = imageMarkup.active && action.id === imageMarkup.selectedId;
-      return `<div class="image-markup-stamp${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-stamp-id="${escapeHTML(action.id)}" title="${escapeHTML(imageMarkupStampLabel(action))} 코드 분석 도장" style="left:${Math.max(0, Math.min(96, Number(action.x) || 0))}%;top:${Math.max(0, Math.min(96, Number(action.y) || 0))}%;--stamp-scale:${Math.max(0.6, Math.min(1.8, Number(action.size) || 1))}">${escapeHTML(imageMarkupStampLabel(action))}</div>`;
+      return `<div class="image-markup-stamp stamp-${escapeHTML(action.kind || "major")}${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-stamp-id="${escapeHTML(action.id)}" title="${escapeHTML(imageMarkupStampLabel(action))} 분석 도장" style="left:${Math.max(0, Math.min(96, Number(action.x) || 0))}%;top:${Math.max(0, Math.min(96, Number(action.y) || 0))}%;--stamp-scale:${Math.max(0.6, Math.min(1.8, Number(action.size) || 1))}">${imageMarkupStampContent(action)}</div>`;
     }).join("") + (imageMarkup.active && imageMarkup.tool === "stamp" && imageMarkup.stampPreview
-      ? `<div class="image-markup-stamp preview" aria-hidden="true" style="left:${imageMarkup.stampPreview.x}%;top:${imageMarkup.stampPreview.y}%;--stamp-scale:${imageMarkup.stampSize}">${escapeHTML(imageMarkupStampLabel())}</div>`
+      ? `<div class="image-markup-stamp stamp-${escapeHTML(imageMarkup.stampKind)} preview" aria-hidden="true" style="left:${imageMarkup.stampPreview.x}%;top:${imageMarkup.stampPreview.y}%;--stamp-scale:${imageMarkup.stampSize}">${imageMarkupStampContent()}</div>`
       : "");
   els.imageMarkupCanvas?.classList.toggle("has-markup", markup.actions.length > 0);
   if (els.imageMarkupDelete) els.imageMarkupDelete.disabled = !selectedImageMarkupAction();
@@ -2991,6 +3059,7 @@ function renderTheoryWorkbooks() {
   if (els.theorySeventhWorkbook) {
     els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">M7 코드 : 장7도 · 7 코드 : 단7도 · m7 코드 : 단3화음 + 단7도</p><div class="theory-chord-exercise-grid sevenths">${THEORY_SEVENTH_CHORDS.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.sevenths.rows[chord].map((value, index) => theoryInput(value, `sevenths.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</div></div>`;
   }
+  renderTheoryToolMenu();
   document.querySelectorAll("[data-theory-tool]").forEach((button) => button.classList.toggle("active", button.dataset.theoryTool === activeTheoryTool));
   document.querySelectorAll("[data-theory-tool-panel]").forEach((panel) => { panel.hidden = panel.dataset.theoryToolPanel !== activeTheoryTool; });
 }
@@ -3220,11 +3289,14 @@ function renderMetronome() {
     root.querySelectorAll("[data-advanced-metronome]").forEach((input) => {
       input.checked = metronome.advanced;
     });
+    root.querySelectorAll("[data-backbeat-metronome]").forEach((input) => {
+      input.checked = metronome.backbeat;
+    });
     root.querySelectorAll("[data-beat-dots]").forEach((beatDots) => {
       beatDots.innerHTML = Array.from({ length: meterBeatCount() }, (_, index) => {
         const active = metronome.isPlaying && index === metronome.visibleBeat;
         const downbeat = index === 0;
-        const muted = metronome.advanced && !shouldPlayMetronomeClick(index);
+        const muted = (metronome.advanced || metronome.backbeat) && !shouldPlayMetronomeClick(index);
         return `<span class="${active ? "active" : ""} ${downbeat ? "downbeat" : ""} ${muted ? "muted" : ""}"></span>`;
       }).join("");
     });
@@ -3252,13 +3324,24 @@ function setMeter(value) {
 
 function setAdvancedMetronome(enabled) {
   metronome.advanced = enabled;
+  if (enabled) metronome.backbeat = false;
   metronome.beat = 0;
   metronome.bar = enabled ? -1 : 0;
   metronome.visibleBeat = 0;
   renderMetronome();
 }
 
+function setBackbeatMetronome(enabled) {
+  metronome.backbeat = enabled;
+  if (enabled) metronome.advanced = false;
+  metronome.beat = 0;
+  metronome.bar = 0;
+  metronome.visibleBeat = 0;
+  renderMetronome();
+}
+
 function shouldPlayMetronomeClick(beat) {
+  if (metronome.backbeat) return beat === 1 || beat === 3;
   if (!metronome.advanced) return true;
   if (metronome.bar < 0) return true;
   const pattern = ADVANCED_METRONOME_PATTERN_4_4[metronome.bar % ADVANCED_METRONOME_PATTERN_4_4.length];
@@ -3267,6 +3350,7 @@ function shouldPlayMetronomeClick(beat) {
 }
 
 function isMetronomeDownbeat(beat) {
+  if (metronome.backbeat) return false;
   return beat === 0 || (metronome.advanced && metronome.bar < 0);
 }
 
@@ -6417,6 +6501,11 @@ function applyBulkCurriculumTags(mode = "add") {
 }
 
 document.addEventListener("click", (event) => {
+  const moveTheory = event.target.closest("[data-move-theory-tool]");
+  if (moveTheory) {
+    moveTheoryTool(moveTheory.dataset.moveTheoryTool, moveTheory.dataset.direction);
+    return;
+  }
   const fretShift = event.target.closest("[data-theory-fret-shift]");
   if (fretShift) {
     theoryFretStart = Math.max(1, Math.min(8, theoryFretStart + Number(fretShift.dataset.theoryFretShift || 0)));
@@ -7366,6 +7455,8 @@ els.imageMarkupText.addEventListener("click", () => setImageMarkupTool("text"));
 els.imageMarkupStampMajor?.addEventListener("click", () => setImageMarkupStamp("major"));
 els.imageMarkupStampMinor?.addEventListener("click", () => setImageMarkupStamp("minor"));
 els.imageMarkupStampDominant?.addEventListener("click", () => setImageMarkupStamp("dominant"));
+els.imageMarkupStampTwoFive?.addEventListener("click", () => setImageMarkupStamp("twofive"));
+els.imageMarkupStampMotion?.addEventListener("click", () => setImageMarkupStamp("motion"));
 els.imageMarkupStampSize?.addEventListener("input", () => {
   imageMarkup.stampSize = Math.max(0.6, Math.min(1.8, Number(els.imageMarkupStampSize.value) / 100 || 1));
   renderImageMarkupStampStatus();
@@ -7622,7 +7713,8 @@ window.addEventListener("resize", () => {
 document.addEventListener("keydown", (event) => {
   if (!els.imageViewerDialog.open) return;
   const isEditingField = event.target.matches("input, textarea, [contenteditable='true']");
-  if (imageMarkup.active && imageMarkup.tool === "stamp" && !isEditingField) {
+  const degreeStampActive = ["major", "minor", "dominant"].includes(imageMarkup.stampKind);
+  if (imageMarkup.active && imageMarkup.tool === "stamp" && degreeStampActive && !isEditingField) {
     if (/^[1-7]$/.test(event.key)) {
       event.preventDefault();
       imageMarkup.stampDegree = Number(event.key);
@@ -7641,6 +7733,7 @@ document.addEventListener("keydown", (event) => {
     deleteSelectedImageMarkup();
     return;
   }
+  if (isEditingField) return;
   if (event.key === "ArrowLeft") moveImageViewer(-1);
   if (event.key === "ArrowRight") moveImageViewer(1);
   if (event.key === "+" || event.key === "=") changeImageViewerZoom(0.1);
@@ -7672,6 +7765,7 @@ document.addEventListener("input", (event) => {
 document.addEventListener("change", (event) => {
   if (event.target.matches("[data-tempo-input]")) setTempo(event.target.value);
   if (event.target.matches("[data-advanced-metronome]")) setAdvancedMetronome(event.target.checked);
+  if (event.target.matches("[data-backbeat-metronome]")) setBackbeatMetronome(event.target.checked);
 });
 document.addEventListener("click", async (event) => {
   const meterButton = event.target.closest("[data-meter]");
