@@ -500,6 +500,7 @@ let chordBuilder = {
   category: "custom",
 };
 let pendingBlockIds = new Set();
+let pendingTheoryToolIds = new Set();
 let expandedLessonIds = new Set();
 let expandedLibraryBlockIds = new Set();
 let editingLessonId = "";
@@ -1422,6 +1423,9 @@ function migrateState(data) {
       lessons: student.lessons.map((lesson) => ({
         ...lesson,
         blockIds: lesson.blockIds || lesson.materialIds || [],
+        theoryToolIds: Array.isArray(lesson.theoryToolIds)
+          ? lesson.theoryToolIds.filter((id) => DEFAULT_THEORY_TOOL_ORDER.includes(id))
+          : [],
         scoreMarkups: lesson.scoreMarkups && typeof lesson.scoreMarkups === "object" ? lesson.scoreMarkups : {},
         blockAssets: lesson.blockAssets && typeof lesson.blockAssets === "object" ? lesson.blockAssets : {},
         updatedAt: lesson.updatedAt || "",
@@ -1500,23 +1504,19 @@ function renderTheoryToolMenu() {
   els.theoryToolMenu.innerHTML = order.map((id, index) => {
     const tool = toolsById.get(id);
     if (!tool) return "";
-    return `<div class="theory-tool-tab-item">
+    return `<div class="theory-tool-tab-item" ${publicShareMode ? "" : `draggable="true" data-draggable-theory-tool="${escapeHTML(id)}" title="드래그해서 순서 바꾸기"`}>
       <button class="${id === activeTheoryTool ? "active" : ""}" type="button" data-theory-tool="${escapeHTML(id)}">${String(index + 1).padStart(2, "0")} ${escapeHTML(tool.label)}</button>
-      ${publicShareMode ? "" : `<span class="theory-tool-order-actions">
-        <button class="icon-button tiny-button" type="button" data-move-theory-tool="${escapeHTML(id)}" data-direction="up" ${index === 0 ? "disabled" : ""} title="앞으로 이동">←</button>
-        <button class="icon-button tiny-button" type="button" data-move-theory-tool="${escapeHTML(id)}" data-direction="down" ${index === order.length - 1 ? "disabled" : ""} title="뒤로 이동">→</button>
-      </span>`}
     </div>`;
   }).join("");
 }
 
-function moveTheoryTool(toolId, direction) {
+function moveTheoryTool(toolId, targetId) {
   const order = theoryToolOrder();
   const index = order.indexOf(toolId);
-  const nextIndex = direction === "up" ? index - 1 : index + 1;
-  if (index < 0 || nextIndex < 0 || nextIndex >= order.length) return;
+  const nextIndex = order.indexOf(targetId);
+  if (index < 0 || nextIndex < 0 || index === nextIndex) return;
   const [moved] = order.splice(index, 1);
-  order.splice(nextIndex, 0, moved);
+  order.splice(order.indexOf(targetId), 0, moved);
   state.theoryToolOrder = order;
   renderTheoryToolMenu();
   saveStateInBackground({ mode: "overwrite" }, "이론 탭 순서를 저장했습니다.");
@@ -1527,7 +1527,7 @@ function openUsefulSitesDialog() {
   els.usefulSitesDialog.showModal();
 }
 
-function openTheoryToolsDialog(source = "room") {
+function openTheoryToolsDialog(source = "room", toolId = "") {
   const student = publicShareMode
     ? state.students[0]
     : source === "share"
@@ -1535,6 +1535,7 @@ function openTheoryToolsDialog(source = "room") {
       : getActiveStudent();
   if (!student) return;
   activeTheoryStudentId = student.id;
+  if (DEFAULT_THEORY_TOOL_ORDER.includes(toolId)) activeTheoryTool = toolId;
   renderTheoryToolMenu();
   renderDiatonicPractice();
   renderTheoryWorkbooks();
@@ -6063,13 +6064,26 @@ function deleteSchedulePerson(personId) {
 }
 
 function renderLessonPicker() {
-  renderKindPicker(els.lessonTheoryPicker, "theory", els.lessonTheorySearch?.value || "");
+  renderTheoryToolPicker();
   renderKindPicker(els.lessonPracticePicker, "practice", els.lessonPracticeSearch?.value || "");
 
   const pending = [...pendingBlockIds].map(getBlock).filter(Boolean);
-  els.pendingMaterialList.innerHTML = pending.length
-    ? pending.map((block) => `<span class="tag ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)} · ${block.title}</span>`).join("")
-    : `<span class="material-meta">아직 붙인 블럭이 없습니다.</span>`;
+  const pendingTheory = theoryToolOrder().filter((id) => pendingTheoryToolIds.has(id)).map((id) => THEORY_TOOLS.find((tool) => tool.id === id)).filter(Boolean);
+  els.pendingMaterialList.innerHTML = pending.length || pendingTheory.length
+    ? `${pendingTheory.map((tool) => `<span class="tag theory">이론 · ${escapeHTML(tool.label)}</span>`).join("")}${pending.map((block) => `<span class="tag ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)} · ${escapeHTML(block.title)}</span>`).join("")}`
+    : `<span class="material-meta">아직 붙인 링크나 블럭이 없습니다.</span>`;
+}
+
+function renderTheoryToolPicker() {
+  const previousValue = els.lessonTheoryPicker.value;
+  const query = normalizeText(els.lessonTheorySearch?.value || "");
+  const toolsById = new Map(THEORY_TOOLS.map((tool) => [tool.id, tool]));
+  const available = theoryToolOrder().map((id) => toolsById.get(id)).filter(Boolean)
+    .filter((tool) => !pendingTheoryToolIds.has(tool.id))
+    .filter((tool) => !query || normalizeText(tool.label).includes(query));
+  els.lessonTheoryPicker.innerHTML = available.map((tool) => `<option value="${escapeHTML(tool.id)}">${escapeHTML(tool.label)}</option>`).join("");
+  if (available.some((tool) => tool.id === previousValue)) els.lessonTheoryPicker.value = previousValue;
+  els.lessonTheoryPicker.disabled = !available.length;
 }
 
 function renderKindPicker(picker, kind, searchQuery = "") {
@@ -6136,11 +6150,12 @@ function renderWeeklyLessonMode(student, { admin = false } = {}) {
             <time>${formatDate(lesson.date)}</time>
             ${lesson.memo ? `<em>${escapeHTML(lesson.memo)}</em>` : ""}
             <small>${blocks.length}개 블럭</small>
-            ${renderLessonPreview(student, blocks)}
+            ${renderLessonPreview(student, blocks, lesson)}
           </button>
           <div class="lesson-body ${collapsed ? "collapsed" : ""}">
             ${admin ? (editing ? renderLessonEditForm(lesson) : renderLessonViewTools(lesson)) : ""}
             ${lesson.memo ? `<p>${escapeHTML(lesson.memo)}</p>` : ""}
+            ${renderLessonTheoryLinks(lesson)}
             <div class="lesson-blocks" ${admin ? `data-lesson-drop-zone="${lesson.id}"` : ""}>
               ${blocks
                 .map((block, index) =>
@@ -6162,10 +6177,12 @@ function renderWeeklyLessonMode(student, { admin = false } = {}) {
     .join("");
 }
 
-function renderLessonPreview(student, blocks) {
-  if (!blocks.length) return "";
+function renderLessonPreview(student, blocks, lesson = {}) {
+  const theoryTools = (lesson.theoryToolIds || []).map((id) => THEORY_TOOLS.find((tool) => tool.id === id)).filter(Boolean);
+  if (!blocks.length && !theoryTools.length) return "";
   return `
     <div class="lesson-preview-line">
+      ${theoryTools.map((tool) => `<span class="lesson-preview-item"><span class="mini-kind theory">이론</span><b>${escapeHTML(tool.label)}</b></span>`).join("")}
       ${blocks
         .map((block) => {
           const label = block.kind === "practice" ? renderMasteryBadge(student, block, "tiny") : `<span class="mini-kind ${blockKindClass(block.kind)}">${blockKindLabel(block.kind)}</span>`;
@@ -6174,6 +6191,12 @@ function renderLessonPreview(student, blocks) {
         .join("")}
     </div>
   `;
+}
+
+function renderLessonTheoryLinks(lesson) {
+  const tools = (lesson.theoryToolIds || []).map((id) => THEORY_TOOLS.find((tool) => tool.id === id)).filter(Boolean);
+  if (!tools.length) return "";
+  return `<div class="lesson-theory-links">${tools.map((tool) => `<button type="button" class="lesson-theory-link" data-open-lesson-theory="${escapeHTML(tool.id)}">이론 · ${escapeHTML(tool.label)}</button>`).join("")}</div>`;
 }
 
 function renderPracticeSongMode(student, { admin = false } = {}) {
@@ -6422,11 +6445,12 @@ function renderShareResourceLibrary() {
   els.shareResourceLibrary.href = url;
 }
 
-function upsertLesson(student, date, blockIds, memo = "") {
+function upsertLesson(student, date, blockIds, memo = "", theoryToolIds = []) {
   ensurePracticeProgress(student, blockIds);
   const lesson = student.lessons.find((item) => item.date === date);
   if (lesson) {
     lesson.blockIds = [...new Set([...lesson.blockIds, ...blockIds])];
+    lesson.theoryToolIds = [...new Set([...(lesson.theoryToolIds || []), ...theoryToolIds])];
     if (memo) lesson.memo = memo;
     lesson.updatedAt = nowIso();
     return lesson;
@@ -6437,6 +6461,7 @@ function upsertLesson(student, date, blockIds, memo = "") {
     date,
     memo,
     blockIds: [...new Set(blockIds)],
+    theoryToolIds: [...new Set(theoryToolIds)],
     blockAssets: {},
     scoreMarkups: {},
     updatedAt: nowIso(),
@@ -6501,9 +6526,9 @@ function applyBulkCurriculumTags(mode = "add") {
 }
 
 document.addEventListener("click", (event) => {
-  const moveTheory = event.target.closest("[data-move-theory-tool]");
-  if (moveTheory) {
-    moveTheoryTool(moveTheory.dataset.moveTheoryTool, moveTheory.dataset.direction);
+  const lessonTheory = event.target.closest("[data-open-lesson-theory]");
+  if (lessonTheory) {
+    openTheoryToolsDialog(publicShareMode ? "share" : "room", lessonTheory.dataset.openLessonTheory);
     return;
   }
   const fretShift = event.target.closest("[data-theory-fret-shift]");
@@ -6699,6 +6724,7 @@ document.addEventListener("click", (event) => {
     if (Date.now() < suppressStudentTabClickUntil) return;
     activeStudentId = studentTab.dataset.studentTab;
     pendingBlockIds.clear();
+    pendingTheoryToolIds.clear();
     expandedLessonIds.clear();
     render();
   }
@@ -8165,7 +8191,7 @@ async function deleteBlockById(blockId) {
       if (lesson.blockAssets) delete lesson.blockAssets[blockId];
       if (lesson.scoreMarkups) delete lesson.scoreMarkups[blockId];
     });
-    student.lessons = student.lessons.filter((lesson) => lesson.blockIds.length || lesson.memo);
+    student.lessons = student.lessons.filter((lesson) => lesson.blockIds.length || lesson.theoryToolIds?.length || lesson.memo);
     if (student.practiceProgress) delete student.practiceProgress[blockId];
   });
   selectedBlockIds.delete(blockId);
@@ -8192,7 +8218,7 @@ async function deleteSelectedLibraryBlocks() {
         if (lesson.scoreMarkups) delete lesson.scoreMarkups[id];
       });
     });
-    student.lessons = student.lessons.filter((lesson) => lesson.blockIds.length || lesson.memo);
+    student.lessons = student.lessons.filter((lesson) => lesson.blockIds.length || lesson.theoryToolIds?.length || lesson.memo);
     if (student.practiceProgress) ids.forEach((id) => delete student.practiceProgress[id]);
   });
   ids.forEach((id) => {
@@ -8336,7 +8362,7 @@ async function removeBlockFromLesson(lessonId, blockId) {
   if (lesson.blockAssets) delete lesson.blockAssets[blockId];
   if (lesson.scoreMarkups) delete lesson.scoreMarkups[blockId];
   lesson.updatedAt = nowIso();
-  if (!lesson.blockIds.length && !lesson.memo) {
+  if (!lesson.blockIds.length && !lesson.theoryToolIds?.length && !lesson.memo) {
     student.lessons = student.lessons.filter((item) => item.id !== lessonId);
   }
   render();
@@ -8374,6 +8400,7 @@ async function deleteActiveStudent() {
   activeStudentId = state.students[0]?.id || "";
   activeShareStudentId = activeStudentId;
   pendingBlockIds.clear();
+  pendingTheoryToolIds.clear();
   selectedBlockIds.clear();
   render();
   saveStateInBackground({ mode: "overwrite" }, `${student.name} 학생을 삭제했습니다.`);
@@ -8421,7 +8448,16 @@ $("#studentForm").addEventListener("submit", async (event) => {
 });
 
 function attachPickedBlock(kind) {
-  const picker = kind === "theory" ? els.lessonTheoryPicker : els.lessonPracticePicker;
+  if (kind === "theory") {
+    const id = els.lessonTheoryPicker.value;
+    const tool = THEORY_TOOLS.find((item) => item.id === id);
+    if (!tool) return;
+    pendingTheoryToolIds.add(id);
+    showToast(`${tool.label} 이론 링크를 이번 날짜에 붙였습니다.`);
+    renderRooms();
+    return;
+  }
+  const picker = els.lessonPracticePicker;
   const id = picker.value;
   if (!id) return;
   pendingBlockIds.add(id);
@@ -8432,7 +8468,7 @@ function attachPickedBlock(kind) {
 
 $("#attachTheoryMaterial").addEventListener("click", () => attachPickedBlock("theory"));
 $("#attachPracticeMaterial").addEventListener("click", () => attachPickedBlock("practice"));
-els.lessonTheorySearch?.addEventListener("input", () => renderKindPicker(els.lessonTheoryPicker, "theory", els.lessonTheorySearch.value));
+els.lessonTheorySearch?.addEventListener("input", renderTheoryToolPicker);
 els.lessonPracticeSearch?.addEventListener("input", () => renderKindPicker(els.lessonPracticePicker, "practice", els.lessonPracticeSearch.value));
 els.drawLessonChord?.addEventListener("click", () => openChordBuilder({ attachToLesson: true, studentId: activeStudentId }));
 els.drawLessonRhythm?.addEventListener("click", () => openRhythmBuilder({ attachToLesson: true }));
@@ -8442,15 +8478,17 @@ $("#saveLesson").addEventListener("click", async () => {
   const date = els.lessonDate.value || today();
   const memo = els.lessonMemo.value.trim();
   const blockIds = [...pendingBlockIds];
+  const theoryToolIds = [...pendingTheoryToolIds];
 
   if (!student) return;
-  if (!blockIds.length && !memo) {
-    showToast("메모나 블럭 중 하나는 있어야 저장됩니다.");
+  if (!blockIds.length && !theoryToolIds.length && !memo) {
+    showToast("메모, 이론 링크, 실습 블럭 중 하나는 있어야 저장됩니다.");
     return;
   }
 
-  upsertLesson(student, date, blockIds, memo);
+  upsertLesson(student, date, blockIds, memo, theoryToolIds);
   pendingBlockIds.clear();
+  pendingTheoryToolIds.clear();
   els.lessonMemo.value = "";
   render();
   saveStateInBackground({}, `${formatDate(date)} 수업에 저장했습니다.`);
@@ -8472,6 +8510,32 @@ document.querySelectorAll("[data-open-useful-sites]").forEach((button) => {
 els.closeUsefulSites?.addEventListener("click", () => els.usefulSitesDialog.close());
 document.querySelectorAll("[data-open-theory-tools]").forEach((button) => {
   button.addEventListener("click", () => openTheoryToolsDialog(button.dataset.openTheoryTools));
+});
+let draggedTheoryToolId = "";
+els.theoryToolMenu?.addEventListener("dragstart", (event) => {
+  const item = event.target.closest("[data-draggable-theory-tool]");
+  if (!item || publicShareMode) return;
+  draggedTheoryToolId = item.dataset.draggableTheoryTool;
+  item.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", draggedTheoryToolId);
+});
+els.theoryToolMenu?.addEventListener("dragover", (event) => {
+  const item = event.target.closest("[data-draggable-theory-tool]");
+  if (!item || !draggedTheoryToolId) return;
+  event.preventDefault();
+  els.theoryToolMenu.querySelectorAll(".drag-over").forEach((node) => node.classList.remove("drag-over"));
+  item.classList.add("drag-over");
+});
+els.theoryToolMenu?.addEventListener("drop", (event) => {
+  const item = event.target.closest("[data-draggable-theory-tool]");
+  if (!item || !draggedTheoryToolId) return;
+  event.preventDefault();
+  moveTheoryTool(draggedTheoryToolId, item.dataset.draggableTheoryTool);
+});
+els.theoryToolMenu?.addEventListener("dragend", () => {
+  draggedTheoryToolId = "";
+  els.theoryToolMenu.querySelectorAll(".dragging, .drag-over").forEach((node) => node.classList.remove("dragging", "drag-over"));
 });
 els.closeTheoryTools?.addEventListener("click", () => els.theoryToolsDialog.close());
 els.clearTheoryDiatonic?.addEventListener("click", () => clearDiatonicPractice(theoryToolStudent()));

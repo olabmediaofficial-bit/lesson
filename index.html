@@ -219,10 +219,10 @@
                 <textarea id="lessonMemo" rows="3" placeholder="오늘 수업 메모 또는 다음 과제"></textarea>
                 <div class="composer-actions">
                   <div class="lesson-picker-group">
-                    <strong>이론</strong>
-                    <input id="lessonTheorySearch" type="search" placeholder="이론 블럭 검색" aria-label="이론 블럭 검색" autocomplete="off" />
-                    <select id="lessonTheoryPicker" aria-label="이론 블럭 선택"></select>
-                    <button class="secondary-button" id="attachTheoryMaterial" type="button">붙이기</button>
+                    <strong>이론 링크</strong>
+                    <input id="lessonTheorySearch" type="search" placeholder="이론 페이지 검색" aria-label="이론 페이지 검색" autocomplete="off" />
+                    <select id="lessonTheoryPicker" aria-label="이론 페이지 선택"></select>
+                    <button class="secondary-button" id="attachTheoryMaterial" type="button">링크 붙이기</button>
                   </div>
                   <div class="lesson-picker-group">
                     <strong>실습</strong>
@@ -754,26 +754,27 @@
         </section>
         <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="diatonic-function" hidden>
           <div class="theory-tool-head"><div><h3>다이어토닉 · 펑션 · 세컨더리 도미넌트</h3><p>코드 도수와 기능, 화성 분석 표기법을 한 장에서 확인합니다.</p></div></div>
-          <img src="theory-materials/diatonic-function-secondary.png" alt="다이어토닉, 펑션, 세컨더리 도미넌트와 화성 분석 표기법" />
+          <div class="theory-reading-page">
+            <section><h4>메이저 스케일</h4><div class="theory-table-scroll"><table class="theory-data-table"><thead><tr><th>도수</th><th>I</th><th>II</th><th>III</th><th>IV</th><th>V</th><th>VI</th><th>VII</th></tr></thead><tbody><tr><th>다이어토닉</th><td>M7</td><td>m7</td><td>m7</td><td>M7</td><td>7</td><td>m7</td><td>m7(b5)</td></tr><tr><th>펑션</th><td>T</td><td>SD</td><td>T</td><td>SD</td><td>D</td><td>T</td><td>D</td></tr><tr><th>세컨더리 도미넌트</th><td>V7</td><td>VI7</td><td>VII7</td><td>I7</td><td>II7</td><td>III7</td><td>—</td></tr></tbody></table></div></section>
+            <section><h4>마이너 스케일</h4><div class="theory-table-scroll"><table class="theory-data-table"><thead><tr><th>도수</th><th>I</th><th>II</th><th>III</th><th>IV</th><th>V</th><th>♭VI</th><th>♭VII</th></tr></thead><tbody><tr><th>다이어토닉</th><td>m7</td><td>m7(b5)</td><td>M7</td><td>m7</td><td>m7 (7)</td><td>M7</td><td>7</td></tr><tr><th>펑션</th><td>Tm</td><td>SDm</td><td>Tm</td><td>SDm</td><td>Non (D)</td><td>SDm</td><td>SDm</td></tr><tr><th>세컨더리 도미넌트</th><td>V7</td><td>—</td><td>♭VII7</td><td>I7</td><td>II7</td><td>III7</td><td>IV7</td></tr></tbody></table></div></section>
+            <section><h4>화성 분석 표기법</h4><div class="theory-notation-grid"><div><small>코드 도수</small><strong>IV 또는 4</strong></div><div><small>기능</small><strong>T · S · D</strong></div><div><small>도미넌트 모션</small><span class="theory-curve-arrow"></span></div><div><small>II–V</small><span class="analysis-relationship analysis-twofive"></span></div><div><small>5도권 진행</small><strong>→</strong></div><div><small>세컨더리 도미넌트</small><span class="theory-curve-arrow dashed"></span></div></div></section>
+          </div>
         </section>
         <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="code-expansion" hidden>
           <div class="theory-tool-head"><div><h3>코드 확장 및 활용</h3><p>차용 화음, 대리코드, 클리셰와 페달 포인트를 살펴봅니다.</p></div></div>
-          <img src="theory-materials/code-expansion.png" alt="코드 확장 및 활용 이론 자료" />
+          <div class="theory-reading-page theory-topic-list"><section><h4>1. IVm</h4><p>다이어토닉 코드인 4도 마이너를 사용합니다. 특히 IVm6는 슬프고 아련한 느낌을 냅니다.</p></section><section><h4>2. IVm의 대리코드</h4><p>구성음상 ♭IIM7, VIM7, VII7을 대리코드로 사용할 수 있습니다. 신선하거나 강렬한 분위기를 만들 때 유용합니다.</p></section><section><h4>3. IV / V (또는 II / V)</h4><p>구성음상 V9sus4와 같으며 V7을 부드럽고 세련된 사운드로 표현할 때 사용합니다.</p></section><section><h4>4. 클리셰 · 순차 진행</h4><p>베이스 라인, 탑 노트, 내성 등 특정 음을 순차적으로 진행합니다.</p><code>C → G/B → Am → C/G → F → C/E → Dm → G</code><code>C → CM7 → C7 → F → Fm → C → D → Dm → G</code></section><section><h4>5. 페달 포인트</h4><p>코드가 바뀌어도 특정 지속음을 유지합니다.</p><code>C → F/C → G/C → C</code></section><section><h4>6. 머니 코드</h4><p>수많은 히트곡에 쓰인 대중적인 4코드 진행의 별칭입니다.</p><code>1564 · 6415 · 2516</code></section><section><h4>7. 논 도미넌트 II7</h4><p>도미넌트 모션이 아닌 상황에서 사용하는 II7입니다. 뒤에 타깃이 없으며 밝은 분위기를 냅니다.</p></section><section><h4>8. #IVm7(b5)</h4><p>IV, IVm과 연결해 앞뒤로 활용합니다.</p></section></div>
         </section>
         <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="chord-progression" hidden>
           <div class="theory-tool-head"><div><h3>코드 진행</h3><p>펑션, 대리코드, 도미넌트 모션과 2-5-1 진행을 정리합니다.</p></div></div>
-          <img src="theory-materials/chord-progression.png" alt="코드 진행 이론 자료" />
+          <div class="theory-reading-page theory-topic-list"><section><h4>1. 다이어토닉 코드와 펑션</h4><p>다이어토닉 코드는 해당 스케일의 음으로 구성된 코드 조합이며, 펑션은 구성음의 안정도에 따라 결정되는 코드의 기능입니다.</p><div class="theory-stability"><span>안정</span><b>1</b><b>5</b><b>3</b><b>6</b><b>2</b><b>4</b><b>7</b><span>불안정</span></div><ul><li>토닉: 1, 3음을 보유해 안정적</li><li>서브 도미넌트: 1, 4음을 보유해 약간 불안정</li><li>도미넌트: 4, 7음을 보유해 불안정</li><li>주요 3화음: I · IV · V</li></ul></section><section><h4>2. 대리코드</h4><p>공통음과 공통 성질을 공유할 경우 대리코드로 치환할 수 있습니다. 예: C = Am</p></section><section><h4>3. 도미넌트 모션</h4><p>5도 7th 코드가 1도로 진행하려는 움직임입니다. 불안정한 코드가 해결되며 트라이톤의 ‘파→미’, ‘시→도’ 진행이 핵심입니다.</p></section><section><h4>4. IIm – V – I</h4><p>모든 도미넌트 모션은 IIm–V로 분할할 수 있습니다. 보다 부드럽고 세련된 진행감을 만듭니다.</p></section><section><h4>5. 세컨더리 도미넌트</h4><p>세컨더리 스케일에서 도미넌트를 차용하는 일시적 전조 개념입니다.</p></section></div>
         </section>
         <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="harmony-application" hidden>
           <div class="theory-tool-head"><div><h3>하모니 코드의 응용</h3><p>컴파운드 코드, 그 외 코드와 보이싱을 정리합니다.</p></div></div>
-          <div class="theory-reference-with-notes">
-            <img src="theory-materials/harmony-application.png" alt="하모니 코드의 응용 이론 자료" />
-            <aside class="compound-examples"><strong>컴파운드 코드 예시</strong><p>C/D: D C E G = Dsus4(9) → D7 (G key)</p><p>C/F = F C E G = F no3</p><p>C/A = A C E G = Am7</p></aside>
-          </div>
+          <div class="theory-reading-page theory-topic-list"><section><h4>1. 컴파운드 코드</h4><p>하모니 코드의 근음이 바뀌는 형태입니다.</p><dl><dt>인버전 코드</dt><dd>코드 구성음 안에서 자리를 바꿉니다. C/E · C/G · CM7/B</dd><dt>하이브리드 코드</dt><dd>코드 구성음 밖의 근음을 사용합니다. C/D · C/F · C/A</dd></dl><div class="compound-examples"><strong>예시</strong><p>C/D: D C E G = Dsus4(9) → D7 (G key)</p><p>C/F = F C E G = F no3</p><p>C/A = A C E G = Am7</p></div></section><section><h4>2. 그 외 코드</h4><dl><dt>add</dt><dd>해당 도수의 음을 추가: Cadd2, C2</dd><dt>sus</dt><dd>3음을 해당 도수 음으로 교체: Csus2, Csus4</dd><dt>aug</dt><dd>5음에 #을 적용: Caug, C+5</dd><dt>Half-Diminish</dt><dd>5음에 ♭을 적용: Cm(b5), Cm−5</dd><dt>Diminish</dt><dd>근음을 제외한 모든 음에 ♭을 적용: Cdim, Cdim7</dd></dl></section><section><h4>3. 보이싱</h4><p>코드 구성음의 배치를 통해 사운드를 결정합니다.</p><div class="theory-chip-list"><span>클로즈드 보이싱</span><span>가이드 톤 보이싱</span><span>드롭 2 & 3 보이싱</span><span>스프레드 보이싱</span><span>어퍼 스트럭처 트라이어즈</span><span>클러스터 보이싱</span></div></section></div>
         </section>
         <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="harmony-code" hidden>
           <div class="theory-tool-head"><div><h3>하모니 코드</h3><p>도수별 역할과 코드 표기법의 기초를 확인합니다.</p></div></div>
-          <img src="theory-materials/harmony-code.png" alt="하모니 코드 기초 이론 자료" />
+          <div class="theory-reading-page"><section><h4>3도 간격으로 쌓아 구성하는 코드</h4><div class="degree-role-list"><div><b>9도 이상</b><span>텐션 9 · 11 · 13 및 # · ♭</span></div><div><b>7도</b><span>M7 또는 7 결정</span></div><div><b>5도</b><span>완전 5도 · Aug(#5) · Half-Diminish(b5)</span></div><div><b>3도</b><span>Major 또는 Minor 결정</span></div><div><b>1도</b><span>근음 · 베이스 · 코드 이름 결정</span></div></div></section><section><h4>코드 표기법</h4><div class="chord-notation-demo"><strong>C</strong><div><span>#</span><span>b5</span><span>m</span><span>7</span></div></div></section></div>
         </section>
       </div>
     </dialog>
