@@ -866,6 +866,7 @@ function normalizeRhythmCells(cells, count) {
       stroke: strokeManual ? savedStroke : hit === "circle" ? (savedStroke === "none" ? (index % 2 === 0 ? "down" : "up") : savedStroke) : "none",
       strokeManual,
       accent: Boolean(cell.accent),
+      codeChange: Boolean(cell.codeChange),
       fingers: [...new Set((Array.isArray(cell.fingers) ? cell.fingers : []).map(Number).filter((finger) => finger >= 1 && finger <= 4))].sort(),
       mute: Boolean(cell.mute),
     };
@@ -907,7 +908,7 @@ function rhythmSvg(rhythm, options = {}) {
   const count = normalized.cells.length;
   const slotsPerBar = rhythmSlotCount(normalized.meter, normalized.unit, 1);
   const width = Math.max(720, count * 42 + 190);
-  const height = compact ? 126 : showTitle ? 250 : 196;
+  const height = compact ? 126 : showTitle ? 280 : 226;
   const left = 136;
   const right = width - 70;
   const titleOffset = compact ? -64 : showTitle ? 0 : -42;
@@ -921,6 +922,7 @@ function rhythmSvg(rhythm, options = {}) {
   const stemRightOffset = 10;
   const circleY = noteY + 34;
   const arrowY = noteY + 70;
+  const codeChangeY = noteY + 104;
   const isFinger = normalized.category === "finger";
   const svgCells = normalized.cells
     .map((cell, index) => {
@@ -939,12 +941,16 @@ function rhythmSvg(rhythm, options = {}) {
       const accent = !isFinger && cell.accent
         ? `<text x="${x}" y="${noteY - 18}" text-anchor="middle" font-size="22" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#7b4529">&gt;</text>`
         : "";
+      const codeChange = !isFinger && cell.codeChange
+        ? `<circle cx="${x}" cy="${codeChangeY}" r="11" fill="#d53a3a" /><text x="${x}" y="${codeChangeY + 5}" text-anchor="middle" font-size="14" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#fff">C</text>`
+        : "";
       return `
         ${note}
         ${stem}
         ${accent}
         ${showMarks ? mark : ""}
         ${showArrows && !isFinger && arrow ? `<text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
+        ${showMarks ? codeChange : ""}
       `;
     })
     .join("");
@@ -4102,7 +4108,7 @@ function renderRhythmBuilder() {
     cells: rhythmBuilder.cells,
   });
   const width = Math.max(720, count * 42 + 190);
-  const height = 196;
+  const height = 226;
   const left = 136;
   const right = width - 70;
   const step = (right - left) / Math.max(1, count - 1);
@@ -4110,11 +4116,13 @@ function renderRhythmBuilder() {
   const accentY = noteY - 18;
   const circleY = noteY + 34;
   const arrowY = noteY + 70;
+  const codeChangeY = noteY + 104;
   const isFinger = rhythmBuilder.category === "finger";
   els.rhythmBuilderBoard.innerHTML = `
     <div class="rhythm-measure-meta">
       <strong>${escapeHTML(rhythmBuilder.meter)} · ${rhythmBuilder.bars}마디</strong>
       <span>${escapeHTML(unitLabel)} 기준 · 마디당 ${count / rhythmBuilder.bars}칸</span>
+      ${isFinger ? "" : `<span class="rhythm-code-change-guide"><i>C</i> 코드 체인지</span>`}
     </div>
     <div class="rhythm-editor-canvas" style="--rhythm-aspect: ${width} / ${height};">
       <img src="${rhythmSvg(preview, { showTitle: false })}" alt="리듬 음표 미리보기" />
@@ -4123,6 +4131,7 @@ function renderRhythmBuilder() {
           const x = ((left + index * step) / width) * 100;
           const markY = (circleY / height) * 100;
           const strokeY = (arrowY / height) * 100;
+          const codeChangeTop = (codeChangeY / height) * 100;
           const accentTop = (accentY / height) * 100;
           return isFinger ? `
             <div class="rhythm-overlay-fingers" data-rhythm-slot="${index}" style="left:${x}%; top:${markY}%;" aria-label="${index + 1}번째 핑거링">
@@ -4156,6 +4165,14 @@ function renderRhythmBuilder() {
               style="left:${x}%; top:${strokeY}%;"
               data-rhythm-stroke="${index}"
               aria-label="${index + 1}번째 다운 업 바꾸기"
+            ></button>
+            <button
+              class="rhythm-overlay-code-change ${cell.codeChange ? "active" : ""}"
+              type="button"
+              style="left:${x}%; top:${codeChangeTop}%;"
+              data-rhythm-code-change="${index}"
+              aria-label="${index + 1}번째 코드 체인지 표시"
+              aria-pressed="${cell.codeChange ? "true" : "false"}"
             ></button>
           `;
         })
@@ -4321,6 +4338,13 @@ function toggleRhythmAccent(index) {
   renderRhythmBuilder();
 }
 
+function toggleRhythmCodeChange(index) {
+  const cell = rhythmBuilder.cells[index];
+  if (!cell) return;
+  cell.codeChange = !cell.codeChange;
+  renderRhythmBuilder();
+}
+
 function toggleRhythmFinger(index, finger) {
   const cell = rhythmBuilder.cells[index];
   if (!cell || finger < 1 || finger > 4) return;
@@ -4395,6 +4419,7 @@ function saveCustomRhythmFromBuilder() {
   activeRhythmCategory = rhythm.category;
   els.rhythmBuilderDialog.close();
   render();
+  if (els.rhythmPickerDialog?.open) renderRhythmPickerGrid();
   saveStateInBackground({}, `${rhythm.name} 리듬표를 저장했습니다.`);
 }
 
@@ -4420,7 +4445,9 @@ function deleteCustomRhythm(rhythmId) {
     rhythms: normalizeRhythmIds(block.rhythms || []).filter((id) => id !== rhythm.id),
     updatedAt: nowIso(),
   }));
+  selectedRhythmIds = selectedRhythmIds.filter((id) => id !== rhythm.id);
   render();
+  if (els.rhythmPickerDialog?.open) renderRhythmPickerGrid();
   saveStateInBackground({}, `${rhythm.name} 리듬표를 삭제했습니다.`);
 }
 
@@ -4595,11 +4622,17 @@ function renderRhythmPickerGrid() {
     ? rhythms
         .map(
           (rhythm) => `
-            <button class="rhythm-card picker-card ${selectedSet.has(rhythm.id) ? "selected" : ""}" type="button" data-picker-rhythm="${escapeHTML(rhythm.id)}">
-              <strong>${escapeHTML(rhythm.name)}</strong>
-              <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
-              <span>${escapeHTML(rhythmCategoryLabel(rhythm.category))} · ${selectedSet.has(rhythm.id) ? "선택됨" : "선택"}</span>
-            </button>
+            <article class="rhythm-picker-item">
+              <button class="rhythm-card picker-card ${selectedSet.has(rhythm.id) ? "selected" : ""}" type="button" data-picker-rhythm="${escapeHTML(rhythm.id)}">
+                <strong>${escapeHTML(rhythm.name)}</strong>
+                <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
+                <span>${escapeHTML(rhythmCategoryLabel(rhythm.category))} · ${selectedSet.has(rhythm.id) ? "선택됨" : "선택"}</span>
+              </button>
+              <div class="rhythm-picker-actions">
+                <button type="button" data-edit-rhythm="${escapeHTML(rhythm.id)}">수정</button>
+                <button class="danger" type="button" data-delete-rhythm="${escapeHTML(rhythm.id)}">삭제</button>
+              </div>
+            </article>
           `,
         )
         .join("")
@@ -7369,6 +7402,11 @@ els.rhythmBuilderBoard?.addEventListener("click", (event) => {
   const accent = event.target.closest("[data-rhythm-accent]");
   if (accent) {
     toggleRhythmAccent(Number(accent.dataset.rhythmAccent));
+    return;
+  }
+  const codeChange = event.target.closest("[data-rhythm-code-change]");
+  if (codeChange) {
+    toggleRhythmCodeChange(Number(codeChange.dataset.rhythmCodeChange));
     return;
   }
   const stroke = event.target.closest("[data-rhythm-stroke]");

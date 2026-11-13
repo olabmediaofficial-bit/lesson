@@ -3689,7 +3689,8 @@ textarea {
 
 .rhythm-overlay-hit,
 .rhythm-overlay-stroke,
-.rhythm-overlay-accent {
+.rhythm-overlay-accent,
+.rhythm-overlay-code-change {
   position: absolute;
   display: grid;
   place-items: center;
@@ -3765,6 +3766,43 @@ textarea {
   width: 30px;
   height: 25px;
   border-radius: 8px;
+}
+
+.rhythm-overlay-code-change {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+.rhythm-overlay-code-change:hover,
+.rhythm-overlay-code-change:focus-visible {
+  outline: 2px solid rgba(213, 58, 58, 0.45);
+  outline-offset: 1px;
+  background: rgba(213, 58, 58, 0.08);
+}
+
+.rhythm-overlay-code-change.active {
+  outline: 2px solid rgba(213, 58, 58, 0.24);
+  outline-offset: 2px;
+}
+
+.rhythm-code-change-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rhythm-code-change-guide i {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #d53a3a;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .rhythm-overlay-hit:hover,
@@ -5666,6 +5704,41 @@ dialog::backdrop {
   overflow-x: hidden;
   overflow-y: auto;
   padding: 16px 18px;
+}
+
+.rhythm-picker-item {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf5;
+}
+
+.rhythm-picker-item .rhythm-card {
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.rhythm-picker-item .chord-card-actions {
+  justify-content: flex-end;
+}
+
+.rhythm-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.rhythm-picker-actions button {
+  min-height: 32px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .chord-picker-dialog menu {
