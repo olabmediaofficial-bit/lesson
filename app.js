@@ -585,6 +585,7 @@ let activeDiatonicType = "major";
 let activeTheoryTool = "fretboard";
 let theoryFretStart = 1;
 let activeFretboardScale = "";
+let theoryFretAll = false;
 let suppressStudentTabClickUntil = 0;
 let activeTheoryStudentId = "";
 let activePracticeTool = "";
@@ -3080,12 +3081,15 @@ function renderTheoryWorkbooks() {
   const practice = student.theoryPractice;
   renderFretboardScalePicker();
   if (els.theoryFretboardWorkbook) {
-    const frets = Array.from({ length: 5 }, (_, index) => theoryFretStart + index);
+    const frets = theoryFretAll
+      ? Array.from({ length: 12 }, (_, index) => index + 1)
+      : Array.from({ length: 5 }, (_, index) => theoryFretStart + index);
+    const fretRangeLabel = theoryFretAll ? "1–12프렛" : `${theoryFretStart}–${theoryFretStart + 4}프렛`;
     els.theoryFretboardWorkbook.innerHTML = `
-      <div class="theory-workbook-card theory-fretboard-workbook">
+      <div class="theory-workbook-card theory-fretboard-workbook ${theoryFretAll ? "show-all-frets" : ""}" style="--visible-frets:${frets.length}">
         <div class="theory-fretboard-heading">
           <h4>기타 지판 음계</h4>
-          <span>${theoryFretStart}–${theoryFretStart + 4}프렛</span>
+          <span>${fretRangeLabel}</span>
         </div>
         <div class="theory-fretboard-board">
           <div class="theory-fretboard-fret-labels">${frets.map((fret) => `<span>${fret}fr</span>`).join("")}</div>
@@ -3100,9 +3104,10 @@ function renderTheoryWorkbooks() {
           </div>
         </div>
         <div class="theory-fretboard-controls">
-          <button class="icon-button" type="button" data-theory-fret-shift="-1" ${theoryFretStart <= 1 ? "disabled" : ""} title="이전 프렛">←</button>
-          <span>${theoryFretStart}–${theoryFretStart + 4}프렛</span>
-          <button class="icon-button" type="button" data-theory-fret-shift="1" ${theoryFretStart >= 8 ? "disabled" : ""} title="다음 프렛">→</button>
+          <button class="icon-button" type="button" data-theory-fret-shift="-1" ${theoryFretAll || theoryFretStart <= 1 ? "disabled" : ""} title="이전 프렛">←</button>
+          <span>${fretRangeLabel}</span>
+          <button class="icon-button" type="button" data-theory-fret-shift="1" ${theoryFretAll || theoryFretStart >= 8 ? "disabled" : ""} title="다음 프렛">→</button>
+          <button class="secondary-button theory-all-frets-button ${theoryFretAll ? "active" : ""}" type="button" data-theory-fret-all aria-pressed="${theoryFretAll ? "true" : "false"}">${theoryFretAll ? "5프렛 보기" : "전체 프렛 보기"}</button>
         </div>
       </div>`;
     updateFretboardHighlightClasses();
@@ -3117,7 +3122,7 @@ function renderTheoryWorkbooks() {
   }
   if (els.theorySeventhWorkbook) {
     const seventhColumn = (title, chords) => `<section class="theory-seventh-column"><h4>${title}</h4>${chords.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.sevenths.rows[chord].map((value, index) => theoryInput(value, `sevenths.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</section>`;
-    els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card seventh-workbook">${theoryPianoMarkup()}<p class="theory-formula">M7 · 7 · m7 · mM7 코드의 네 구성음을 직접 채워보세요.</p><div class="theory-chord-exercise-grid sevenths">${seventhColumn("Major M7", THEORY_MAJOR_SEVENTH_CHORDS)}${seventhColumn("Dominant 7", THEORY_DOMINANT_SEVENTH_CHORDS)}${seventhColumn("Minor m7", THEORY_MINOR_SEVENTH_CHORDS)}${seventhColumn("Minor mM7", THEORY_MINOR_MAJOR_SEVENTH_CHORDS)}</div></div>`;
+    els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card seventh-workbook">${theoryPianoMarkup()}<div class="theory-chord-exercise-grid sevenths">${seventhColumn("Major M7", THEORY_MAJOR_SEVENTH_CHORDS)}${seventhColumn("Dominant 7", THEORY_DOMINANT_SEVENTH_CHORDS)}${seventhColumn("Minor m7", THEORY_MINOR_SEVENTH_CHORDS)}${seventhColumn("Minor mM7", THEORY_MINOR_MAJOR_SEVENTH_CHORDS)}</div></div>`;
   }
   renderTheoryToolMenu();
   document.querySelectorAll("[data-theory-tool]").forEach((button) => button.classList.toggle("active", button.dataset.theoryTool === activeTheoryTool));
@@ -6620,6 +6625,12 @@ document.addEventListener("click", (event) => {
   const fretShift = event.target.closest("[data-theory-fret-shift]");
   if (fretShift) {
     theoryFretStart = Math.max(1, Math.min(8, theoryFretStart + Number(fretShift.dataset.theoryFretShift || 0)));
+    renderTheoryWorkbooks();
+    return;
+  }
+  const fretAll = event.target.closest("[data-theory-fret-all]");
+  if (fretAll) {
+    theoryFretAll = !theoryFretAll;
     renderTheoryWorkbooks();
     return;
   }

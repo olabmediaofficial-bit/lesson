@@ -3203,25 +3203,33 @@ textarea {
 }
 
 .theory-scale-highlight-picker {
-  display: grid;
-  grid-template-columns: repeat(6, 32px);
-  gap: 5px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
   margin-left: auto;
+  overflow-x: auto;
+  padding: 2px;
 }
 
 .theory-scale-highlight-picker button {
-  width: 32px;
-  min-height: 28px;
-  padding: 0;
-  border-radius: 6px;
+  flex: 0 0 auto;
+  width: 34px;
+  min-height: 27px;
+  padding: 1px 4px;
+  border: 1px solid #d8bea8;
+  border-radius: 5px;
+  color: #76523d;
+  background: #fbf3ea;
   font-size: 11px;
   font-weight: 900;
+  box-shadow: none;
 }
 
 .theory-scale-highlight-picker button.active {
-  border-color: #9b5a36;
+  border-color: #a9643d;
   color: #fff;
-  background: #9b5a36;
+  background: #b8754e;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
 }
 
 .theory-workbook-card {
@@ -3336,7 +3344,7 @@ textarea {
   grid-column: 3;
   grid-row: 1;
   min-width: 560px;
-  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  grid-template-columns: repeat(var(--visible-frets, 5), minmax(100px, 1fr));
   color: #9a7a61;
   font-size: 12px;
   font-weight: 900;
@@ -3377,7 +3385,7 @@ textarea {
   position: relative;
   display: grid;
   height: 52px;
-  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  grid-template-columns: repeat(var(--visible-frets, 5), minmax(100px, 1fr));
   background: linear-gradient(to bottom, transparent 48%, #704b35 48%, #704b35 53%, transparent 53%);
 }
 
@@ -3407,20 +3415,10 @@ textarea {
   text-transform: uppercase;
 }
 
-.theory-fretboard-open-note.is-scale-tone,
-.theory-fretboard-note.is-scale-tone {
-  background: rgba(231, 181, 127, 0.42);
-}
-
 .theory-fretboard-open-note.is-scale-tone input,
 .theory-fretboard-note.is-scale-tone input {
   border-color: rgba(181, 106, 57, 0.7);
   background: rgba(255, 228, 198, 0.9);
-}
-
-.theory-fretboard-open-note.is-scale-root,
-.theory-fretboard-note.is-scale-root {
-  background: rgba(173, 83, 43, 0.4);
 }
 
 .theory-fretboard-open-note.is-scale-root input,
@@ -3433,6 +3431,16 @@ textarea {
 .theory-fretboard-controls {
   justify-content: center;
 }
+
+.theory-all-frets-button { width: auto; min-height: 32px; padding: 5px 10px; box-shadow: none; }
+.theory-all-frets-button.active { border-color: #a9643d; color: #fff; background: #b8754e; }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-board { grid-template-columns: 30px 42px minmax(900px, 1fr); }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-fret-labels { min-width: 900px; grid-template-columns: repeat(12, minmax(68px, 1fr)); }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-strings { min-width: 990px; grid-template-columns: 30px 42px minmax(900px, 1fr); grid-template-rows: repeat(6, 44px); }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-string-row { height: 44px; grid-template-columns: repeat(12, minmax(68px, 1fr)); }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-open-note,
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-open-note input,
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-note input { width: 34px; height: 34px; font-size: 12px; }
 
 .theory-scale-name-table {
   display: grid;
@@ -5144,27 +5152,28 @@ dialog::backdrop {
 .compound-examples { margin-top: 16px; padding: 14px; border-left: 3px solid #70452d; background: #faf3eb; }
 .degree-role-list { display: grid; gap: 0; }
 .degree-role-list > div { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px dashed #d8c7b6; }
-.harmonic-code-map { display: grid; grid-template-columns: minmax(360px, 1fr) 250px; gap: 24px; align-items: stretch; }
+.harmonic-code-map { display: grid; grid-template-columns: minmax(360px, 1fr) 270px; gap: 0; align-items: stretch; }
 .harmonic-role-list { display: grid; grid-template-rows: repeat(5, 62px); }
 .harmonic-role-list > div { position: relative; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 12px; border-bottom: 1px dotted #bda48f; }
-.harmonic-role-list > div::after { position: absolute; right: -28px; width: 30px; border-top: 2px dotted #9f8169; content: ""; }
+.harmonic-role-list > div::after { position: absolute; top: 50%; right: -190px; width: 192px; border-top: 2px dotted #9f8169; content: ""; }
 .harmonic-role-list b { color: #78482d; }
 .harmonic-role-list span { font-size: 13px; }
-.harmonic-staff { position: relative; min-height: 310px; border-left: 2px solid #5b4536; }
+.harmonic-staff { position: relative; min-height: 310px; }
+.harmonic-staff::after { position: absolute; top: 20px; right: 58px; bottom: 20px; width: 2px; background: #3e2d23; content: ""; }
 .harmonic-staff > i { position: absolute; right: 0; left: 0; border-top: 2px solid #6d5b4f; }
 .harmonic-staff > i:nth-child(1) { top: 85px; }
 .harmonic-staff > i:nth-child(2) { top: 116px; }
 .harmonic-staff > i:nth-child(3) { top: 147px; }
 .harmonic-staff > i:nth-child(4) { top: 178px; }
 .harmonic-staff > i:nth-child(5) { top: 209px; }
-.harmonic-note { position: absolute; left: 54%; width: 44px; height: 27px; border-radius: 50%; background: #3e2d23; transform: rotate(-15deg); }
-.harmonic-note::before { position: absolute; top: 50%; right: 100%; width: 142px; border-top: 2px dotted #9f8169; content: ""; transform: rotate(15deg); transform-origin: right; }
-.harmonic-note::after { position: absolute; right: -2px; bottom: 12px; width: 2px; height: 52px; background: #3e2d23; content: ""; transform: rotate(15deg); transform-origin: bottom; }
-.harmonic-note.note-nine { top: 22px; }
-.harmonic-note.note-seven { top: 84px; }
-.harmonic-note.note-five { top: 146px; }
-.harmonic-note.note-three { top: 208px; }
-.harmonic-note.note-one { top: 270px; }
+.harmonic-note { position: absolute; right: 38px; width: 44px; height: 27px; border-radius: 50%; background: #3e2d23; transform: rotate(-15deg); z-index: 2; }
+.harmonic-note::before { position: absolute; top: 50%; right: 100%; width: 178px; border-top: 2px dotted #9f8169; content: ""; transform: rotate(15deg); transform-origin: right; }
+.harmonic-note::after { display: none; }
+.harmonic-note.note-nine { top: 17px; }
+.harmonic-note.note-seven { top: 79px; }
+.harmonic-note.note-five { top: 141px; }
+.harmonic-note.note-three { top: 203px; }
+.harmonic-note.note-one { top: 265px; }
 .chord-notation-demo { display: flex; align-items: center; gap: 8px; }
 .chord-notation-demo > strong { font: 900 90px/1 Georgia, serif; }
 .chord-notation-demo > div { display: grid; grid-template-columns: repeat(2, 42px); }
