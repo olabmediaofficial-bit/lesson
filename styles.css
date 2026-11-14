@@ -3202,6 +3202,28 @@ textarea {
   font-size: 12px;
 }
 
+.theory-scale-highlight-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 32px);
+  gap: 5px;
+  margin-left: auto;
+}
+
+.theory-scale-highlight-picker button {
+  width: 32px;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.theory-scale-highlight-picker button.active {
+  border-color: #9b5a36;
+  color: #fff;
+  background: #9b5a36;
+}
+
 .theory-workbook-card {
   display: grid;
   gap: 18px;
@@ -3385,6 +3407,29 @@ textarea {
   text-transform: uppercase;
 }
 
+.theory-fretboard-open-note.is-scale-tone,
+.theory-fretboard-note.is-scale-tone {
+  background: rgba(231, 181, 127, 0.42);
+}
+
+.theory-fretboard-open-note.is-scale-tone input,
+.theory-fretboard-note.is-scale-tone input {
+  border-color: rgba(181, 106, 57, 0.7);
+  background: rgba(255, 228, 198, 0.9);
+}
+
+.theory-fretboard-open-note.is-scale-root,
+.theory-fretboard-note.is-scale-root {
+  background: rgba(173, 83, 43, 0.4);
+}
+
+.theory-fretboard-open-note.is-scale-root input,
+.theory-fretboard-note.is-scale-root input {
+  border-color: #7d3f23;
+  color: #fff;
+  background: #a85d36;
+}
+
 .theory-fretboard-controls {
   justify-content: center;
 }
@@ -3503,8 +3548,44 @@ textarea {
   text-align: center;
 }
 
+.theory-chord-exercise-grid.sevenths {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.theory-seventh-column {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.theory-seventh-column h4 {
+  margin: 0 0 2px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(136, 103, 79, 0.28);
+  color: var(--accent-strong);
+  font-size: 14px;
+}
+
 .theory-chord-exercise-grid.sevenths .theory-chord-row {
-  grid-template-columns: 62px repeat(7, minmax(18px, auto));
+  grid-template-columns: 44px 28px 6px 28px 6px 28px 6px 28px;
+  gap: 1px;
+}
+
+.theory-chord-exercise-grid.sevenths .theory-chord-row input {
+  box-sizing: border-box;
+  width: 28px;
+  min-width: 0;
+  padding: 2px;
+  font-size: 13px;
+}
+
+.theory-chord-exercise-grid.sevenths .theory-chord-row strong {
+  font-size: 13px;
+}
+
+.theory-chord-exercise-grid.sevenths .theory-chord-row span {
+  text-align: center;
 }
 
 @media (max-width: 760px) {
@@ -5063,6 +5144,27 @@ dialog::backdrop {
 .compound-examples { margin-top: 16px; padding: 14px; border-left: 3px solid #70452d; background: #faf3eb; }
 .degree-role-list { display: grid; gap: 0; }
 .degree-role-list > div { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px dashed #d8c7b6; }
+.harmonic-code-map { display: grid; grid-template-columns: minmax(360px, 1fr) 250px; gap: 24px; align-items: stretch; }
+.harmonic-role-list { display: grid; grid-template-rows: repeat(5, 62px); }
+.harmonic-role-list > div { position: relative; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 12px; border-bottom: 1px dotted #bda48f; }
+.harmonic-role-list > div::after { position: absolute; right: -28px; width: 30px; border-top: 2px dotted #9f8169; content: ""; }
+.harmonic-role-list b { color: #78482d; }
+.harmonic-role-list span { font-size: 13px; }
+.harmonic-staff { position: relative; min-height: 310px; border-left: 2px solid #5b4536; }
+.harmonic-staff > i { position: absolute; right: 0; left: 0; border-top: 2px solid #6d5b4f; }
+.harmonic-staff > i:nth-child(1) { top: 85px; }
+.harmonic-staff > i:nth-child(2) { top: 116px; }
+.harmonic-staff > i:nth-child(3) { top: 147px; }
+.harmonic-staff > i:nth-child(4) { top: 178px; }
+.harmonic-staff > i:nth-child(5) { top: 209px; }
+.harmonic-note { position: absolute; left: 54%; width: 44px; height: 27px; border-radius: 50%; background: #3e2d23; transform: rotate(-15deg); }
+.harmonic-note::before { position: absolute; top: 50%; right: 100%; width: 142px; border-top: 2px dotted #9f8169; content: ""; transform: rotate(15deg); transform-origin: right; }
+.harmonic-note::after { position: absolute; right: -2px; bottom: 12px; width: 2px; height: 52px; background: #3e2d23; content: ""; transform: rotate(15deg); transform-origin: bottom; }
+.harmonic-note.note-nine { top: 22px; }
+.harmonic-note.note-seven { top: 84px; }
+.harmonic-note.note-five { top: 146px; }
+.harmonic-note.note-three { top: 208px; }
+.harmonic-note.note-one { top: 270px; }
 .chord-notation-demo { display: flex; align-items: center; gap: 8px; }
 .chord-notation-demo > strong { font: 900 90px/1 Georgia, serif; }
 .chord-notation-demo > div { display: grid; grid-template-columns: repeat(2, 42px); }

@@ -359,6 +359,7 @@ const DEFAULT_USEFUL_SITES = [
 
 const THEORY_TOOLS = [
   { id: "fretboard", label: "기타 구조 및 음계" },
+  { id: "harmony-code", label: "하모닉 코드" },
   { id: "triads", label: "3화음 코드" },
   { id: "sevenths", label: "7th 코드" },
   { id: "diatonic", label: "다이어토닉" },
@@ -366,9 +367,9 @@ const THEORY_TOOLS = [
   { id: "code-expansion", label: "코드 확장 및 활용" },
   { id: "chord-progression", label: "코드 진행" },
   { id: "harmony-application", label: "하모니 코드의 응용" },
-  { id: "harmony-code", label: "하모니 코드" },
 ];
 const DEFAULT_THEORY_TOOL_ORDER = THEORY_TOOLS.map((tool) => tool.id);
+const LEGACY_THEORY_TOOL_ORDER = ["fretboard", "triads", "sevenths", "diatonic", "diatonic-function", "code-expansion", "chord-progression", "harmony-application", "harmony-code"];
 
 const starterData = {
   practiceProgressScale: "four-step",
@@ -575,10 +576,15 @@ const THEORY_TRIAD_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A"
 const THEORY_TRIAD_MAJOR_CHORDS = [...THEORY_TRIAD_ROOTS];
 const THEORY_TRIAD_MINOR_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}m`);
 const THEORY_TRIAD_CHORDS = [...THEORY_TRIAD_MAJOR_CHORDS, ...THEORY_TRIAD_MINOR_CHORDS];
-const THEORY_SEVENTH_CHORDS = ["CM7", "E7", "Dm7", "FM7", "F#m7", "B7"];
+const THEORY_MAJOR_SEVENTH_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}M7`);
+const THEORY_DOMINANT_SEVENTH_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}7`);
+const THEORY_MINOR_SEVENTH_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}m7`);
+const THEORY_MINOR_MAJOR_SEVENTH_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}mM7`);
+const THEORY_SEVENTH_CHORDS = [...THEORY_MAJOR_SEVENTH_CHORDS, ...THEORY_DOMINANT_SEVENTH_CHORDS, ...THEORY_MINOR_SEVENTH_CHORDS, ...THEORY_MINOR_MAJOR_SEVENTH_CHORDS];
 let activeDiatonicType = "major";
 let activeTheoryTool = "fretboard";
 let theoryFretStart = 1;
+let activeFretboardScale = "";
 let suppressStudentTabClickUntil = 0;
 let activeTheoryStudentId = "";
 let activePracticeTool = "";
@@ -1147,6 +1153,7 @@ const els = {
   theoryToolMenu: $("#theoryToolMenu"),
   closeTheoryTools: $("#closeTheoryTools"),
   theoryFretboardWorkbook: $("#theoryFretboardWorkbook"),
+  theoryFretboardScalePicker: $("#theoryFretboardScalePicker"),
   theoryTriadWorkbook: $("#theoryTriadWorkbook"),
   theorySeventhWorkbook: $("#theorySeventhWorkbook"),
   theoryDiatonicTable: $("#theoryDiatonicTable"),
@@ -1391,7 +1398,11 @@ function migrateState(data) {
   const savedTheoryOrder = Array.isArray(data.theoryToolOrder)
     ? data.theoryToolOrder.filter((id) => DEFAULT_THEORY_TOOL_ORDER.includes(id))
     : [];
-  data.theoryToolOrder = [...new Set([...savedTheoryOrder, ...DEFAULT_THEORY_TOOL_ORDER])];
+  const usesLegacyTheoryOrder = savedTheoryOrder.length === LEGACY_THEORY_TOOL_ORDER.length
+    && savedTheoryOrder.every((id, index) => id === LEGACY_THEORY_TOOL_ORDER[index]);
+  data.theoryToolOrder = usesLegacyTheoryOrder
+    ? [...DEFAULT_THEORY_TOOL_ORDER]
+    : [...new Set([...savedTheoryOrder, ...DEFAULT_THEORY_TOOL_ORDER])];
   data.usefulSites = Array.isArray(data.usefulSites)
     ? data.usefulSites
         .map(normalizeUsefulSite)
@@ -3031,11 +3042,43 @@ function theoryInput(value, path, label) {
   return `<input data-theory-input="${escapeHTML(path)}" value="${escapeHTML(value)}" aria-label="${escapeHTML(label)}" autocomplete="off" />`;
 }
 
+function theoryPitchClass(value) {
+  const note = String(value || "").trim().toUpperCase().replaceAll("♯", "#").replaceAll("♭", "B");
+  return ({ C: 0, "C#": 1, DB: 1, D: 2, "D#": 3, EB: 3, E: 4, FB: 4, "E#": 5, F: 5, "F#": 6, GB: 6, G: 7, "G#": 8, AB: 8, A: 9, "A#": 10, BB: 10, B: 11, CB: 11 })[note];
+}
+
+function fretboardScalePitchClasses(root) {
+  const rootPitch = theoryPitchClass(root);
+  if (!Number.isInteger(rootPitch)) return new Set();
+  return new Set([0, 2, 4, 5, 7, 9, 11].map((interval) => (rootPitch + interval) % 12));
+}
+
+function updateFretboardHighlightClasses() {
+  const scale = fretboardScalePitchClasses(activeFretboardScale);
+  const rootPitch = theoryPitchClass(activeFretboardScale);
+  document.querySelectorAll("[data-fretboard-note-cell]").forEach((cell) => {
+    const pitch = theoryPitchClass(cell.querySelector("input")?.value);
+    cell.classList.toggle("is-scale-tone", scale.has(pitch));
+    cell.classList.toggle("is-scale-root", scale.has(pitch) && pitch === rootPitch);
+  });
+  els.theoryFretboardScalePicker?.querySelectorAll("[data-fretboard-scale]").forEach((button) => {
+    const active = button.dataset.fretboardScale === activeFretboardScale;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function renderFretboardScalePicker() {
+  if (!els.theoryFretboardScalePicker) return;
+  els.theoryFretboardScalePicker.innerHTML = THEORY_TRIAD_ROOTS.map((root) => `<button class="${root === activeFretboardScale ? "active" : ""}" type="button" data-fretboard-scale="${escapeHTML(root)}" aria-pressed="${root === activeFretboardScale ? "true" : "false"}" title="${escapeHTML(root)} major 스케일">${escapeHTML(root)}</button>`).join("");
+}
+
 function renderTheoryWorkbooks() {
   const student = theoryToolStudent();
   if (!student) return;
   student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
   const practice = student.theoryPractice;
+  renderFretboardScalePicker();
   if (els.theoryFretboardWorkbook) {
     const frets = Array.from({ length: 5 }, (_, index) => theoryFretStart + index);
     els.theoryFretboardWorkbook.innerHTML = `
@@ -3049,9 +3092,9 @@ function renderTheoryWorkbooks() {
           <div class="theory-fretboard-strings">
             ${Array.from({ length: 6 }, (_, stringIndex) => `
               <div class="theory-fretboard-string-label"><strong>${stringIndex + 1}</strong></div>
-              <div class="theory-fretboard-open-note">${theoryInput(practice.fretboard.cells[stringIndex * 13], `fretboard.cells.${stringIndex * 13}`, `${stringIndex + 1}번 줄 개방현`)}</div>
+              <div class="theory-fretboard-open-note" data-fretboard-note-cell>${theoryInput(practice.fretboard.cells[stringIndex * 13], `fretboard.cells.${stringIndex * 13}`, `${stringIndex + 1}번 줄 개방현`)}</div>
               <div class="theory-fretboard-string-row">
-                ${frets.map((fret) => `<div class="theory-fretboard-note">${theoryInput(practice.fretboard.cells[stringIndex * 13 + fret], `fretboard.cells.${stringIndex * 13 + fret}`, `${stringIndex + 1}번 줄 ${fret}프렛`)}</div>`).join("")}
+                ${frets.map((fret) => `<div class="theory-fretboard-note" data-fretboard-note-cell>${theoryInput(practice.fretboard.cells[stringIndex * 13 + fret], `fretboard.cells.${stringIndex * 13 + fret}`, `${stringIndex + 1}번 줄 ${fret}프렛`)}</div>`).join("")}
               </div>
             `).join("")}
           </div>
@@ -3062,6 +3105,7 @@ function renderTheoryWorkbooks() {
           <button class="icon-button" type="button" data-theory-fret-shift="1" ${theoryFretStart >= 8 ? "disabled" : ""} title="다음 프렛">→</button>
         </div>
       </div>`;
+    updateFretboardHighlightClasses();
   }
   if (els.theoryTriadWorkbook) {
     const triadColumn = (title, chords) => `
@@ -3072,7 +3116,8 @@ function renderTheoryWorkbooks() {
     els.theoryTriadWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">Major 코드 (5+4) / Minor 코드 (4+5)</p><div class="theory-chord-exercise-grid triads">${triadColumn("Major", THEORY_TRIAD_MAJOR_CHORDS)}${triadColumn("Minor", THEORY_TRIAD_MINOR_CHORDS)}</div></div>`;
   }
   if (els.theorySeventhWorkbook) {
-    els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">M7 코드 : 장7도 · 7 코드 : 단7도 · m7 코드 : 단3화음 + 단7도</p><div class="theory-chord-exercise-grid sevenths">${THEORY_SEVENTH_CHORDS.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.sevenths.rows[chord].map((value, index) => theoryInput(value, `sevenths.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</div></div>`;
+    const seventhColumn = (title, chords) => `<section class="theory-seventh-column"><h4>${title}</h4>${chords.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.sevenths.rows[chord].map((value, index) => theoryInput(value, `sevenths.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</section>`;
+    els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card seventh-workbook">${theoryPianoMarkup()}<p class="theory-formula">M7 · 7 · m7 · mM7 코드의 네 구성음을 직접 채워보세요.</p><div class="theory-chord-exercise-grid sevenths">${seventhColumn("Major M7", THEORY_MAJOR_SEVENTH_CHORDS)}${seventhColumn("Dominant 7", THEORY_DOMINANT_SEVENTH_CHORDS)}${seventhColumn("Minor m7", THEORY_MINOR_SEVENTH_CHORDS)}${seventhColumn("Minor mM7", THEORY_MINOR_MAJOR_SEVENTH_CHORDS)}</div></div>`;
   }
   renderTheoryToolMenu();
   document.querySelectorAll("[data-theory-tool]").forEach((button) => button.classList.toggle("active", button.dataset.theoryTool === activeTheoryTool));
@@ -6578,6 +6623,13 @@ document.addEventListener("click", (event) => {
     renderTheoryWorkbooks();
     return;
   }
+  const fretboardScale = event.target.closest("[data-fretboard-scale]");
+  if (fretboardScale) {
+    const scale = fretboardScale.dataset.fretboardScale;
+    activeFretboardScale = activeFretboardScale === scale ? "" : scale;
+    updateFretboardHighlightClasses();
+    return;
+  }
   const theoryTool = event.target.closest("[data-theory-tool]");
   if (theoryTool) {
     activeTheoryTool = theoryTool.dataset.theoryTool;
@@ -7059,6 +7111,7 @@ document.addEventListener("input", (event) => {
   const theoryInput = event.target.closest("[data-theory-input]");
   if (theoryInput) {
     setTheoryPracticeValue(theoryToolStudent(), theoryInput.dataset.theoryInput, theoryInput.value);
+    if (theoryInput.dataset.theoryInput.startsWith("fretboard.cells.")) updateFretboardHighlightClasses();
     return;
   }
   const curriculumSearch = event.target.closest("#curriculumSkillSearch");
