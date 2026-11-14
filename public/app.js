@@ -359,6 +359,7 @@ const DEFAULT_USEFUL_SITES = [
 
 const THEORY_TOOLS = [
   { id: "fretboard", label: "기타 구조 및 음계" },
+  { id: "harmony-code", label: "하모닉 코드" },
   { id: "triads", label: "3화음 코드" },
   { id: "sevenths", label: "7th 코드" },
   { id: "diatonic", label: "다이어토닉" },
@@ -366,9 +367,9 @@ const THEORY_TOOLS = [
   { id: "code-expansion", label: "코드 확장 및 활용" },
   { id: "chord-progression", label: "코드 진행" },
   { id: "harmony-application", label: "하모니 코드의 응용" },
-  { id: "harmony-code", label: "하모니 코드" },
 ];
 const DEFAULT_THEORY_TOOL_ORDER = THEORY_TOOLS.map((tool) => tool.id);
+const LEGACY_THEORY_TOOL_ORDER = ["fretboard", "triads", "sevenths", "diatonic", "diatonic-function", "code-expansion", "chord-progression", "harmony-application", "harmony-code"];
 
 const starterData = {
   practiceProgressScale: "four-step",
@@ -571,11 +572,20 @@ const DIATONIC_TYPES = {
   harmonicMinor: { label: "하모닉 마이너", description: "하모닉 마이너 스케일(Harmonic Minor Scale) : 내추럴 마이너 스케일의 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
   melodicMinor: { label: "멜로딕 마이너", description: "멜로딕 마이너 스케일(Melodic Minor Scale) : 내추럴 마이너 스케일의 6, 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
 };
-const THEORY_TRIAD_CHORDS = ["C", "D", "G", "E", "A", "Am", "Dm", "Em"];
-const THEORY_SEVENTH_CHORDS = ["CM7", "E7", "Dm7", "FM7", "F#m7", "B7"];
+const THEORY_TRIAD_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const THEORY_TRIAD_MAJOR_CHORDS = [...THEORY_TRIAD_ROOTS];
+const THEORY_TRIAD_MINOR_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}m`);
+const THEORY_TRIAD_CHORDS = [...THEORY_TRIAD_MAJOR_CHORDS, ...THEORY_TRIAD_MINOR_CHORDS];
+const THEORY_MAJOR_SEVENTH_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}M7`);
+const THEORY_DOMINANT_SEVENTH_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}7`);
+const THEORY_MINOR_SEVENTH_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}m7`);
+const THEORY_MINOR_MAJOR_SEVENTH_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}mM7`);
+const THEORY_SEVENTH_CHORDS = [...THEORY_MAJOR_SEVENTH_CHORDS, ...THEORY_DOMINANT_SEVENTH_CHORDS, ...THEORY_MINOR_SEVENTH_CHORDS, ...THEORY_MINOR_MAJOR_SEVENTH_CHORDS];
 let activeDiatonicType = "major";
 let activeTheoryTool = "fretboard";
 let theoryFretStart = 1;
+let activeFretboardScale = "";
+let theoryFretAll = false;
 let suppressStudentTabClickUntil = 0;
 let activeTheoryStudentId = "";
 let activePracticeTool = "";
@@ -866,6 +876,7 @@ function normalizeRhythmCells(cells, count) {
       stroke: strokeManual ? savedStroke : hit === "circle" ? (savedStroke === "none" ? (index % 2 === 0 ? "down" : "up") : savedStroke) : "none",
       strokeManual,
       accent: Boolean(cell.accent),
+      codeChange: Boolean(cell.codeChange),
       fingers: [...new Set((Array.isArray(cell.fingers) ? cell.fingers : []).map(Number).filter((finger) => finger >= 1 && finger <= 4))].sort(),
       mute: Boolean(cell.mute),
     };
@@ -907,7 +918,7 @@ function rhythmSvg(rhythm, options = {}) {
   const count = normalized.cells.length;
   const slotsPerBar = rhythmSlotCount(normalized.meter, normalized.unit, 1);
   const width = Math.max(720, count * 42 + 190);
-  const height = compact ? 126 : showTitle ? 250 : 196;
+  const height = compact ? 126 : showTitle ? 280 : 226;
   const left = 136;
   const right = width - 70;
   const titleOffset = compact ? -64 : showTitle ? 0 : -42;
@@ -921,6 +932,7 @@ function rhythmSvg(rhythm, options = {}) {
   const stemRightOffset = 10;
   const circleY = noteY + 34;
   const arrowY = noteY + 70;
+  const codeChangeY = noteY + 104;
   const isFinger = normalized.category === "finger";
   const svgCells = normalized.cells
     .map((cell, index) => {
@@ -939,12 +951,16 @@ function rhythmSvg(rhythm, options = {}) {
       const accent = !isFinger && cell.accent
         ? `<text x="${x}" y="${noteY - 18}" text-anchor="middle" font-size="22" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#7b4529">&gt;</text>`
         : "";
+      const codeChange = !isFinger && cell.codeChange
+        ? `<circle cx="${x}" cy="${codeChangeY}" r="11" fill="#d53a3a" /><text x="${x}" y="${codeChangeY + 5}" text-anchor="middle" font-size="14" font-weight="900" font-family="'Gmarket Sans','Pretendard',sans-serif" fill="#fff">C</text>`
+        : "";
       return `
         ${note}
         ${stem}
         ${accent}
         ${showMarks ? mark : ""}
         ${showArrows && !isFinger && arrow ? `<text x="${x}" y="${arrowY}" text-anchor="middle" font-size="22" font-weight="900" fill="#b98255">${arrow}</text>` : ""}
+        ${showMarks ? codeChange : ""}
       `;
     })
     .join("");
@@ -1138,6 +1154,7 @@ const els = {
   theoryToolMenu: $("#theoryToolMenu"),
   closeTheoryTools: $("#closeTheoryTools"),
   theoryFretboardWorkbook: $("#theoryFretboardWorkbook"),
+  theoryFretboardScalePicker: $("#theoryFretboardScalePicker"),
   theoryTriadWorkbook: $("#theoryTriadWorkbook"),
   theorySeventhWorkbook: $("#theorySeventhWorkbook"),
   theoryDiatonicTable: $("#theoryDiatonicTable"),
@@ -1382,7 +1399,11 @@ function migrateState(data) {
   const savedTheoryOrder = Array.isArray(data.theoryToolOrder)
     ? data.theoryToolOrder.filter((id) => DEFAULT_THEORY_TOOL_ORDER.includes(id))
     : [];
-  data.theoryToolOrder = [...new Set([...savedTheoryOrder, ...DEFAULT_THEORY_TOOL_ORDER])];
+  const usesLegacyTheoryOrder = savedTheoryOrder.length === LEGACY_THEORY_TOOL_ORDER.length
+    && savedTheoryOrder.every((id, index) => id === LEGACY_THEORY_TOOL_ORDER[index]);
+  data.theoryToolOrder = usesLegacyTheoryOrder
+    ? [...DEFAULT_THEORY_TOOL_ORDER]
+    : [...new Set([...savedTheoryOrder, ...DEFAULT_THEORY_TOOL_ORDER])];
   data.usefulSites = Array.isArray(data.usefulSites)
     ? data.usefulSites
         .map(normalizeUsefulSite)
@@ -3022,43 +3043,86 @@ function theoryInput(value, path, label) {
   return `<input data-theory-input="${escapeHTML(path)}" value="${escapeHTML(value)}" aria-label="${escapeHTML(label)}" autocomplete="off" />`;
 }
 
+function theoryPitchClass(value) {
+  const note = String(value || "").trim().toUpperCase().replaceAll("♯", "#").replaceAll("♭", "B");
+  return ({ C: 0, "C#": 1, DB: 1, D: 2, "D#": 3, EB: 3, E: 4, FB: 4, "E#": 5, F: 5, "F#": 6, GB: 6, G: 7, "G#": 8, AB: 8, A: 9, "A#": 10, BB: 10, B: 11, CB: 11 })[note];
+}
+
+function fretboardScalePitchClasses(root) {
+  const rootPitch = theoryPitchClass(root);
+  if (!Number.isInteger(rootPitch)) return new Set();
+  return new Set([0, 2, 4, 5, 7, 9, 11].map((interval) => (rootPitch + interval) % 12));
+}
+
+function updateFretboardHighlightClasses() {
+  const scale = fretboardScalePitchClasses(activeFretboardScale);
+  const rootPitch = theoryPitchClass(activeFretboardScale);
+  document.querySelectorAll("[data-fretboard-note-cell]").forEach((cell) => {
+    const pitch = theoryPitchClass(cell.querySelector("input")?.value);
+    cell.classList.toggle("is-scale-tone", scale.has(pitch));
+    cell.classList.toggle("is-scale-root", scale.has(pitch) && pitch === rootPitch);
+  });
+  els.theoryFretboardScalePicker?.querySelectorAll("[data-fretboard-scale]").forEach((button) => {
+    const active = button.dataset.fretboardScale === activeFretboardScale;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function renderFretboardScalePicker() {
+  if (!els.theoryFretboardScalePicker) return;
+  els.theoryFretboardScalePicker.innerHTML = THEORY_TRIAD_ROOTS.map((root) => `<button class="${root === activeFretboardScale ? "active" : ""}" type="button" data-fretboard-scale="${escapeHTML(root)}" aria-pressed="${root === activeFretboardScale ? "true" : "false"}" title="${escapeHTML(root)} major 스케일">${escapeHTML(root)}</button>`).join("");
+}
+
 function renderTheoryWorkbooks() {
   const student = theoryToolStudent();
   if (!student) return;
   student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
   const practice = student.theoryPractice;
+  renderFretboardScalePicker();
   if (els.theoryFretboardWorkbook) {
-    const frets = Array.from({ length: 5 }, (_, index) => theoryFretStart + index);
+    const frets = theoryFretAll
+      ? Array.from({ length: 12 }, (_, index) => index + 1)
+      : Array.from({ length: 5 }, (_, index) => theoryFretStart + index);
+    const fretRangeLabel = theoryFretAll ? "1–12프렛" : `${theoryFretStart}–${theoryFretStart + 4}프렛`;
     els.theoryFretboardWorkbook.innerHTML = `
-      <div class="theory-workbook-card theory-fretboard-workbook">
+      <div class="theory-workbook-card theory-fretboard-workbook ${theoryFretAll ? "show-all-frets" : ""}" style="--visible-frets:${frets.length}">
         <div class="theory-fretboard-heading">
           <h4>기타 지판 음계</h4>
-          <span>${theoryFretStart}–${theoryFretStart + 4}프렛</span>
+          <span>${fretRangeLabel}</span>
         </div>
         <div class="theory-fretboard-board">
           <div class="theory-fretboard-fret-labels">${frets.map((fret) => `<span>${fret}fr</span>`).join("")}</div>
           <div class="theory-fretboard-strings">
             ${Array.from({ length: 6 }, (_, stringIndex) => `
               <div class="theory-fretboard-string-label"><strong>${stringIndex + 1}</strong></div>
-              <div class="theory-fretboard-open-note">${theoryInput(practice.fretboard.cells[stringIndex * 13], `fretboard.cells.${stringIndex * 13}`, `${stringIndex + 1}번 줄 개방현`)}</div>
+              <div class="theory-fretboard-open-note" data-fretboard-note-cell>${theoryInput(practice.fretboard.cells[stringIndex * 13], `fretboard.cells.${stringIndex * 13}`, `${stringIndex + 1}번 줄 개방현`)}</div>
               <div class="theory-fretboard-string-row">
-                ${frets.map((fret) => `<div class="theory-fretboard-note">${theoryInput(practice.fretboard.cells[stringIndex * 13 + fret], `fretboard.cells.${stringIndex * 13 + fret}`, `${stringIndex + 1}번 줄 ${fret}프렛`)}</div>`).join("")}
+                ${frets.map((fret) => `<div class="theory-fretboard-note" data-fretboard-note-cell>${theoryInput(practice.fretboard.cells[stringIndex * 13 + fret], `fretboard.cells.${stringIndex * 13 + fret}`, `${stringIndex + 1}번 줄 ${fret}프렛`)}</div>`).join("")}
               </div>
             `).join("")}
           </div>
         </div>
         <div class="theory-fretboard-controls">
-          <button class="icon-button" type="button" data-theory-fret-shift="-1" ${theoryFretStart <= 1 ? "disabled" : ""} title="이전 프렛">←</button>
-          <span>${theoryFretStart}–${theoryFretStart + 4}프렛</span>
-          <button class="icon-button" type="button" data-theory-fret-shift="1" ${theoryFretStart >= 8 ? "disabled" : ""} title="다음 프렛">→</button>
+          <button class="icon-button" type="button" data-theory-fret-shift="-1" ${theoryFretAll || theoryFretStart <= 1 ? "disabled" : ""} title="이전 프렛">←</button>
+          <span>${fretRangeLabel}</span>
+          <button class="icon-button" type="button" data-theory-fret-shift="1" ${theoryFretAll || theoryFretStart >= 8 ? "disabled" : ""} title="다음 프렛">→</button>
+          <button class="secondary-button theory-all-frets-button ${theoryFretAll ? "active" : ""}" type="button" data-theory-fret-all aria-pressed="${theoryFretAll ? "true" : "false"}">${theoryFretAll ? "5프렛 보기" : "전체 프렛 보기"}</button>
         </div>
       </div>`;
+    updateFretboardHighlightClasses();
   }
   if (els.theoryTriadWorkbook) {
-    els.theoryTriadWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">Major 코드 (5+4) / Minor 코드 (4+5)</p><div class="theory-chord-exercise-grid">${THEORY_TRIAD_CHORDS.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.triads.rows[chord].map((value, index) => theoryInput(value, `triads.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</div></div>`;
+    const triadColumn = (title, chords) => `
+      <section class="theory-triad-column">
+        <h4>${title}</h4>
+        ${chords.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.triads.rows[chord].map((value, index) => theoryInput(value, `triads.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}
+      </section>`;
+    els.theoryTriadWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">Major 코드 (5+4) / Minor 코드 (4+5)</p><div class="theory-chord-exercise-grid triads">${triadColumn("Major", THEORY_TRIAD_MAJOR_CHORDS)}${triadColumn("Minor", THEORY_TRIAD_MINOR_CHORDS)}</div></div>`;
   }
   if (els.theorySeventhWorkbook) {
-    els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">M7 코드 : 장7도 · 7 코드 : 단7도 · m7 코드 : 단3화음 + 단7도</p><div class="theory-chord-exercise-grid sevenths">${THEORY_SEVENTH_CHORDS.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.sevenths.rows[chord].map((value, index) => theoryInput(value, `sevenths.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</div></div>`;
+    const seventhColumn = (title, chords) => `<section class="theory-seventh-column"><h4>${title}</h4>${chords.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.sevenths.rows[chord].map((value, index) => theoryInput(value, `sevenths.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</section>`;
+    els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card seventh-workbook">${theoryPianoMarkup()}<div class="theory-chord-exercise-grid sevenths">${seventhColumn("Major M7", THEORY_MAJOR_SEVENTH_CHORDS)}${seventhColumn("Dominant 7", THEORY_DOMINANT_SEVENTH_CHORDS)}${seventhColumn("Minor m7", THEORY_MINOR_SEVENTH_CHORDS)}${seventhColumn("Minor mM7", THEORY_MINOR_MAJOR_SEVENTH_CHORDS)}</div></div>`;
   }
   renderTheoryToolMenu();
   document.querySelectorAll("[data-theory-tool]").forEach((button) => button.classList.toggle("active", button.dataset.theoryTool === activeTheoryTool));
@@ -4102,7 +4166,7 @@ function renderRhythmBuilder() {
     cells: rhythmBuilder.cells,
   });
   const width = Math.max(720, count * 42 + 190);
-  const height = 196;
+  const height = 226;
   const left = 136;
   const right = width - 70;
   const step = (right - left) / Math.max(1, count - 1);
@@ -4110,11 +4174,13 @@ function renderRhythmBuilder() {
   const accentY = noteY - 18;
   const circleY = noteY + 34;
   const arrowY = noteY + 70;
+  const codeChangeY = noteY + 104;
   const isFinger = rhythmBuilder.category === "finger";
   els.rhythmBuilderBoard.innerHTML = `
     <div class="rhythm-measure-meta">
       <strong>${escapeHTML(rhythmBuilder.meter)} · ${rhythmBuilder.bars}마디</strong>
       <span>${escapeHTML(unitLabel)} 기준 · 마디당 ${count / rhythmBuilder.bars}칸</span>
+      ${isFinger ? "" : `<span class="rhythm-code-change-guide"><i>C</i> 코드 체인지</span>`}
     </div>
     <div class="rhythm-editor-canvas" style="--rhythm-aspect: ${width} / ${height};">
       <img src="${rhythmSvg(preview, { showTitle: false })}" alt="리듬 음표 미리보기" />
@@ -4123,6 +4189,7 @@ function renderRhythmBuilder() {
           const x = ((left + index * step) / width) * 100;
           const markY = (circleY / height) * 100;
           const strokeY = (arrowY / height) * 100;
+          const codeChangeTop = (codeChangeY / height) * 100;
           const accentTop = (accentY / height) * 100;
           return isFinger ? `
             <div class="rhythm-overlay-fingers" data-rhythm-slot="${index}" style="left:${x}%; top:${markY}%;" aria-label="${index + 1}번째 핑거링">
@@ -4156,6 +4223,14 @@ function renderRhythmBuilder() {
               style="left:${x}%; top:${strokeY}%;"
               data-rhythm-stroke="${index}"
               aria-label="${index + 1}번째 다운 업 바꾸기"
+            ></button>
+            <button
+              class="rhythm-overlay-code-change ${cell.codeChange ? "active" : ""}"
+              type="button"
+              style="left:${x}%; top:${codeChangeTop}%;"
+              data-rhythm-code-change="${index}"
+              aria-label="${index + 1}번째 코드 체인지 표시"
+              aria-pressed="${cell.codeChange ? "true" : "false"}"
             ></button>
           `;
         })
@@ -4321,6 +4396,13 @@ function toggleRhythmAccent(index) {
   renderRhythmBuilder();
 }
 
+function toggleRhythmCodeChange(index) {
+  const cell = rhythmBuilder.cells[index];
+  if (!cell) return;
+  cell.codeChange = !cell.codeChange;
+  renderRhythmBuilder();
+}
+
 function toggleRhythmFinger(index, finger) {
   const cell = rhythmBuilder.cells[index];
   if (!cell || finger < 1 || finger > 4) return;
@@ -4395,6 +4477,7 @@ function saveCustomRhythmFromBuilder() {
   activeRhythmCategory = rhythm.category;
   els.rhythmBuilderDialog.close();
   render();
+  if (els.rhythmPickerDialog?.open) renderRhythmPickerGrid();
   saveStateInBackground({}, `${rhythm.name} 리듬표를 저장했습니다.`);
 }
 
@@ -4420,7 +4503,9 @@ function deleteCustomRhythm(rhythmId) {
     rhythms: normalizeRhythmIds(block.rhythms || []).filter((id) => id !== rhythm.id),
     updatedAt: nowIso(),
   }));
+  selectedRhythmIds = selectedRhythmIds.filter((id) => id !== rhythm.id);
   render();
+  if (els.rhythmPickerDialog?.open) renderRhythmPickerGrid();
   saveStateInBackground({}, `${rhythm.name} 리듬표를 삭제했습니다.`);
 }
 
@@ -4595,11 +4680,17 @@ function renderRhythmPickerGrid() {
     ? rhythms
         .map(
           (rhythm) => `
-            <button class="rhythm-card picker-card ${selectedSet.has(rhythm.id) ? "selected" : ""}" type="button" data-picker-rhythm="${escapeHTML(rhythm.id)}">
-              <strong>${escapeHTML(rhythm.name)}</strong>
-              <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
-              <span>${escapeHTML(rhythmCategoryLabel(rhythm.category))} · ${selectedSet.has(rhythm.id) ? "선택됨" : "선택"}</span>
-            </button>
+            <article class="rhythm-picker-item">
+              <button class="rhythm-card picker-card ${selectedSet.has(rhythm.id) ? "selected" : ""}" type="button" data-picker-rhythm="${escapeHTML(rhythm.id)}">
+                <strong>${escapeHTML(rhythm.name)}</strong>
+                <img src="${rhythmSvg(rhythm)}" alt="${escapeHTML(rhythm.name)} 리듬표" loading="lazy" />
+                <span>${escapeHTML(rhythmCategoryLabel(rhythm.category))} · ${selectedSet.has(rhythm.id) ? "선택됨" : "선택"}</span>
+              </button>
+              <div class="rhythm-picker-actions">
+                <button type="button" data-edit-rhythm="${escapeHTML(rhythm.id)}">수정</button>
+                <button class="danger" type="button" data-delete-rhythm="${escapeHTML(rhythm.id)}">삭제</button>
+              </div>
+            </article>
           `,
         )
         .join("")
@@ -6537,6 +6628,19 @@ document.addEventListener("click", (event) => {
     renderTheoryWorkbooks();
     return;
   }
+  const fretAll = event.target.closest("[data-theory-fret-all]");
+  if (fretAll) {
+    theoryFretAll = !theoryFretAll;
+    renderTheoryWorkbooks();
+    return;
+  }
+  const fretboardScale = event.target.closest("[data-fretboard-scale]");
+  if (fretboardScale) {
+    const scale = fretboardScale.dataset.fretboardScale;
+    activeFretboardScale = activeFretboardScale === scale ? "" : scale;
+    updateFretboardHighlightClasses();
+    return;
+  }
   const theoryTool = event.target.closest("[data-theory-tool]");
   if (theoryTool) {
     activeTheoryTool = theoryTool.dataset.theoryTool;
@@ -7018,6 +7122,7 @@ document.addEventListener("input", (event) => {
   const theoryInput = event.target.closest("[data-theory-input]");
   if (theoryInput) {
     setTheoryPracticeValue(theoryToolStudent(), theoryInput.dataset.theoryInput, theoryInput.value);
+    if (theoryInput.dataset.theoryInput.startsWith("fretboard.cells.")) updateFretboardHighlightClasses();
     return;
   }
   const curriculumSearch = event.target.closest("#curriculumSkillSearch");
@@ -7369,6 +7474,11 @@ els.rhythmBuilderBoard?.addEventListener("click", (event) => {
   const accent = event.target.closest("[data-rhythm-accent]");
   if (accent) {
     toggleRhythmAccent(Number(accent.dataset.rhythmAccent));
+    return;
+  }
+  const codeChange = event.target.closest("[data-rhythm-code-change]");
+  if (codeChange) {
+    toggleRhythmCodeChange(Number(codeChange.dataset.rhythmCodeChange));
     return;
   }
   const stroke = event.target.closest("[data-rhythm-stroke]");

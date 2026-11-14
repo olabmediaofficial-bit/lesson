@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 590" role="img" aria-labelledby="title description">
+  <title id="title">하모닉 코드 음표와 도수별 역할</title>
+  <desc id="description">1도부터 9도 이상까지 3도 간격으로 쌓인 음표와 각 도수의 역할을 같은 높이의 점선으로 연결한 도식</desc>
+  <style>
+    .degree { fill: #78482d; font: 800 27px 'GmarketSans', 'Apple SD Gothic Neo', sans-serif; }
+    .role { fill: #352b25; font: 700 23px 'GmarketSans', 'Apple SD Gothic Neo', sans-serif; }
+    .guide { stroke: #a88970; stroke-width: 2.5; stroke-dasharray: 4 5; }
+    .staff { stroke: #66564a; stroke-width: 2.5; }
+    .stem { stroke: #3e2d23; stroke-width: 4; }
+    .note { fill: #3e2d23; }
+  </style>
+  <g aria-hidden="true">
+    <line class="guide" x1="500" y1="70" x2="1018" y2="70" />
+    <line class="guide" x1="500" y1="180" x2="1018" y2="180" />
+    <line class="guide" x1="500" y1="290" x2="1018" y2="290" />
+    <line class="guide" x1="500" y1="400" x2="1018" y2="400" />
+    <line class="guide" x1="500" y1="510" x2="1018" y2="510" />
+
+    <line class="staff" x1="835" y1="202" x2="1160" y2="202" />
+    <line class="staff" x1="835" y1="246" x2="1160" y2="246" />
+    <line class="staff" x1="835" y1="290" x2="1160" y2="290" />
+    <line class="staff" x1="835" y1="334" x2="1160" y2="334" />
+    <line class="staff" x1="835" y1="378" x2="1160" y2="378" />
+    <line class="stem" x1="1065" y1="54" x2="1065" y2="526" />
+
+    <ellipse class="note" cx="1042" cy="70" rx="29" ry="18" transform="rotate(-14 1042 70)" />
+    <ellipse class="note" cx="1042" cy="180" rx="29" ry="18" transform="rotate(-14 1042 180)" />
+    <ellipse class="note" cx="1042" cy="290" rx="29" ry="18" transform="rotate(-14 1042 290)" />
+    <ellipse class="note" cx="1042" cy="400" rx="29" ry="18" transform="rotate(-14 1042 400)" />
+    <ellipse class="note" cx="1042" cy="510" rx="29" ry="18" transform="rotate(-14 1042 510)" />
+  </g>
+
+  <text class="degree" x="18" y="79">9도 이상</text>
+  <text class="role" x="170" y="79">텐션 9 · 11 · 13 및 # · ♭</text>
+  <text class="degree" x="18" y="189">7도</text>
+  <text class="role" x="170" y="189">M7 또는 7을 결정</text>
+  <text class="degree" x="18" y="299">5도</text>
+  <text class="role" x="170" y="299">완전 5도 · Aug(#5) · Half-Diminish(b5)</text>
+  <text class="degree" x="18" y="409">3도</text>
+  <text class="role" x="170" y="409">Major 또는 Minor를 결정</text>
+  <text class="degree" x="18" y="519">1도</text>
+  <text class="role" x="170" y="519">근음 · 베이스 · 코드 이름을 결정</text>
+</svg>

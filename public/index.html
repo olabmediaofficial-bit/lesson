@@ -716,7 +716,8 @@
         <div class="theory-tool-menu" id="theoryToolMenu"></div>
         <section class="theory-tool-panel" data-theory-tool-panel="fretboard">
           <div class="theory-tool-head">
-            <div><h3>기타의 구조 및 음계</h3><p>각 줄의 개방현부터 12프렛까지 음이름을 직접 채워보세요.</p></div>
+            <div><h3>기타의 구조 및 음계</h3><p>기타 지판의 음 배치와 메이저 스케일의 위치를 확인합니다.</p></div>
+            <div class="theory-scale-highlight-picker" id="theoryFretboardScalePicker" aria-label="메이저 스케일 하이라이트"></div>
             <strong data-theory-student-name></strong>
           </div>
           <div id="theoryFretboardWorkbook"></div>
@@ -724,7 +725,7 @@
         </section>
         <section class="theory-tool-panel" data-theory-tool-panel="triads" hidden>
           <div class="theory-tool-head">
-            <div><h3>3화음 코드</h3><p>메이저·마이너 코드의 세 구성음을 직접 채워보세요.</p></div>
+            <div><h3>3화음 코드</h3></div>
             <strong data-theory-student-name></strong>
           </div>
           <div id="theoryTriadWorkbook"></div>
@@ -732,7 +733,7 @@
         </section>
         <section class="theory-tool-panel" data-theory-tool-panel="sevenths" hidden>
           <div class="theory-tool-head">
-            <div><h3>7th 코드</h3><p>M7·7·m7 코드의 네 구성음을 직접 채워보세요.</p></div>
+            <div><h3>7th 코드</h3><p>M7(장7도, 근음에서 반음 아래) · 7(단7도, 근음에서 온음 아래)</p></div>
             <strong data-theory-student-name></strong>
           </div>
           <div id="theorySeventhWorkbook"></div>
@@ -742,7 +743,7 @@
           <div class="theory-tool-head">
             <div>
               <h3>스케일과 다이어토닉 코드</h3>
-              <p>각 키의 음계와 다이어토닉 코드를 직접 채워보세요.</p>
+              <p>스케일의 각 음을 3도 간격으로 쌓아 다이어토닉 코드를 구성합니다.</p>
             </div>
             <strong data-theory-student-name></strong>
           </div>
@@ -773,8 +774,8 @@
           <div class="theory-reading-page theory-topic-list"><section><h4>1. 컴파운드 코드</h4><p>하모니 코드의 근음이 바뀌는 형태입니다.</p><dl><dt>인버전 코드</dt><dd>코드 구성음 안에서 자리를 바꿉니다. C/E · C/G · CM7/B</dd><dt>하이브리드 코드</dt><dd>코드 구성음 밖의 근음을 사용합니다. C/D · C/F · C/A</dd></dl><div class="compound-examples"><strong>예시</strong><p>C/D: D C E G = Dsus4(9) → D7 (G key)</p><p>C/F = F C E G = F no3</p><p>C/A = A C E G = Am7</p></div></section><section><h4>2. 그 외 코드</h4><dl><dt>add</dt><dd>해당 도수의 음을 추가: Cadd2, C2</dd><dt>sus</dt><dd>3음을 해당 도수 음으로 교체: Csus2, Csus4</dd><dt>aug</dt><dd>5음에 #을 적용: Caug, C+5</dd><dt>Half-Diminish</dt><dd>5음에 ♭을 적용: Cm(b5), Cm−5</dd><dt>Diminish</dt><dd>근음을 제외한 모든 음에 ♭을 적용: Cdim, Cdim7</dd></dl></section><section><h4>3. 보이싱</h4><p>코드 구성음의 배치를 통해 사운드를 결정합니다.</p><div class="theory-chip-list"><span>클로즈드 보이싱</span><span>가이드 톤 보이싱</span><span>드롭 2 & 3 보이싱</span><span>스프레드 보이싱</span><span>어퍼 스트럭처 트라이어즈</span><span>클러스터 보이싱</span></div></section></div>
         </section>
         <section class="theory-tool-panel theory-reference-panel" data-theory-tool-panel="harmony-code" hidden>
-          <div class="theory-tool-head"><div><h3>하모니 코드</h3><p>도수별 역할과 코드 표기법의 기초를 확인합니다.</p></div></div>
-          <div class="theory-reading-page"><section><h4>3도 간격으로 쌓아 구성하는 코드</h4><div class="degree-role-list"><div><b>9도 이상</b><span>텐션 9 · 11 · 13 및 # · ♭</span></div><div><b>7도</b><span>M7 또는 7 결정</span></div><div><b>5도</b><span>완전 5도 · Aug(#5) · Half-Diminish(b5)</span></div><div><b>3도</b><span>Major 또는 Minor 결정</span></div><div><b>1도</b><span>근음 · 베이스 · 코드 이름 결정</span></div></div></section><section><h4>코드 표기법</h4><div class="chord-notation-demo"><strong>C</strong><div><span>#</span><span>b5</span><span>m</span><span>7</span></div></div></section></div>
+          <div class="theory-tool-head"><div><h3>하모닉 코드</h3><p>3도씩 쌓인 음의 위치와 도수별 역할을 함께 확인합니다.</p></div></div>
+          <div class="theory-reading-page"><section><h4>음표로 보는 하모닉 코드</h4><img class="harmonic-code-diagram" src="theory-materials/harmonic-code-diagram.svg" alt="1도, 3도, 5도, 7도, 9도 이상의 위치와 역할을 음표에 맞춰 표시한 하모닉 코드 도식" /></section><section><h4>코드 표기법</h4><div class="chord-notation-demo"><strong>C</strong><div><span>#</span><span>b5</span><span>m</span><span>7</span></div></div></section></div>
         </section>
       </div>
     </dialog>

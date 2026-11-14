@@ -3376,9 +3376,9 @@ textarea {
   height: 46px;
   place-self: center;
   place-items: center;
-  border: 2px solid #b98255;
+  border: 0;
   border-radius: 50%;
-  background: #fff;
+  background: transparent;
 }
 
 .theory-fretboard-string-row {
@@ -3406,6 +3406,10 @@ textarea {
   z-index: 1;
   width: 42px;
   height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  aspect-ratio: 1;
+  box-sizing: border-box;
   padding: 0;
   border: 1px solid rgba(185, 130, 85, 0.36);
   border-radius: 50%;
@@ -3440,7 +3444,8 @@ textarea {
 .theory-fretboard-workbook.show-all-frets .theory-fretboard-string-row { height: 44px; grid-template-columns: repeat(12, minmax(68px, 1fr)); }
 .theory-fretboard-workbook.show-all-frets .theory-fretboard-open-note,
 .theory-fretboard-workbook.show-all-frets .theory-fretboard-open-note input,
-.theory-fretboard-workbook.show-all-frets .theory-fretboard-note input { width: 34px; height: 34px; font-size: 12px; }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-note input { width: 34px; height: 34px; min-width: 34px; min-height: 34px; aspect-ratio: 1; font-size: 12px; }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-open-note { width: 34px; height: 34px; }
 
 .theory-scale-name-table {
   display: grid;
@@ -5152,6 +5157,7 @@ dialog::backdrop {
 .compound-examples { margin-top: 16px; padding: 14px; border-left: 3px solid #70452d; background: #faf3eb; }
 .degree-role-list { display: grid; gap: 0; }
 .degree-role-list > div { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px dashed #d8c7b6; }
+.harmonic-code-diagram { display: block; width: min(100%, 1180px); height: auto; margin: 12px auto 0; }
 .harmonic-code-map { display: grid; grid-template-columns: minmax(360px, 1fr) 270px; gap: 0; align-items: stretch; }
 .harmonic-role-list { display: grid; grid-template-rows: repeat(5, 62px); }
 .harmonic-role-list > div { position: relative; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 12px; border-bottom: 1px dotted #bda48f; }
