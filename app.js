@@ -571,7 +571,10 @@ const DIATONIC_TYPES = {
   harmonicMinor: { label: "하모닉 마이너", description: "하모닉 마이너 스케일(Harmonic Minor Scale) : 내추럴 마이너 스케일의 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
   melodicMinor: { label: "멜로딕 마이너", description: "멜로딕 마이너 스케일(Melodic Minor Scale) : 내추럴 마이너 스케일의 6, 7음을 반음 올린 음계", keys: DIATONIC_MINOR_KEYS },
 };
-const THEORY_TRIAD_CHORDS = ["C", "D", "G", "E", "A", "Am", "Dm", "Em"];
+const THEORY_TRIAD_ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const THEORY_TRIAD_MAJOR_CHORDS = [...THEORY_TRIAD_ROOTS];
+const THEORY_TRIAD_MINOR_CHORDS = THEORY_TRIAD_ROOTS.map((root) => `${root}m`);
+const THEORY_TRIAD_CHORDS = [...THEORY_TRIAD_MAJOR_CHORDS, ...THEORY_TRIAD_MINOR_CHORDS];
 const THEORY_SEVENTH_CHORDS = ["CM7", "E7", "Dm7", "FM7", "F#m7", "B7"];
 let activeDiatonicType = "major";
 let activeTheoryTool = "fretboard";
@@ -3061,7 +3064,12 @@ function renderTheoryWorkbooks() {
       </div>`;
   }
   if (els.theoryTriadWorkbook) {
-    els.theoryTriadWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">Major 코드 (5+4) / Minor 코드 (4+5)</p><div class="theory-chord-exercise-grid">${THEORY_TRIAD_CHORDS.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.triads.rows[chord].map((value, index) => theoryInput(value, `triads.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</div></div>`;
+    const triadColumn = (title, chords) => `
+      <section class="theory-triad-column">
+        <h4>${title}</h4>
+        ${chords.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.triads.rows[chord].map((value, index) => theoryInput(value, `triads.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}
+      </section>`;
+    els.theoryTriadWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">Major 코드 (5+4) / Minor 코드 (4+5)</p><div class="theory-chord-exercise-grid triads">${triadColumn("Major", THEORY_TRIAD_MAJOR_CHORDS)}${triadColumn("Minor", THEORY_TRIAD_MINOR_CHORDS)}</div></div>`;
   }
   if (els.theorySeventhWorkbook) {
     els.theorySeventhWorkbook.innerHTML = `<div class="theory-workbook-card">${theoryPianoMarkup()}<p class="theory-formula">M7 코드 : 장7도 · 7 코드 : 단7도 · m7 코드 : 단3화음 + 단7도</p><div class="theory-chord-exercise-grid sevenths">${THEORY_SEVENTH_CHORDS.map((chord) => `<div class="theory-chord-row"><strong>${chord}</strong>${practice.sevenths.rows[chord].map((value, index) => theoryInput(value, `sevenths.rows.${chord}.${index}`, `${chord} 구성음 ${index + 1}`)).join("<span>−</span>")}</div>`).join("")}</div></div>`;

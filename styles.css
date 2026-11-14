@@ -3450,6 +3450,20 @@ textarea {
   gap: 14px 34px;
 }
 
+.theory-triad-column {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.theory-triad-column h4 {
+  margin: 0 0 2px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(136, 103, 79, 0.28);
+  color: var(--accent-strong);
+  font-size: 15px;
+}
+
 .theory-chord-row {
   display: grid;
   grid-template-columns: 56px repeat(5, minmax(18px, auto));
@@ -3469,6 +3483,24 @@ textarea {
 .theory-chord-row span {
   color: #776052;
   font-weight: 900;
+}
+
+.theory-chord-exercise-grid.triads .theory-chord-row {
+  grid-template-columns: 48px 44px 8px 44px 8px 44px;
+  gap: 2px;
+}
+
+.theory-chord-exercise-grid.triads .theory-chord-row input {
+  box-sizing: border-box;
+  width: 44px;
+  min-width: 0;
+  padding-right: 4px;
+  padding-left: 4px;
+  text-align: center;
+}
+
+.theory-chord-exercise-grid.triads .theory-chord-row span {
+  text-align: center;
 }
 
 .theory-chord-exercise-grid.sevenths .theory-chord-row {
