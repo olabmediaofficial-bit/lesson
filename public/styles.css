@@ -5157,7 +5157,20 @@ dialog::backdrop {
 .compound-examples { margin-top: 16px; padding: 14px; border-left: 3px solid #70452d; background: #faf3eb; }
 .degree-role-list { display: grid; gap: 0; }
 .degree-role-list > div { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px dashed #d8c7b6; }
-.harmonic-code-diagram { display: block; width: min(100%, 1180px); height: auto; margin: 12px auto 0; }
+.harmonic-code-figure {
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.harmonic-code-diagram {
+  display: block;
+  width: min(100%, 1152px);
+  height: auto;
+  margin: 0 auto;
+  object-fit: contain;
+}
 .harmonic-code-map { display: grid; grid-template-columns: minmax(360px, 1fr) 270px; gap: 0; align-items: stretch; }
 .harmonic-role-list { display: grid; grid-template-rows: repeat(5, 62px); }
 .harmonic-role-list > div { position: relative; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 12px; border-bottom: 1px dotted #bda48f; }
