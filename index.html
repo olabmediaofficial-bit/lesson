@@ -56,6 +56,10 @@
             <span aria-hidden="true">♩</span>
             리듬 사전
           </button>
+          <button class="nav-item" data-view="licks" type="button">
+            <span aria-hidden="true">𝄢</span>
+            릭 사전
+          </button>
           <button class="nav-item" data-view="practiceTools" type="button">
             <span aria-hidden="true">⌗</span>
             실습 도구
@@ -352,6 +356,28 @@
             </div>
             <div class="segmented chord-category-tabs" id="rhythmCategoryTabs" aria-label="리듬 종류 선택"></div>
             <div id="rhythmGrid" class="rhythm-grid"></div>
+          </section>
+        </section>
+
+        <section class="view" id="licksView" aria-label="릭 사전">
+          <section class="panel lick-dictionary-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Lick dictionary</p>
+                <h2>릭 사전</h2>
+                <p>짧은 기타 구절을 타브 악보로 만들고 모아봅니다.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="secondary-button" id="openLickBuilder" type="button">릭 그리기</button>
+              </div>
+            </div>
+            <div class="control-row">
+              <label class="search-box">
+                <span aria-hidden="true">⌕</span>
+                <input id="lickSearch" type="search" placeholder="릭 이름 검색" />
+              </label>
+            </div>
+            <div id="lickGrid" class="lick-grid"></div>
           </section>
         </section>
 
@@ -978,6 +1004,63 @@
           <button class="primary-button" value="save" type="submit">저장</button>
         </menu>
       </form>
+    </dialog>
+
+    <dialog id="lickBuilderDialog">
+      <form method="dialog" class="dialog-card lick-builder-dialog" id="lickBuilderForm">
+        <div class="dialog-head">
+          <div>
+            <h2 id="lickBuilderTitle">릭 그리기</h2>
+            <p>음표 길이를 고른 뒤 원하는 줄과 위치를 눌러 프렛 번호를 입력합니다.</p>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" title="닫기">×</button>
+        </div>
+        <div class="lick-builder-fields">
+          <label>
+            릭 이름
+            <input id="lickBuilderName" type="text" placeholder="예: A minor 첫 번째 릭" />
+          </label>
+          <label>
+            마디 수
+            <select id="lickBuilderBars">
+              <option value="1">1마디</option>
+              <option value="2">2마디</option>
+              <option value="3">3마디</option>
+              <option value="4">4마디</option>
+            </select>
+          </label>
+          <div class="lick-note-tools" role="group" aria-label="음표 길이">
+            <span>음표</span>
+            <button type="button" data-lick-duration="4">♩ 4분</button>
+            <button type="button" data-lick-duration="8">♪ 8분</button>
+            <button type="button" data-lick-duration="16">♬ 16분</button>
+          </div>
+          <button class="secondary-button lick-delete-note" id="deleteLickNote" type="button" disabled>선택 삭제</button>
+        </div>
+        <div class="lick-editor-help">프렛 번호는 0–24까지 입력할 수 있습니다. 기존 숫자를 누르면 바로 수정됩니다.</div>
+        <div id="lickBuilderBoard" class="lick-builder-board" aria-label="타브 악보 그리기 보드"></div>
+        <menu>
+          <button class="secondary-button" id="clearLickBuilder" type="button">전체 지우기</button>
+          <button class="secondary-button" value="cancel" type="submit">취소</button>
+          <button class="primary-button" value="save" type="submit">저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="lickViewerDialog">
+      <div class="dialog-card lick-viewer-dialog">
+        <div class="dialog-head">
+          <div>
+            <h2 id="lickViewerTitle">릭</h2>
+          </div>
+          <button class="icon-button" data-close-lick-viewer type="button" title="닫기">×</button>
+        </div>
+        <div id="lickViewerBoard" class="lick-viewer-board"></div>
+        <menu>
+          <button class="secondary-button" data-close-lick-viewer type="button">닫기</button>
+          <button class="primary-button" id="editViewedLick" type="button">편집</button>
+        </menu>
+      </div>
     </dialog>
 
     <dialog id="chordPickerDialog">

@@ -2538,6 +2538,332 @@ textarea {
   backdrop-filter: blur(2px);
 }
 
+.lick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px;
+}
+
+.lick-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(148, 101, 67, 0.22);
+  border-radius: 8px;
+  background: #fffaf4;
+}
+
+.lick-card:hover {
+  border-color: rgba(185, 130, 85, 0.42);
+  box-shadow: 0 8px 18px rgba(185, 130, 85, 0.1);
+}
+
+.lick-card-main {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lick-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lick-card-heading strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lick-card-heading small {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+#lickBuilderDialog,
+#lickViewerDialog {
+  width: min(1380px, calc(100vw - 24px));
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+#lickBuilderDialog::backdrop,
+#lickViewerDialog::backdrop {
+  background: rgba(25, 18, 13, 0.62);
+  backdrop-filter: blur(2px);
+}
+
+.lick-builder-dialog,
+.lick-viewer-dialog {
+  width: 100%;
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+}
+
+.lick-builder-fields {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 130px auto auto;
+  align-items: end;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #fbf0e4;
+}
+
+.lick-builder-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.lick-note-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lick-note-tools > span {
+  margin-right: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.lick-note-tools button {
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid rgba(148, 101, 67, 0.28);
+  border-radius: 6px;
+  color: var(--ink);
+  background: #fffaf4;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.lick-note-tools button.active {
+  border-color: #9f633e;
+  color: #fff;
+  background: #ad7049;
+}
+
+.lick-editor-help {
+  padding: 10px 18px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lick-builder-board,
+.lick-viewer-board {
+  padding: 18px;
+  overflow-x: auto;
+}
+
+.lick-score {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(520px, 1fr));
+  gap: 24px 18px;
+  min-width: 1060px;
+  padding: 20px 16px;
+  border: 1px solid rgba(148, 101, 67, 0.2);
+  border-radius: 6px;
+  background: #fffefa;
+}
+
+.lick-measure {
+  position: relative;
+  min-width: 520px;
+  padding: 27px 12px 18px 52px;
+}
+
+.lick-measure-number {
+  position: absolute;
+  top: 0;
+  left: 52px;
+  color: #9a7a61;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.lick-tab-label {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  translate: 0 -50%;
+  color: #2d251f;
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 900;
+  writing-mode: vertical-rl;
+  letter-spacing: 1px;
+}
+
+.lick-tab-grid {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(25px, 1fr));
+  grid-template-rows: repeat(6, 29px);
+  border-left: 3px solid #2d251f;
+  border-right: 3px solid #2d251f;
+  background:
+    linear-gradient(to right, transparent calc(25% - 1px), rgba(122, 93, 70, 0.16) calc(25% - 1px), rgba(122, 93, 70, 0.16) calc(25% + 1px), transparent calc(25% + 1px)),
+    linear-gradient(to right, transparent calc(50% - 1px), rgba(122, 93, 70, 0.16) calc(50% - 1px), rgba(122, 93, 70, 0.16) calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(to right, transparent calc(75% - 1px), rgba(122, 93, 70, 0.16) calc(75% - 1px), rgba(122, 93, 70, 0.16) calc(75% + 1px), transparent calc(75% + 1px));
+}
+
+.lick-tab-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 29px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid #5b514a;
+  border-radius: 0;
+  color: #111;
+  background: transparent;
+  font: inherit;
+}
+
+.lick-tab-cell:nth-last-child(-n + 16) {
+  border-bottom: 1px solid #5b514a;
+}
+
+.lick-score.is-editable .lick-tab-cell {
+  cursor: crosshair;
+}
+
+.lick-score.is-editable .lick-tab-cell:hover {
+  background: rgba(185, 130, 85, 0.1);
+}
+
+.lick-tab-cell.selected {
+  background: rgba(185, 130, 85, 0.18);
+}
+
+.lick-fret-number,
+.lick-fret-input {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  min-width: 17px;
+  padding: 0 2px;
+  translate: -50% -50%;
+  border-radius: 2px;
+  color: #111;
+  background: #fffefa;
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.lick-fret-input {
+  width: 38px;
+  height: 27px;
+  border: 2px solid #ad7049;
+  outline: 0;
+  font-family: inherit;
+}
+
+.lick-tab-cell.has-note::after {
+  position: absolute;
+  left: 50%;
+  bottom: calc(50% + 10px);
+  width: 1px;
+  height: 18px;
+  content: "";
+  background: #2d251f;
+}
+
+.lick-tab-cell.duration-8::before,
+.lick-tab-cell.duration-16::before {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: calc(50% + 27px);
+  width: 11px;
+  height: 5px;
+  content: "";
+  border-top: 2px solid #2d251f;
+  border-right: 2px solid #2d251f;
+  transform: skewY(22deg);
+}
+
+.lick-tab-cell.duration-16::before {
+  height: 9px;
+  border-bottom: 2px solid #2d251f;
+}
+
+.lick-score.is-compact {
+  grid-template-columns: 1fr;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.lick-score.is-compact .lick-measure {
+  min-width: 0;
+  padding: 12px 4px 4px 28px;
+}
+
+.lick-score.is-compact .lick-tab-grid {
+  grid-template-columns: repeat(16, minmax(10px, 1fr));
+  grid-template-rows: repeat(6, 16px);
+}
+
+.lick-score.is-compact .lick-tab-cell {
+  min-height: 16px;
+}
+
+.lick-score.is-compact .lick-fret-number {
+  min-width: 11px;
+  padding: 0 1px;
+  font-size: 11px;
+  line-height: 13px;
+}
+
+.lick-score.is-compact .lick-tab-cell.has-note::after,
+.lick-score.is-compact .lick-tab-cell.duration-8::before,
+.lick-score.is-compact .lick-tab-cell.duration-16::before,
+.lick-score.is-compact .lick-tab-label,
+.lick-score.is-compact .lick-measure-number {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .lick-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lick-builder-fields {
+    grid-template-columns: 1fr 110px;
+  }
+
+  .lick-note-tools {
+    grid-column: 1 / -1;
+  }
+}
+
 .practice-tools-panel {
   display: grid;
   gap: 18px;

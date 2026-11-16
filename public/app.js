@@ -380,6 +380,7 @@ const starterData = {
   schedulePeople: [],
   customChords: [],
   customRhythms: [],
+  customLicks: [],
   blocks: [
     {
       id: "blk-1",
@@ -464,6 +465,7 @@ let activeChordLibrary = "dictionary";
 let activeChordStudentFilter = activeStudentId || "";
 let activeChordCategory = "all";
 let activeRhythmCategory = "all";
+let activeViewedLickId = "";
 let lessonRoomMode = "weekly";
 let scheduleViewMode = "weekly";
 let scheduleMonthDate = new Date();
@@ -562,6 +564,14 @@ let rhythmPlayback = {
   playing: false,
   index: 0,
   tempo: 90,
+};
+let lickBuilder = {
+  id: "",
+  name: "",
+  bars: 1,
+  duration: 8,
+  notes: [],
+  selectedNoteId: "",
 };
 let visibleFretboardNotes = new Set();
 const DIATONIC_TABLE_KEYS = ["C", "G", "D", "A", "E", "B", "F# (=Gb)", "Gb (=F#)", "Db", "Ab", "Eb", "Bb", "F"];
@@ -1008,6 +1018,48 @@ function rhythmDictionary() {
     );
 }
 
+const LICK_SLOTS_PER_BAR = 16;
+
+function normalizeLickNotes(notes, bars = 1) {
+  const maxSlot = Math.max(1, Number(bars) || 1) * LICK_SLOTS_PER_BAR;
+  const occupied = new Map();
+  (Array.isArray(notes) ? notes : []).forEach((note) => {
+    const slot = Math.min(maxSlot - 1, Math.max(0, Number(note.slot) || 0));
+    const string = Math.min(6, Math.max(1, Number(note.string) || 1));
+    const fret = Math.min(24, Math.max(0, Number(note.fret) || 0));
+    const duration = [4, 8, 16].includes(Number(note.duration)) ? Number(note.duration) : 8;
+    occupied.set(`${slot}:${string}`, {
+      id: note.id || uid("lick-note"),
+      slot,
+      string,
+      fret,
+      duration,
+    });
+  });
+  return [...occupied.values()].sort((a, b) => a.slot - b.slot || a.string - b.string);
+}
+
+function normalizeCustomLick(lick = {}) {
+  const bars = Math.min(4, Math.max(1, Number(lick.bars) || 1));
+  return {
+    id: lick.id || uid("lick"),
+    name: String(lick.name || "").trim() || "이름 없는 릭",
+    bars,
+    notes: normalizeLickNotes(lick.notes, bars),
+    updatedAt: lick.updatedAt || nowIso(),
+  };
+}
+
+function lickDictionary() {
+  return (state.customLicks || [])
+    .map(normalizeCustomLick)
+    .sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true }));
+}
+
+function getLickById(id) {
+  return lickDictionary().find((lick) => lick.id === id);
+}
+
 function normalizeRhythmIds(value) {
   const items = Array.isArray(value) ? value : String(value || "").split(",");
   return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
@@ -1027,7 +1079,8 @@ const els = {
     schedule: $("#scheduleView"),
     chords: $("#chordsView"),
     rhythms: $("#rhythmsView"),
-  practiceTools: $("#practiceToolsView"),
+    licks: $("#licksView"),
+    practiceTools: $("#practiceToolsView"),
     share: $("#shareView"),
   },
   librarySearch: $("#librarySearch"),
@@ -1063,6 +1116,19 @@ const els = {
   rhythmPlaybackTempoRange: $("#rhythmPlaybackTempoRange"),
   toggleRhythmPlayback: $("#toggleRhythmPlayback"),
   clearRhythmBuilder: $("#clearRhythmBuilder"),
+  lickSearch: $("#lickSearch"),
+  lickGrid: $("#lickGrid"),
+  openLickBuilder: $("#openLickBuilder"),
+  lickBuilderDialog: $("#lickBuilderDialog"),
+  lickBuilderName: $("#lickBuilderName"),
+  lickBuilderBars: $("#lickBuilderBars"),
+  lickBuilderBoard: $("#lickBuilderBoard"),
+  deleteLickNote: $("#deleteLickNote"),
+  clearLickBuilder: $("#clearLickBuilder"),
+  lickViewerDialog: $("#lickViewerDialog"),
+  lickViewerTitle: $("#lickViewerTitle"),
+  lickViewerBoard: $("#lickViewerBoard"),
+  editViewedLick: $("#editViewedLick"),
   fretboardTrainer: $("#fretboardTrainer"),
   revealFretboardNotes: $("#revealFretboardNotes"),
   clearFretboardNotes: $("#clearFretboardNotes"),
@@ -1416,6 +1482,7 @@ function migrateState(data) {
   data.schedulePeople = Array.isArray(data.schedulePeople) ? data.schedulePeople : [];
   data.customChords = Array.isArray(data.customChords) ? data.customChords.map(normalizeCustomChord) : [];
   data.customRhythms = Array.isArray(data.customRhythms) ? data.customRhythms.map(normalizeCustomRhythm) : [];
+  data.customLicks = Array.isArray(data.customLicks) ? data.customLicks.map(normalizeCustomLick) : [];
   data.blocks = data.blocks.map((block) => ({
     ...block,
     tags: stripLegacyCurriculumTags(block.tags || []),
@@ -2852,6 +2919,7 @@ function switchView(view) {
     schedule: "레슨 시간표",
     chords: "코드사전",
     rhythms: "리듬 사전",
+    licks: "릭 사전",
     practiceTools: "실습 도구",
     share: "공유 화면",
   };
@@ -2875,6 +2943,7 @@ function render() {
   renderSchedule();
   renderChordDictionary();
   renderRhythmDictionary();
+  renderLickDictionary();
   renderFretboardTrainer();
   renderDiatonicPractice();
   renderTheoryWorkbooks();
@@ -4541,6 +4610,176 @@ function deleteCustomRhythm(rhythmId) {
   render();
   if (els.rhythmPickerDialog?.open) renderRhythmPickerGrid();
   saveStateInBackground({}, `${rhythm.name} 리듬표를 삭제했습니다.`);
+}
+
+function lickBoardMarkup(lick, { editable = false, compact = false } = {}) {
+  const normalized = normalizeCustomLick(lick);
+  const noteMap = new Map(normalized.notes.map((note) => [`${note.slot}:${note.string}`, note]));
+  const measureMarkup = Array.from({ length: normalized.bars }, (_, barIndex) => {
+    const cells = Array.from({ length: 6 }, (_, stringIndex) => {
+      const string = stringIndex + 1;
+      return Array.from({ length: LICK_SLOTS_PER_BAR }, (_, localSlot) => {
+        const slot = barIndex * LICK_SLOTS_PER_BAR + localSlot;
+        const note = noteMap.get(`${slot}:${string}`);
+        const selected = editable && note?.id === lickBuilder.selectedNoteId;
+        const durationClass = note ? ` duration-${note.duration}` : "";
+        return `
+          <button class="lick-tab-cell${note ? " has-note" : ""}${selected ? " selected" : ""}${durationClass}" type="button"
+            ${editable ? `data-lick-slot="${slot}" data-lick-string="${string}"` : "disabled"}
+            aria-label="${barIndex + 1}마디 ${localSlot + 1}번째 위치 ${string}번 줄${note ? ` ${note.fret}프렛` : ""}">
+            ${note ? `<span class="lick-fret-number" data-lick-note-id="${escapeHTML(note.id)}">${note.fret}</span>` : ""}
+          </button>
+        `;
+      }).join("");
+    }).join("");
+    return `
+      <section class="lick-measure${compact ? " compact" : ""}" aria-label="${barIndex + 1}마디">
+        <span class="lick-measure-number">${barIndex + 1}</span>
+        <span class="lick-tab-label">TAB</span>
+        <div class="lick-tab-grid">${cells}</div>
+      </section>
+    `;
+  }).join("");
+  return `<div class="lick-score${editable ? " is-editable" : ""}${compact ? " is-compact" : ""}">${measureMarkup}</div>`;
+}
+
+function renderLickDictionary() {
+  if (!els.lickGrid) return;
+  const query = String(els.lickSearch?.value || "").trim().toLowerCase();
+  const licks = lickDictionary().filter((lick) => !query || lick.name.toLowerCase().includes(query));
+  els.lickGrid.innerHTML = licks.length
+    ? licks.map((lick) => `
+        <article class="lick-card">
+          <button class="lick-card-main" type="button" data-view-lick="${escapeHTML(lick.id)}">
+            <span class="lick-card-heading"><strong>${escapeHTML(lick.name)}</strong><small>${lick.bars}마디</small></span>
+            ${lickBoardMarkup(lick, { compact: true })}
+          </button>
+          <div class="chord-card-actions">
+            <button class="chord-edit-button" type="button" data-edit-lick="${escapeHTML(lick.id)}">편집</button>
+            <button class="chord-delete-button" type="button" data-delete-lick="${escapeHTML(lick.id)}">삭제</button>
+          </div>
+        </article>
+      `).join("")
+    : `<div class="empty">저장된 릭이 없습니다.</div>`;
+}
+
+function openLickBuilder(lick = null) {
+  const source = lick ? normalizeCustomLick(lick) : null;
+  lickBuilder = {
+    id: source?.id || "",
+    name: source?.name || "",
+    bars: source?.bars || 1,
+    duration: 8,
+    notes: source ? structuredClone(source.notes) : [],
+    selectedNoteId: "",
+  };
+  els.lickBuilderName.value = lickBuilder.name;
+  els.lickBuilderBars.value = String(lickBuilder.bars);
+  renderLickBuilder();
+  els.lickBuilderDialog.showModal();
+}
+
+function renderLickBuilder() {
+  if (!els.lickBuilderBoard) return;
+  lickBuilder.notes = normalizeLickNotes(lickBuilder.notes, lickBuilder.bars);
+  document.querySelectorAll("[data-lick-duration]").forEach((button) => {
+    button.classList.toggle("active", Number(button.dataset.lickDuration) === lickBuilder.duration);
+  });
+  els.deleteLickNote.disabled = !lickBuilder.selectedNoteId;
+  els.lickBuilderBoard.innerHTML = lickBoardMarkup({
+    id: lickBuilder.id || "preview",
+    name: lickBuilder.name || "릭",
+    bars: lickBuilder.bars,
+    notes: lickBuilder.notes,
+  }, { editable: true });
+}
+
+function beginLickFretInput(cell) {
+  const slot = Number(cell.dataset.lickSlot);
+  const string = Number(cell.dataset.lickString);
+  const existing = lickBuilder.notes.find((note) => note.slot === slot && note.string === string);
+  lickBuilder.selectedNoteId = existing?.id || "";
+  els.deleteLickNote.disabled = !existing;
+  cell.querySelector(".lick-fret-input")?.remove();
+  const input = document.createElement("input");
+  input.className = "lick-fret-input";
+  input.type = "number";
+  input.inputMode = "numeric";
+  input.min = "0";
+  input.max = "24";
+  input.value = existing ? String(existing.fret) : "";
+  cell.append(input);
+  input.focus();
+  input.select();
+  let cancelled = false;
+  const commit = () => {
+    if (cancelled || !input.isConnected) return;
+    const raw = input.value.trim();
+    if (raw !== "") {
+      const fret = Math.min(24, Math.max(0, Number(raw) || 0));
+      if (existing) {
+        existing.fret = fret;
+        existing.duration = lickBuilder.duration;
+        lickBuilder.selectedNoteId = existing.id;
+      } else {
+        const note = { id: uid("lick-note"), slot, string, fret, duration: lickBuilder.duration };
+        lickBuilder.notes.push(note);
+        lickBuilder.selectedNoteId = note.id;
+      }
+    }
+    renderLickBuilder();
+  };
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      input.blur();
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelled = true;
+      renderLickBuilder();
+    }
+  });
+  input.addEventListener("blur", commit, { once: true });
+}
+
+function deleteSelectedLickNote() {
+  if (!lickBuilder.selectedNoteId) return;
+  lickBuilder.notes = lickBuilder.notes.filter((note) => note.id !== lickBuilder.selectedNoteId);
+  lickBuilder.selectedNoteId = "";
+  renderLickBuilder();
+}
+
+function saveCustomLick() {
+  const lick = normalizeCustomLick({
+    id: lickBuilder.id || uid("lick"),
+    name: els.lickBuilderName.value,
+    bars: lickBuilder.bars,
+    notes: lickBuilder.notes,
+    updatedAt: nowIso(),
+  });
+  state.customLicks = [lick, ...(state.customLicks || []).filter((item) => item.id !== lick.id)];
+  els.lickBuilderDialog.close();
+  renderLickDictionary();
+  saveStateInBackground({}, `${lick.name} 릭을 저장했습니다.`);
+}
+
+function openLickViewer(lickId) {
+  const lick = getLickById(lickId);
+  if (!lick) return;
+  activeViewedLickId = lick.id;
+  els.lickViewerTitle.textContent = lick.name;
+  els.lickViewerBoard.innerHTML = lickBoardMarkup(lick);
+  els.lickViewerDialog.showModal();
+}
+
+function deleteCustomLick(lickId) {
+  const lick = getLickById(lickId);
+  if (!lick || !window.confirm(`${lick.name} 릭을 삭제할까요?`)) return;
+  state.customLicks = (state.customLicks || []).filter((item) => item.id !== lick.id);
+  if (els.lickViewerDialog?.open) els.lickViewerDialog.close();
+  renderLickDictionary();
+  saveStateInBackground({}, `${lick.name} 릭을 삭제했습니다.`);
 }
 
 function ensurePendingBlankBlock() {
@@ -6871,6 +7110,29 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const viewLick = event.target.closest("[data-view-lick]");
+  if (viewLick) {
+    openLickViewer(viewLick.dataset.viewLick);
+    return;
+  }
+
+  const editLick = event.target.closest("[data-edit-lick]");
+  if (editLick) {
+    openLickBuilder(getLickById(editLick.dataset.editLick));
+    return;
+  }
+
+  const deleteLick = event.target.closest("[data-delete-lick]");
+  if (deleteLick) {
+    deleteCustomLick(deleteLick.dataset.deleteLick);
+    return;
+  }
+
+  if (event.target.closest("[data-close-lick-viewer]")) {
+    els.lickViewerDialog.close();
+    return;
+  }
+
   const assignRoom = event.target.closest("[data-assign-room]");
   if (assignRoom) assignSelectedToStudent(assignRoom.dataset.assignRoom);
 
@@ -7453,9 +7715,46 @@ els.chordStudentFilter?.addEventListener("change", () => {
   renderChordDictionary();
 });
 els.rhythmSearch?.addEventListener("input", renderRhythmDictionary);
+els.lickSearch?.addEventListener("input", renderLickDictionary);
 els.rhythmPickerSearch?.addEventListener("input", renderRhythmPickerGrid);
 els.openChordBuilder.addEventListener("click", openChordBuilder);
 els.openRhythmBuilder?.addEventListener("click", () => openRhythmBuilder());
+els.openLickBuilder?.addEventListener("click", () => openLickBuilder());
+els.lickBuilderBars?.addEventListener("change", () => {
+  lickBuilder.bars = Math.min(4, Math.max(1, Number(els.lickBuilderBars.value) || 1));
+  lickBuilder.notes = normalizeLickNotes(lickBuilder.notes, lickBuilder.bars);
+  lickBuilder.selectedNoteId = "";
+  renderLickBuilder();
+});
+document.querySelectorAll("[data-lick-duration]").forEach((button) => {
+  button.addEventListener("click", () => {
+    lickBuilder.duration = Number(button.dataset.lickDuration) || 8;
+    renderLickBuilder();
+  });
+});
+els.lickBuilderBoard?.addEventListener("click", (event) => {
+  if (event.target.closest(".lick-fret-input")) return;
+  const cell = event.target.closest("[data-lick-slot][data-lick-string]");
+  if (cell) beginLickFretInput(cell);
+});
+els.deleteLickNote?.addEventListener("click", deleteSelectedLickNote);
+els.clearLickBuilder?.addEventListener("click", () => {
+  if (lickBuilder.notes.length && !window.confirm("입력한 음을 모두 지울까요?")) return;
+  lickBuilder.notes = [];
+  lickBuilder.selectedNoteId = "";
+  renderLickBuilder();
+});
+els.lickBuilderDialog?.addEventListener("submit", (event) => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  saveCustomLick();
+});
+els.editViewedLick?.addEventListener("click", () => {
+  const lick = getLickById(activeViewedLickId);
+  if (!lick) return;
+  els.lickViewerDialog.close();
+  openLickBuilder(lick);
+});
 els.drawChordFromPicker?.addEventListener("click", () => {
   const blockId = els.chordPickerBlockId?.value || "";
   els.chordPickerDialog.close();
@@ -7898,6 +8197,11 @@ window.addEventListener("resize", () => {
   }
 });
 document.addEventListener("keydown", (event) => {
+  if (els.lickBuilderDialog?.open && ["Backspace", "Delete"].includes(event.key) && !event.target.matches("input, textarea, select, [contenteditable='true']")) {
+    event.preventDefault();
+    deleteSelectedLickNote();
+    return;
+  }
   if (!els.imageViewerDialog.open) return;
   const isEditingField = event.target.matches("input, textarea, [contenteditable='true']");
   const degreeStampActive = ["major", "minor", "dominant"].includes(imageMarkup.stampKind);
