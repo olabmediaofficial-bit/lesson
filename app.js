@@ -587,6 +587,7 @@ let theoryFretStart = 1;
 let activeFretboardHighlightType = "";
 let activeFretboardHighlightKey = "";
 let theoryFretAll = false;
+const hiddenTheoryFretboardStrings = new Set();
 let suppressStudentTabClickUntil = 0;
 let activeTheoryStudentId = "";
 let activePracticeTool = "";
@@ -3098,7 +3099,7 @@ function renderFretboardScalePicker() {
     <div class="theory-highlight-type-tabs">
       ${FRETBOARD_HIGHLIGHT_TYPES.map((item) => `<button class="theory-highlight-type ${item.key === activeFretboardHighlightType ? "active" : ""}" type="button" data-fretboard-highlight-type="${escapeHTML(item.key)}" aria-pressed="${item.key === activeFretboardHighlightType ? "true" : "false"}">${escapeHTML(item.label)}</button>`).join("")}
     </div>
-    ${definition ? `<div class="theory-highlight-key-panel" aria-label="${escapeHTML(definition.label)} 키 선택">
+    ${definition ? `<div class="theory-highlight-key-panel ${activeFretboardHighlightType === "triad" ? "is-triad" : ""}" aria-label="${escapeHTML(definition.label)} 키 선택">
       ${keys.map((key) => `<button class="theory-highlight-key ${key === activeFretboardHighlightKey ? "active" : ""}" type="button" data-fretboard-highlight-key="${escapeHTML(key)}" aria-pressed="${key === activeFretboardHighlightKey ? "true" : "false"}" title="${escapeHTML(key)} ${escapeHTML(definition.label)}">${escapeHTML(key)}</button>`).join("")}
     </div>` : ""}`;
 }
@@ -3123,13 +3124,17 @@ function renderTheoryWorkbooks() {
         <div class="theory-fretboard-board">
           <div class="theory-fretboard-fret-labels">${frets.map((fret) => `<span>${fret}fr</span>`).join("")}</div>
           <div class="theory-fretboard-strings">
-            ${Array.from({ length: 6 }, (_, stringIndex) => `
+            ${Array.from({ length: 6 }, (_, stringIndex) => {
+              const stringNumber = stringIndex + 1;
+              const hidden = hiddenTheoryFretboardStrings.has(stringNumber);
+              return `
+              <button class="theory-fretboard-visibility ${hidden ? "is-hidden" : ""}" type="button" data-theory-string-visibility="${stringNumber}" aria-pressed="${hidden ? "true" : "false"}" aria-label="${stringNumber}번 줄 ${hidden ? "보이기" : "가리기"}" title="${stringNumber}번 줄 ${hidden ? "보이기" : "가리기"}"><span class="theory-eye-icon" aria-hidden="true"></span></button>
               <div class="theory-fretboard-string-label"><strong>${stringIndex + 1}</strong></div>
-              <div class="theory-fretboard-open-note" data-fretboard-note-cell>${theoryInput(practice.fretboard.cells[stringIndex * 13], `fretboard.cells.${stringIndex * 13}`, `${stringIndex + 1}번 줄 개방현`)}</div>
-              <div class="theory-fretboard-string-row">
+              <div class="theory-fretboard-open-note ${hidden ? "is-string-hidden" : ""}" data-fretboard-note-cell>${theoryInput(practice.fretboard.cells[stringIndex * 13], `fretboard.cells.${stringIndex * 13}`, `${stringIndex + 1}번 줄 개방현`)}</div>
+              <div class="theory-fretboard-string-row ${hidden ? "is-string-hidden" : ""}">
                 ${frets.map((fret) => `<div class="theory-fretboard-note" data-fretboard-note-cell>${theoryInput(practice.fretboard.cells[stringIndex * 13 + fret], `fretboard.cells.${stringIndex * 13 + fret}`, `${stringIndex + 1}번 줄 ${fret}프렛`)}</div>`).join("")}
               </div>
-            `).join("")}
+            `}).join("")}
           </div>
         </div>
         <div class="theory-fretboard-controls">
@@ -6660,6 +6665,14 @@ document.addEventListener("click", (event) => {
   const fretAll = event.target.closest("[data-theory-fret-all]");
   if (fretAll) {
     theoryFretAll = !theoryFretAll;
+    renderTheoryWorkbooks();
+    return;
+  }
+  const stringVisibility = event.target.closest("[data-theory-string-visibility]");
+  if (stringVisibility) {
+    const stringNumber = Number(stringVisibility.dataset.theoryStringVisibility);
+    if (hiddenTheoryFretboardStrings.has(stringNumber)) hiddenTheoryFretboardStrings.delete(stringNumber);
+    else hiddenTheoryFretboardStrings.add(stringNumber);
     renderTheoryWorkbooks();
     return;
   }

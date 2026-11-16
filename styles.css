@@ -3225,6 +3225,18 @@ textarea {
   background: #fff8f0;
 }
 
+.theory-highlight-key-panel.is-triad {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(38px, 1fr));
+  grid-template-rows: repeat(2, auto);
+  min-width: 556px;
+  overflow-x: auto;
+}
+
+.theory-highlight-key-panel.is-triad .theory-highlight-key {
+  width: 100%;
+}
+
 .theory-scale-highlight-picker button {
   flex: 0 0 auto;
   width: auto;
@@ -3365,7 +3377,7 @@ textarea {
 
 .theory-fretboard-board {
   display: grid;
-  grid-template-columns: 36px 58px minmax(560px, 1fr);
+  grid-template-columns: 30px 30px 58px minmax(560px, 1fr);
   grid-template-rows: 28px auto;
   gap: 6px 10px;
   overflow-x: auto;
@@ -3373,7 +3385,7 @@ textarea {
 
 .theory-fretboard-fret-labels {
   display: grid;
-  grid-column: 3;
+  grid-column: 4;
   grid-row: 1;
   min-width: 560px;
   grid-template-columns: repeat(var(--visible-frets, 5), minmax(100px, 1fr));
@@ -3388,10 +3400,77 @@ textarea {
   grid-column: 1 / -1;
   grid-row: 2;
   min-width: 680px;
-  grid-template-columns: 36px 58px minmax(560px, 1fr);
+  grid-template-columns: 30px 30px 58px minmax(560px, 1fr);
   grid-template-rows: repeat(6, 52px);
   gap: 0 10px;
   align-items: center;
+}
+
+.theory-fretboard-visibility {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  place-self: center;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #8a674e;
+  background: transparent;
+  box-shadow: none;
+}
+
+.theory-fretboard-visibility:hover,
+.theory-fretboard-visibility:focus-visible {
+  background: #f2e4d6;
+}
+
+.theory-eye-icon {
+  position: relative;
+  display: block;
+  width: 17px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-radius: 50% / 60%;
+}
+
+.theory-eye-icon::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.theory-fretboard-visibility.is-hidden .theory-eye-icon::after {
+  position: absolute;
+  top: 4px;
+  left: -2px;
+  width: 20px;
+  border-top: 1.5px solid currentColor;
+  content: "";
+  transform: rotate(-38deg);
+}
+
+.theory-fretboard-open-note.is-string-hidden input {
+  visibility: hidden;
+}
+
+.theory-fretboard-string-row.is-string-hidden {
+  background: none;
+}
+
+.theory-fretboard-string-row.is-string-hidden .theory-fretboard-note {
+  border-color: transparent;
+}
+
+.theory-fretboard-string-row.is-string-hidden input {
+  visibility: hidden;
 }
 
 .theory-fretboard-string-label {
@@ -3470,9 +3549,9 @@ textarea {
 
 .theory-all-frets-button { width: auto; min-height: 32px; padding: 5px 10px; box-shadow: none; }
 .theory-all-frets-button.active { border-color: #a9643d; color: #fff; background: #b8754e; }
-.theory-fretboard-workbook.show-all-frets .theory-fretboard-board { grid-template-columns: 30px 42px minmax(900px, 1fr); }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-board { grid-template-columns: 28px 28px 42px minmax(900px, 1fr); }
 .theory-fretboard-workbook.show-all-frets .theory-fretboard-fret-labels { min-width: 900px; grid-template-columns: repeat(12, minmax(68px, 1fr)); }
-.theory-fretboard-workbook.show-all-frets .theory-fretboard-strings { min-width: 990px; grid-template-columns: 30px 42px minmax(900px, 1fr); grid-template-rows: repeat(6, 44px); }
+.theory-fretboard-workbook.show-all-frets .theory-fretboard-strings { min-width: 1010px; grid-template-columns: 28px 28px 42px minmax(900px, 1fr); grid-template-rows: repeat(6, 44px); }
 .theory-fretboard-workbook.show-all-frets .theory-fretboard-string-row { height: 44px; grid-template-columns: repeat(12, minmax(68px, 1fr)); }
 .theory-fretboard-workbook.show-all-frets .theory-fretboard-open-note,
 .theory-fretboard-workbook.show-all-frets .theory-fretboard-open-note input,
