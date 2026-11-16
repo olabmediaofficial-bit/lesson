@@ -584,7 +584,8 @@ const THEORY_SEVENTH_CHORDS = [...THEORY_MAJOR_SEVENTH_CHORDS, ...THEORY_DOMINAN
 let activeDiatonicType = "major";
 let activeTheoryTool = "fretboard";
 let theoryFretStart = 1;
-let activeFretboardScale = "";
+let activeFretboardHighlightType = "";
+let activeFretboardHighlightKey = "";
 let theoryFretAll = false;
 let suppressStudentTabClickUntil = 0;
 let activeTheoryStudentId = "";
@@ -3048,22 +3049,40 @@ function theoryPitchClass(value) {
   return ({ C: 0, "C#": 1, DB: 1, D: 2, "D#": 3, EB: 3, E: 4, FB: 4, "E#": 5, F: 5, "F#": 6, GB: 6, G: 7, "G#": 8, AB: 8, A: 9, "A#": 10, BB: 10, B: 11, CB: 11 })[note];
 }
 
-function fretboardScalePitchClasses(root) {
+const FRETBOARD_HIGHLIGHT_TYPES = [
+  { key: "major", label: "Major Scale", intervals: [0, 2, 4, 5, 7, 9, 11] },
+  { key: "minor", label: "Minor Scale", intervals: [0, 2, 3, 5, 7, 8, 10] },
+  { key: "major-pentatonic", label: "Major Pentatonic", intervals: [0, 2, 4, 7, 9] },
+  { key: "minor-pentatonic", label: "Minor Pentatonic", intervals: [0, 3, 5, 7, 10] },
+  { key: "triad", label: "Triad" },
+];
+
+function fretboardHighlightPitchClasses(type, key) {
+  const root = String(key || "").replace(/m$/, "");
   const rootPitch = theoryPitchClass(root);
   if (!Number.isInteger(rootPitch)) return new Set();
-  return new Set([0, 2, 4, 5, 7, 9, 11].map((interval) => (rootPitch + interval) % 12));
+  const definition = FRETBOARD_HIGHLIGHT_TYPES.find((item) => item.key === type);
+  const intervals = type === "triad"
+    ? (String(key).endsWith("m") ? [0, 3, 7] : [0, 4, 7])
+    : definition?.intervals || [];
+  return new Set(intervals.map((interval) => (rootPitch + interval) % 12));
 }
 
 function updateFretboardHighlightClasses() {
-  const scale = fretboardScalePitchClasses(activeFretboardScale);
-  const rootPitch = theoryPitchClass(activeFretboardScale);
+  const tones = fretboardHighlightPitchClasses(activeFretboardHighlightType, activeFretboardHighlightKey);
+  const rootPitch = theoryPitchClass(String(activeFretboardHighlightKey || "").replace(/m$/, ""));
   document.querySelectorAll("[data-fretboard-note-cell]").forEach((cell) => {
     const pitch = theoryPitchClass(cell.querySelector("input")?.value);
-    cell.classList.toggle("is-scale-tone", scale.has(pitch));
-    cell.classList.toggle("is-scale-root", scale.has(pitch) && pitch === rootPitch);
+    cell.classList.toggle("is-scale-tone", tones.has(pitch));
+    cell.classList.toggle("is-scale-root", tones.has(pitch) && pitch === rootPitch);
   });
-  els.theoryFretboardScalePicker?.querySelectorAll("[data-fretboard-scale]").forEach((button) => {
-    const active = button.dataset.fretboardScale === activeFretboardScale;
+  els.theoryFretboardScalePicker?.querySelectorAll("[data-fretboard-highlight-type]").forEach((button) => {
+    const active = button.dataset.fretboardHighlightType === activeFretboardHighlightType;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  els.theoryFretboardScalePicker?.querySelectorAll("[data-fretboard-highlight-key]").forEach((button) => {
+    const active = button.dataset.fretboardHighlightKey === activeFretboardHighlightKey;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", active ? "true" : "false");
   });
@@ -3071,7 +3090,17 @@ function updateFretboardHighlightClasses() {
 
 function renderFretboardScalePicker() {
   if (!els.theoryFretboardScalePicker) return;
-  els.theoryFretboardScalePicker.innerHTML = THEORY_TRIAD_ROOTS.map((root) => `<button class="${root === activeFretboardScale ? "active" : ""}" type="button" data-fretboard-scale="${escapeHTML(root)}" aria-pressed="${root === activeFretboardScale ? "true" : "false"}" title="${escapeHTML(root)} major 스케일">${escapeHTML(root)}</button>`).join("");
+  const definition = FRETBOARD_HIGHLIGHT_TYPES.find((item) => item.key === activeFretboardHighlightType);
+  const keys = activeFretboardHighlightType === "triad"
+    ? [...THEORY_TRIAD_ROOTS, ...THEORY_TRIAD_ROOTS.map((root) => `${root}m`)]
+    : THEORY_TRIAD_ROOTS;
+  els.theoryFretboardScalePicker.innerHTML = `
+    <div class="theory-highlight-type-tabs">
+      ${FRETBOARD_HIGHLIGHT_TYPES.map((item) => `<button class="theory-highlight-type ${item.key === activeFretboardHighlightType ? "active" : ""}" type="button" data-fretboard-highlight-type="${escapeHTML(item.key)}" aria-pressed="${item.key === activeFretboardHighlightType ? "true" : "false"}">${escapeHTML(item.label)}</button>`).join("")}
+    </div>
+    ${definition ? `<div class="theory-highlight-key-panel" aria-label="${escapeHTML(definition.label)} 키 선택">
+      ${keys.map((key) => `<button class="theory-highlight-key ${key === activeFretboardHighlightKey ? "active" : ""}" type="button" data-fretboard-highlight-key="${escapeHTML(key)}" aria-pressed="${key === activeFretboardHighlightKey ? "true" : "false"}" title="${escapeHTML(key)} ${escapeHTML(definition.label)}">${escapeHTML(key)}</button>`).join("")}
+    </div>` : ""}`;
 }
 
 function renderTheoryWorkbooks() {
@@ -6634,10 +6663,19 @@ document.addEventListener("click", (event) => {
     renderTheoryWorkbooks();
     return;
   }
-  const fretboardScale = event.target.closest("[data-fretboard-scale]");
-  if (fretboardScale) {
-    const scale = fretboardScale.dataset.fretboardScale;
-    activeFretboardScale = activeFretboardScale === scale ? "" : scale;
+  const fretboardHighlightType = event.target.closest("[data-fretboard-highlight-type]");
+  if (fretboardHighlightType) {
+    const type = fretboardHighlightType.dataset.fretboardHighlightType;
+    activeFretboardHighlightType = activeFretboardHighlightType === type ? "" : type;
+    activeFretboardHighlightKey = "";
+    renderFretboardScalePicker();
+    updateFretboardHighlightClasses();
+    return;
+  }
+  const fretboardHighlightKey = event.target.closest("[data-fretboard-highlight-key]");
+  if (fretboardHighlightKey) {
+    const key = fretboardHighlightKey.dataset.fretboardHighlightKey;
+    activeFretboardHighlightKey = activeFretboardHighlightKey === key ? "" : key;
     updateFretboardHighlightClasses();
     return;
   }
