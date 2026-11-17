@@ -539,7 +539,7 @@ let metronome = {
   audioContext: null,
   timer: null,
   isPlaying: false,
-  tempo: 90,
+  tempo: 60,
   meter: "4/4",
   beat: 0,
   bar: 0,
@@ -2252,8 +2252,9 @@ function updateImageViewer() {
 }
 
 function practiceTempoForBlock(block) {
-  const tempo = Number(block?.practice?.tempo);
-  if (!block || block.kind !== "practice" || Number.isNaN(tempo)) return 90;
+  const rawTempo = String(block?.practice?.tempo ?? "").trim();
+  const tempo = Number(rawTempo);
+  if (!block || block.kind !== "practice" || !rawTempo || !Number.isFinite(tempo) || tempo <= 0) return 60;
   return Math.min(220, Math.max(40, tempo));
 }
 
@@ -2923,8 +2924,16 @@ function openChordViewer(chordName, fileName = "", sourceButton = null) {
 
 function switchView(view) {
   if (publicShareMode && view !== "share" && view !== "chords") return;
+  const enteringLessonRoom = (view === "rooms" || view === "share") && currentView !== view;
   currentView = view;
   if (view === "share") activeShareStudentId = activeStudentId;
+  if (enteringLessonRoom) {
+    metronome.tempo = 60;
+    metronome.beat = 0;
+    metronome.bar = metronome.advanced ? -1 : 0;
+    metronome.visibleBeat = 0;
+    if (metronome.isPlaying) restartMetronome();
+  }
 
   const titles = {
     library: "블럭 보관소",
@@ -3489,7 +3498,7 @@ function renderMetronome() {
 }
 
 function setTempo(value) {
-  const nextTempo = Math.min(220, Math.max(40, Number(value) || 90));
+  const nextTempo = Math.min(220, Math.max(40, Number(value) || 60));
   metronome.tempo = nextTempo;
   if (metronome.isPlaying) restartMetronome();
   renderMetronome();
