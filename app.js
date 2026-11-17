@@ -465,6 +465,7 @@ let activeChordLibrary = "dictionary";
 let activeChordStudentFilter = activeStudentId || "";
 let activeChordCategory = "all";
 let activeRhythmCategory = "all";
+let activeLickCategory = "blues";
 let activeViewedLickId = "";
 let lessonRoomMode = "weekly";
 let scheduleViewMode = "weekly";
@@ -1019,6 +1020,17 @@ function rhythmDictionary() {
 }
 
 const LICK_SLOTS_PER_BAR = 16;
+const LICK_CATEGORY_TABS = [
+  { key: "all", label: "전체" },
+  { key: "blues", label: "블루스 릭" },
+];
+const LICK_LIBRARY = Array.from({ length: 20 }, (_, index) => ({
+  id: `blues-lick-${String(index + 1).padStart(2, "0")}`,
+  name: `Blues Lick ${index + 1}`,
+  category: "blues",
+  src: `./assets/licks/blues/blues-lick-${String(index + 1).padStart(2, "0")}.png`,
+  order: index + 1,
+}));
 
 function normalizeLickNotes(notes, bars = 1) {
   const maxSlot = Math.max(1, Number(bars) || 1) * LICK_SLOTS_PER_BAR;
@@ -1051,9 +1063,7 @@ function normalizeCustomLick(lick = {}) {
 }
 
 function lickDictionary() {
-  return (state.customLicks || [])
-    .map(normalizeCustomLick)
-    .sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true }));
+  return [...LICK_LIBRARY];
 }
 
 function getLickById(id) {
@@ -1117,6 +1127,7 @@ const els = {
   toggleRhythmPlayback: $("#toggleRhythmPlayback"),
   clearRhythmBuilder: $("#clearRhythmBuilder"),
   lickSearch: $("#lickSearch"),
+  lickCategoryTabs: $("#lickCategoryTabs"),
   lickGrid: $("#lickGrid"),
   openLickBuilder: $("#openLickBuilder"),
   lickBuilderDialog: $("#lickBuilderDialog"),
@@ -2166,6 +2177,7 @@ function openImageViewerItems(items, index = 0, options = {}) {
     title: options.title || "",
   };
   els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || imageViewer.mode === "rhythm" || imageViewer.mode === "chord-grid");
+  els.imageViewerDialog.classList.toggle("lick-only", imageViewer.mode === "lick");
   els.imageViewerDialog.classList.toggle("rhythm-only", imageViewer.mode === "rhythm");
   els.imageViewerDialog.classList.toggle("chord-grid-mode", imageViewer.mode === "chord-grid");
   els.imageViewerDialog.showModal();
@@ -2178,6 +2190,7 @@ function closeImageViewer() {
   els.imageViewerDialog.classList.remove("chord-only");
   els.imageViewerDialog.classList.remove("rhythm-only");
   els.imageViewerDialog.classList.remove("chord-grid-mode");
+  els.imageViewerDialog.classList.remove("lick-only");
   imageViewerStack = [];
   els.imageViewerImage.src = "";
 }
@@ -2200,6 +2213,7 @@ function updateImageViewer() {
   const imageScroll = els.imageViewerImage.closest(".image-viewer-scroll");
   if (imageScroll) imageScroll.hidden = isChordGrid;
   els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || imageViewer.mode === "rhythm" || isChordGrid);
+  els.imageViewerDialog.classList.toggle("lick-only", imageViewer.mode === "lick");
   els.imageViewerDialog.classList.toggle("rhythm-only", imageViewer.mode === "rhythm");
   els.imageViewerDialog.classList.toggle("chord-grid-mode", isChordGrid);
 
@@ -4646,21 +4660,27 @@ function lickBoardMarkup(lick, { editable = false, compact = false } = {}) {
 function renderLickDictionary() {
   if (!els.lickGrid) return;
   const query = String(els.lickSearch?.value || "").trim().toLowerCase();
-  const licks = lickDictionary().filter((lick) => !query || lick.name.toLowerCase().includes(query));
+  const allLicks = lickDictionary();
+  if (els.lickCategoryTabs) {
+    els.lickCategoryTabs.innerHTML = LICK_CATEGORY_TABS.map((tab) => {
+      const count = tab.key === "all" ? allLicks.length : allLicks.filter((lick) => lick.category === tab.key).length;
+      return `<button class="${activeLickCategory === tab.key ? "active" : ""}" type="button" data-lick-category="${tab.key}">${escapeHTML(tab.label)} <span>${count}</span></button>`;
+    }).join("");
+  }
+  const licks = allLicks.filter((lick) => {
+    const matchesCategory = activeLickCategory === "all" || lick.category === activeLickCategory;
+    return matchesCategory && (!query || lick.name.toLowerCase().includes(query) || String(lick.order).includes(query));
+  });
   els.lickGrid.innerHTML = licks.length
     ? licks.map((lick) => `
         <article class="lick-card">
           <button class="lick-card-main" type="button" data-view-lick="${escapeHTML(lick.id)}">
-            <span class="lick-card-heading"><strong>${escapeHTML(lick.name)}</strong><small>${lick.bars}마디</small></span>
-            ${lickBoardMarkup(lick, { compact: true })}
+            <span class="lick-card-heading"><strong>Blues Lick ${lick.order}</strong><small>블루스</small></span>
+            <span class="lick-image-frame"><img src="${escapeHTML(lick.src)}" alt="Blues Lick ${lick.order} 악보" loading="lazy" /></span>
           </button>
-          <div class="chord-card-actions">
-            <button class="chord-edit-button" type="button" data-edit-lick="${escapeHTML(lick.id)}">편집</button>
-            <button class="chord-delete-button" type="button" data-delete-lick="${escapeHTML(lick.id)}">삭제</button>
-          </div>
         </article>
       `).join("")
-    : `<div class="empty">저장된 릭이 없습니다.</div>`;
+    : `<div class="empty">조건에 맞는 릭이 없습니다.</div>`;
 }
 
 function openLickBuilder(lick = null) {
@@ -4767,10 +4787,15 @@ function saveCustomLick() {
 function openLickViewer(lickId) {
   const lick = getLickById(lickId);
   if (!lick) return;
-  activeViewedLickId = lick.id;
-  els.lickViewerTitle.textContent = lick.name;
-  els.lickViewerBoard.innerHTML = lickBoardMarkup(lick);
-  els.lickViewerDialog.showModal();
+  const visibleLicks = lickDictionary().filter((item) => activeLickCategory === "all" || item.category === activeLickCategory);
+  const items = visibleLicks.map((item) => ({
+    src: item.src,
+    title: `Blues Lick ${item.order}`,
+    lickId: item.id,
+  }));
+  const index = Math.max(0, visibleLicks.findIndex((item) => item.id === lick.id));
+  imageViewerStack = [];
+  openImageViewerItems(items, index, { mode: "lick" });
 }
 
 function deleteCustomLick(lickId) {
@@ -7113,6 +7138,13 @@ document.addEventListener("click", (event) => {
   const viewLick = event.target.closest("[data-view-lick]");
   if (viewLick) {
     openLickViewer(viewLick.dataset.viewLick);
+    return;
+  }
+
+  const lickCategory = event.target.closest("[data-lick-category]");
+  if (lickCategory) {
+    activeLickCategory = lickCategory.dataset.lickCategory;
+    renderLickDictionary();
     return;
   }
 

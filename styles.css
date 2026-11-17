@@ -2540,9 +2540,25 @@ textarea {
 
 .lick-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   padding: 18px;
+}
+
+.lick-image-frame {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 4.4 / 1;
+  overflow: hidden;
+  border: 1px solid rgba(148, 101, 67, 0.2);
+  border-radius: 4px;
+  background: #fff;
+}
+
+.lick-image-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .lick-card {
@@ -4965,6 +4981,15 @@ dialog::backdrop {
 .image-viewer-dialog.chord-only #imageViewerZoomLabel,
 .image-viewer-dialog.chord-only .image-viewer-foot {
   display: none;
+}
+
+.image-viewer-dialog.lick-only .viewer-metronome,
+.image-viewer-dialog.lick-only .viewer-random-button,
+.image-viewer-dialog.lick-only .image-viewer-mastery,
+.image-viewer-dialog.lick-only .viewer-audio-button,
+.image-viewer-dialog.lick-only .viewer-resource-button,
+.image-viewer-dialog.lick-only #imageViewerMarkup {
+  display: none !important;
 }
 
 .image-viewer-dialog.chord-only .image-viewer-actions {
