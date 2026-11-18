@@ -101,6 +101,10 @@
             <input id="bulkTagInput" type="text" placeholder="선택 블럭에 태그 추가" aria-label="선택 블럭 일괄 태그" />
             <button class="secondary-button" id="applyBulkTags" type="button">태그 넣기</button>
             <button class="secondary-button danger" id="deleteSelectedBlocks" type="button">선택 삭제</button>
+            <label class="drop-score-book-control" id="dropScoreBookControl" hidden>
+              추가할 악보집
+              <select id="dropScoreBookPicker" aria-label="드래그한 실습곡을 넣을 악보집"></select>
+            </label>
             <input id="quickLessonDate" type="date" aria-label="배정 날짜" />
             <button class="secondary-button" id="assignSelected" type="button">선택 블럭 넣기</button>
           </div>
@@ -182,6 +186,7 @@
                 <div class="student-actions">
                   <button class="secondary-button" data-view="progress" type="button">진도표 보기</button>
                   <button class="secondary-button" data-open-theory-tools="room" type="button">이론</button>
+                  <button class="secondary-button" data-open-score-books="room" type="button">악보집</button>
                   <button class="secondary-button" id="openUsefulSites" type="button">유용한 사이트</button>
                   <button class="secondary-button danger" id="deleteStudent" type="button">학생 삭제</button>
                   <button class="primary-button" id="copyShareLink" type="button">공유 링크 복사</button>
@@ -492,6 +497,7 @@
                   <a class="resource-library-button" id="shareResourceLibrary" href="#" target="_blank" rel="noreferrer" hidden>레슨 자료실</a>
                   <button class="secondary-button chord-dictionary-link" data-view="chords" type="button">코드사전</button>
                   <button class="secondary-button" data-open-theory-tools="share" type="button">이론</button>
+                  <button class="secondary-button" data-open-score-books="share" type="button">악보집</button>
                   <button class="secondary-button useful-sites-button" data-open-useful-sites type="button">유용한 사이트</button>
                 </div>
                 <div class="share-actions">
@@ -596,6 +602,16 @@
             사용 코드
             <input id="practiceChords" type="text" placeholder="쉼표로 구분: A, E, F#m7, D" />
           </label>
+          <section class="score-book-assignment-field">
+            <div class="field-head">
+              <strong>악보집</strong>
+            </div>
+            <div id="blockScoreBookOptions" class="score-book-option-list"></div>
+            <label>
+              새 악보집
+              <input id="newScoreBookName" type="text" placeholder="예: 초급 가요 악보집" />
+            </label>
+          </section>
         </div>
         <section class="practice-skill-fields" id="practiceSkillFields"></section>
         <section class="block-asset-panel">
@@ -801,6 +817,26 @@
           <div class="theory-tool-head"><div><h3>하모닉 코드</h3><p>3도씩 쌓인 음의 위치와 도수별 역할을 함께 확인합니다.</p></div></div>
           <div class="theory-reading-page"><section class="harmonic-code-figure"><img class="harmonic-code-diagram" src="theory-materials/harmonic-chord-transparent.png" alt="1도, 3도, 5도, 7도, 9도 이상의 위치와 역할을 음표에 맞춰 표시한 하모닉 코드 도식" /></section><section><h4>코드 표기법</h4><div class="chord-notation-demo"><strong>C</strong><div><span>#</span><span>b5</span><span>m</span><span>7</span></div></div></section></div>
         </section>
+      </div>
+    </dialog>
+
+    <dialog id="scoreBooksDialog">
+      <div class="dialog-card score-books-dialog-card">
+        <div class="dialog-head">
+          <div>
+            <p class="eyebrow">Score books</p>
+            <h2>악보집</h2>
+          </div>
+          <button class="icon-button" id="closeScoreBooks" type="button" aria-label="악보집 닫기">×</button>
+        </div>
+        <div class="score-books-toolbar">
+          <div id="scoreBookTabs" class="segmented score-book-tabs" aria-label="악보집 선택"></div>
+          <label class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="scoreBookSearch" type="search" placeholder="곡 제목 검색" />
+          </label>
+        </div>
+        <div id="scoreBookContent" class="score-book-content"></div>
       </div>
     </dialog>
 

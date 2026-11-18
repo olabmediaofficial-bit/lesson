@@ -381,6 +381,7 @@ const starterData = {
   customChords: [],
   customRhythms: [],
   customLicks: [],
+  scoreBooks: [],
   blocks: [
     {
       id: "blk-1",
@@ -466,6 +467,8 @@ let activeChordStudentFilter = activeStudentId || "";
 let activeChordCategory = "all";
 let activeRhythmCategory = "all";
 let activeLickCategory = "blues";
+let activeScoreBookId = "";
+let scoreBookDialogSource = "room";
 let activeViewedLickId = "";
 let lessonRoomMode = "weekly";
 let scheduleViewMode = "weekly";
@@ -1070,6 +1073,22 @@ function getLickById(id) {
   return lickDictionary().find((lick) => lick.id === id);
 }
 
+function normalizeScoreBook(book = {}) {
+  return {
+    id: book.id || uid("score-book"),
+    name: String(book.name || "").trim() || "이름 없는 악보집",
+    updatedAt: book.updatedAt || nowIso(),
+  };
+}
+
+function scoreBookDictionary() {
+  return (state.scoreBooks || []).map(normalizeScoreBook).sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true }));
+}
+
+function normalizeScoreBookIds(value) {
+  return [...new Set((Array.isArray(value) ? value : []).map(String).filter(Boolean))];
+}
+
 function normalizeRhythmIds(value) {
   const items = Array.isArray(value) ? value : String(value || "").split(",");
   return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
@@ -1100,6 +1119,8 @@ const els = {
   bulkTagInput: $("#bulkTagInput"),
   applyBulkTags: $("#applyBulkTags"),
   deleteSelectedBlocks: $("#deleteSelectedBlocks"),
+  dropScoreBookControl: $("#dropScoreBookControl"),
+  dropScoreBookPicker: $("#dropScoreBookPicker"),
   blockKindTabs: $("#blockKindTabs"),
   bulkCurriculumPanel: $("#bulkCurriculumPanel"),
   libraryInsight: $("#libraryInsight"),
@@ -1302,8 +1323,15 @@ const els = {
   practiceKey: $("#practiceKey"),
   practiceBeat: $("#practiceBeat"),
   practiceChords: $("#practiceChords"),
+  blockScoreBookOptions: $("#blockScoreBookOptions"),
+  newScoreBookName: $("#newScoreBookName"),
   blockChordAssetList: $("#blockChordAssetList"),
   blockRhythmAssetList: $("#blockRhythmAssetList"),
+  scoreBooksDialog: $("#scoreBooksDialog"),
+  closeScoreBooks: $("#closeScoreBooks"),
+  scoreBookTabs: $("#scoreBookTabs"),
+  scoreBookSearch: $("#scoreBookSearch"),
+  scoreBookContent: $("#scoreBookContent"),
   editBlockChords: $("#editBlockChords"),
   drawBlockChord: $("#drawBlockChord"),
   editBlockRhythms: $("#editBlockRhythms"),
@@ -1494,6 +1522,7 @@ function migrateState(data) {
   data.customChords = Array.isArray(data.customChords) ? data.customChords.map(normalizeCustomChord) : [];
   data.customRhythms = Array.isArray(data.customRhythms) ? data.customRhythms.map(normalizeCustomRhythm) : [];
   data.customLicks = Array.isArray(data.customLicks) ? data.customLicks.map(normalizeCustomLick) : [];
+  data.scoreBooks = Array.isArray(data.scoreBooks) ? data.scoreBooks.map(normalizeScoreBook) : [];
   data.blocks = data.blocks.map((block) => ({
     ...block,
     tags: stripLegacyCurriculumTags(block.tags || []),
@@ -1502,6 +1531,7 @@ function migrateState(data) {
     audioLink: block.audioLink || "",
     chords: normalizeChordNames(block.chords || []),
     rhythms: normalizeRhythmIds(block.rhythms || []),
+    scoreBookIds: normalizeScoreBookIds(block.scoreBookIds || []),
     curriculum: migrateBlockCurriculum(block),
     curriculumVersion: 2,
     practice: normalizePractice(block.practice),
@@ -1641,6 +1671,112 @@ function openTheoryToolsDialog(source = "room", toolId = "") {
   renderDiatonicPractice();
   renderTheoryWorkbooks();
   els.theoryToolsDialog?.showModal();
+}
+
+function scoreBookResources(block) {
+  const resources = [
+    ...normalizeScores(block),
+    ...normalizeResources(block).filter((resource) => resourceType(resource) === "pdf"),
+  ];
+  const seen = new Set();
+  return resources.filter((resource) => {
+    const href = resourceHref(resource);
+    if (!href || seen.has(href)) return false;
+    seen.add(href);
+    return true;
+  });
+}
+
+function scoreBookBlocks(bookId) {
+  return state.blocks
+    .filter((block) => block.kind === "practice" && normalizeScoreBookIds(block.scoreBookIds).includes(bookId))
+    .filter((block) => scoreBookResources(block).length)
+    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "ko", { numeric: true }));
+}
+
+function scoreBookImageItems(bookId, query = "") {
+  const normalizedQuery = normalizeText(query);
+  return scoreBookBlocks(bookId)
+    .filter((block) => !normalizedQuery || normalizeText(block.title).includes(normalizedQuery))
+    .flatMap((block) => scoreBookResources(block)
+      .filter((resource) => resourceType(resource) === "image")
+      .map((resource, pageIndex) => ({
+        src: resourceHref(resource),
+        title: block.title,
+        blockId: block.id,
+        pageIndex,
+      })));
+}
+
+function renderScoreBookControls() {
+  if (!els.dropScoreBookPicker) return;
+  const books = scoreBookDictionary();
+  const previous = els.dropScoreBookPicker.value;
+  els.dropScoreBookControl.hidden = activeKindFilter !== "practice";
+  els.dropScoreBookPicker.innerHTML = `<option value="">악보집 미지정</option>${books.map((book) => `<option value="${escapeHTML(book.id)}">${escapeHTML(book.name)}</option>`).join("")}`;
+  if (books.some((book) => book.id === previous)) els.dropScoreBookPicker.value = previous;
+}
+
+function renderBlockScoreBookOptions(selectedIds = []) {
+  if (!els.blockScoreBookOptions) return;
+  const selected = new Set(normalizeScoreBookIds(selectedIds));
+  const books = scoreBookDictionary();
+  els.blockScoreBookOptions.innerHTML = books.length
+    ? books.map((book) => `<label><input type="checkbox" data-block-score-book="${escapeHTML(book.id)}" ${selected.has(book.id) ? "checked" : ""} /> <span>${escapeHTML(book.name)}</span></label>`).join("")
+    : `<span class="empty-inline">아직 만든 악보집이 없습니다. 아래에 새 이름을 입력하면 함께 만들어집니다.</span>`;
+}
+
+function openScoreBooksDialog(source = "room") {
+  scoreBookDialogSource = source;
+  const books = scoreBookDictionary();
+  if (!books.some((book) => book.id === activeScoreBookId)) activeScoreBookId = books[0]?.id || "";
+  if (els.scoreBookSearch) els.scoreBookSearch.value = "";
+  renderScoreBooksDialog();
+  els.scoreBooksDialog?.showModal();
+}
+
+function renderScoreBooksDialog() {
+  if (!els.scoreBookContent || !els.scoreBookTabs) return;
+  const books = scoreBookDictionary();
+  els.scoreBookTabs.innerHTML = books.map((book) => {
+    const count = scoreBookBlocks(book.id).length;
+    return `<button class="${book.id === activeScoreBookId ? "active" : ""}" type="button" data-score-book-tab="${escapeHTML(book.id)}">${escapeHTML(book.name)} <span>${count}</span></button>`;
+  }).join("");
+  if (!books.length) {
+    els.scoreBookContent.innerHTML = `<div class="empty">실습 블럭 편집에서 악보집을 만들고 곡을 연결해주세요.</div>`;
+    return;
+  }
+  const query = normalizeText(els.scoreBookSearch?.value || "");
+  const blocks = scoreBookBlocks(activeScoreBookId).filter((block) => !query || normalizeText(block.title).includes(query));
+  const imageItems = scoreBookImageItems(activeScoreBookId, els.scoreBookSearch?.value || "");
+  let imageIndex = 0;
+  els.scoreBookContent.innerHTML = blocks.length
+    ? blocks.map((block) => {
+        const resources = scoreBookResources(block);
+        const pages = resources.map((resource) => {
+          if (resourceType(resource) === "image") {
+            const currentIndex = imageIndex;
+            imageIndex += 1;
+            return `<button class="score-book-page" type="button" data-score-book-page="${currentIndex}"><img src="${escapeHTML(resourceHref(resource))}" alt="${escapeHTML(block.title)} 악보" loading="lazy" /></button>`;
+          }
+          return `<a class="score-book-pdf" href="${escapeHTML(resourceHref(resource))}" target="_blank" rel="noreferrer"><strong>PDF 악보 열기</strong><span>${escapeHTML(resourceLabel(resource))}</span></a>`;
+        }).join("");
+        const canAttach = !publicShareMode && scoreBookDialogSource === "room";
+        const isPending = pendingBlockIds.has(block.id);
+        return `<article class="score-book-song">
+          <header><div><span>실습곡</span><h3>${escapeHTML(block.title)}</h3></div>${canAttach ? `<button class="secondary-button mini-button" type="button" data-add-score-book-block="${escapeHTML(block.id)}" ${isPending ? "disabled" : ""}>${isPending ? "추가됨" : "이번 일지에 넣기"}</button>` : ""}</header>
+          <div class="score-book-pages">${pages}</div>
+        </article>`;
+      }).join("")
+    : `<div class="empty">${query ? "검색 결과가 없습니다." : "이 악보집에 연결된 실습곡이 없습니다."}</div>`;
+  els.scoreBookContent.dataset.imageCount = String(imageItems.length);
+}
+
+function openScoreBookPage(index) {
+  const items = scoreBookImageItems(activeScoreBookId, els.scoreBookSearch?.value || "");
+  if (!items.length) return;
+  imageViewerStack = [];
+  openImageViewerItems(items, Math.min(items.length - 1, Math.max(0, Number(index) || 0)), { mode: "score-book" });
 }
 
 async function persistTheoryPractice(student) {
@@ -2178,6 +2314,7 @@ function openImageViewerItems(items, index = 0, options = {}) {
   };
   els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || imageViewer.mode === "rhythm" || imageViewer.mode === "chord-grid");
   els.imageViewerDialog.classList.toggle("lick-only", imageViewer.mode === "lick");
+  els.imageViewerDialog.classList.toggle("score-book-only", imageViewer.mode === "score-book");
   els.imageViewerDialog.classList.toggle("rhythm-only", imageViewer.mode === "rhythm");
   els.imageViewerDialog.classList.toggle("chord-grid-mode", imageViewer.mode === "chord-grid");
   els.imageViewerDialog.showModal();
@@ -2191,6 +2328,7 @@ function closeImageViewer() {
   els.imageViewerDialog.classList.remove("rhythm-only");
   els.imageViewerDialog.classList.remove("chord-grid-mode");
   els.imageViewerDialog.classList.remove("lick-only");
+  els.imageViewerDialog.classList.remove("score-book-only");
   imageViewerStack = [];
   els.imageViewerImage.src = "";
 }
@@ -2214,6 +2352,7 @@ function updateImageViewer() {
   if (imageScroll) imageScroll.hidden = isChordGrid;
   els.imageViewerDialog.classList.toggle("chord-only", imageViewer.mode === "chord" || imageViewer.mode === "rhythm" || isChordGrid);
   els.imageViewerDialog.classList.toggle("lick-only", imageViewer.mode === "lick");
+  els.imageViewerDialog.classList.toggle("score-book-only", imageViewer.mode === "score-book");
   els.imageViewerDialog.classList.toggle("rhythm-only", imageViewer.mode === "rhythm");
   els.imageViewerDialog.classList.toggle("chord-grid-mode", isChordGrid);
 
@@ -2259,7 +2398,7 @@ function practiceTempoForBlock(block) {
 }
 
 function syncImageViewerMetronomeTempo() {
-  if (imageViewer.mode !== "score") return;
+  if (!["score", "score-book"].includes(imageViewer.mode)) return;
   const block = currentImageViewerBlock();
   const nextTempo = practiceTempoForBlock(block);
   if (metronome.tempo === nextTempo) return;
@@ -4026,6 +4165,7 @@ function renderLibrary() {
   renderCurriculumFinder();
   renderBulkCurriculumPanel();
   renderLibraryInsight();
+  renderScoreBookControls();
   const blocks = filteredBlocks();
   els.materialCount.textContent = blocks.length;
 
@@ -8413,6 +8553,8 @@ function openBlockDialog(blockId = "") {
   els.practiceKey.value = practice.key || "";
   els.practiceBeat.value = practice.beat || "";
   els.practiceChords.value = normalizeChordNames(block?.chords || []).map((name) => getChordByName(name)?.name || name).join(", ");
+  renderBlockScoreBookOptions(block?.scoreBookIds || []);
+  if (els.newScoreBookName) els.newScoreBookName.value = "";
   els.practiceCategories.forEach((checkbox) => {
     checkbox.checked = practice.categories.includes(checkbox.value);
   });
@@ -8607,6 +8749,7 @@ async function createBlocksFromDroppedFiles(files) {
       chords: [],
       rhythms: [],
       practice: normalizePractice(),
+      scoreBookIds: kind === "practice" && els.dropScoreBookPicker?.value ? [els.dropScoreBookPicker.value] : [],
       scores: kind === "practice" && resourceType(resource) === "image" ? [resource] : [],
       resources: kind === "practice" && resourceType(resource) === "image" ? [] : [resource],
       updatedAt: nowIso(),
@@ -8644,6 +8787,16 @@ $("#materialForm").addEventListener("submit", async (event) => {
     const scoreFileResources = await Promise.all([...els.newScoreFiles.files].map(readFileAsUploadedResource));
     const fileResources = await Promise.all([...els.newFiles.files].map(readFileAsUploadedResource));
     const kind = $("#newType").value;
+    const selectedScoreBookIds = [...document.querySelectorAll("[data-block-score-book]:checked")].map((input) => input.dataset.blockScoreBook);
+    const newScoreBookName = els.newScoreBookName?.value.trim() || "";
+    if (kind === "practice" && newScoreBookName) {
+      let book = scoreBookDictionary().find((item) => normalizeText(item.name) === normalizeText(newScoreBookName));
+      if (!book) {
+        book = normalizeScoreBook({ name: newScoreBookName });
+        state.scoreBooks = [...(state.scoreBooks || []), book];
+      }
+      selectedScoreBookIds.push(book.id);
+    }
     const tags = parseTags($("#newTags").value).filter((tag) => !isCurriculumSkillTag(tag));
     const editedChords = normalizeChordNames([...editingBlockChordNames, ...normalizeChordNames(els.practiceChords.value)]);
     const block = {
@@ -8655,6 +8808,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
       audioLink: els.newAudioLink.value.trim(),
       chords: editedChords,
       rhythms: normalizeRhythmIds(editingBlockRhythmIds),
+      scoreBookIds: kind === "practice" ? normalizeScoreBookIds(selectedScoreBookIds) : [],
       curriculum: selectedBlockCurriculum(),
       curriculumVersion: 2,
       updatedAt: nowIso(),
@@ -9016,6 +9170,32 @@ document.querySelectorAll("[data-open-useful-sites]").forEach((button) => {
 els.closeUsefulSites?.addEventListener("click", () => els.usefulSitesDialog.close());
 document.querySelectorAll("[data-open-theory-tools]").forEach((button) => {
   button.addEventListener("click", () => openTheoryToolsDialog(button.dataset.openTheoryTools));
+});
+document.querySelectorAll("[data-open-score-books]").forEach((button) => {
+  button.addEventListener("click", () => openScoreBooksDialog(button.dataset.openScoreBooks));
+});
+els.closeScoreBooks?.addEventListener("click", () => els.scoreBooksDialog.close());
+els.scoreBookSearch?.addEventListener("input", renderScoreBooksDialog);
+els.scoreBookTabs?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-score-book-tab]");
+  if (!button) return;
+  activeScoreBookId = button.dataset.scoreBookTab;
+  renderScoreBooksDialog();
+});
+els.scoreBookContent?.addEventListener("click", (event) => {
+  const page = event.target.closest("[data-score-book-page]");
+  if (page) {
+    openScoreBookPage(Number(page.dataset.scoreBookPage));
+    return;
+  }
+  const addButton = event.target.closest("[data-add-score-book-block]");
+  if (!addButton) return;
+  const block = getBlock(addButton.dataset.addScoreBookBlock);
+  if (!block) return;
+  pendingBlockIds.add(block.id);
+  renderLessonPicker();
+  renderScoreBooksDialog();
+  showToast(`${block.title} 블럭을 이번 날짜에 붙였습니다.`);
 });
 let draggedTheoryToolId = "";
 els.theoryToolMenu?.addEventListener("dragstart", (event) => {

@@ -99,6 +99,7 @@ async function handleRoom(request, env) {
     if (request.method !== "GET") return text("Method not allowed", 405);
 
     const blockIds = new Set(student.lessons.flatMap((lesson) => lesson.blockIds || []));
+    state.blocks.filter((block) => block.kind === "practice" && Array.isArray(block.scoreBookIds) && block.scoreBookIds.length).forEach((block) => blockIds.add(block.id));
     const blocks = state.blocks.filter((block) => blockIds.has(block.id));
     const customChords = (state.customChords || []).filter((chord) => !chord.studentId || chord.studentId === student.id);
     const rhythmIds = new Set(blocks.flatMap((block) => block.rhythms || []));
@@ -111,6 +112,8 @@ async function handleRoom(request, env) {
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
       usefulSites: state.usefulSites,
+      scoreBooks: state.scoreBooks || [],
+      theoryToolOrder: state.theoryToolOrder,
     });
   } catch (error) {
     return json({ error: "Room storage unavailable", detail: error.message || String(error) }, 500);
