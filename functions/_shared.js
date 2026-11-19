@@ -39,6 +39,18 @@ export async function readState(env) {
 export async function writeState(env, state) {
   ensureDatabase(env);
   await env.LESSON_DB.prepare(
+    "create table if not exists lesson_app_state_history (backup_id integer primary key autoincrement, state_id text not null, state text not null, created_at text not null)",
+  ).run();
+  const previous = await env.LESSON_DB.prepare("select state from lesson_app_state where id = ? limit 1").bind(STATE_ID).first();
+  if (previous?.state) {
+    await env.LESSON_DB.prepare("insert into lesson_app_state_history (state_id, state, created_at) values (?, ?, ?)")
+      .bind(STATE_ID, previous.state, new Date().toISOString())
+      .run();
+    await env.LESSON_DB.prepare(
+      "delete from lesson_app_state_history where state_id = ? and backup_id not in (select backup_id from lesson_app_state_history where state_id = ? order by backup_id desc limit 100)",
+    ).bind(STATE_ID, STATE_ID).run();
+  }
+  await env.LESSON_DB.prepare(
     "insert into lesson_app_state (id, state, updated_at) values (?, ?, ?) on conflict(id) do update set state = excluded.state, updated_at = excluded.updated_at",
   )
     .bind(STATE_ID, JSON.stringify(state), new Date().toISOString())
@@ -149,6 +161,32 @@ export function mergeState(serverState, incomingState) {
   };
 }
 
+export function mergeTheoryPractice(existing = {}, incoming = {}) {
+  const existingTime = Date.parse(existing?.updatedAt || "");
+  const incomingTime = Date.parse(incoming?.updatedAt || "");
+  if (!Number.isNaN(existingTime) || !Number.isNaN(incomingTime)) {
+    if (Number.isNaN(incomingTime)) return existing;
+    if (Number.isNaN(existingTime) || incomingTime >= existingTime) return incoming;
+    return existing;
+  }
+  return mergeTheoryValues(existing, incoming);
+}
+
+function mergeTheoryValues(existing, incoming) {
+  if (Array.isArray(existing) || Array.isArray(incoming)) {
+    const previous = Array.isArray(existing) ? existing : [];
+    const next = Array.isArray(incoming) ? incoming : [];
+    return Array.from({ length: Math.max(previous.length, next.length) }, (_, index) => mergeTheoryValues(previous[index], next[index]));
+  }
+  if ((existing && typeof existing === "object") || (incoming && typeof incoming === "object")) {
+    const previous = existing && typeof existing === "object" ? existing : {};
+    const next = incoming && typeof incoming === "object" ? incoming : {};
+    return Object.fromEntries([...new Set([...Object.keys(previous), ...Object.keys(next)])].map((key) => [key, mergeTheoryValues(previous[key], next[key])]));
+  }
+  if (incoming === "" || incoming === null || incoming === undefined) return existing ?? incoming ?? "";
+  return incoming;
+}
+
 function mergeCustomChords(serverChords = [], incomingChords = []) {
   const chords = new Map();
   const keyFor = (chord) => chord.id || `${chord.studentId || "global"}:${String(chord.name || "").trim().toLowerCase()}`;
@@ -202,6 +240,7 @@ function mergeStudents(serverStudents = [], incomingStudents = []) {
         ...(existing?.practiceProgress || {}),
         ...(student.practiceProgress || {}),
       },
+      theoryPractice: mergeTheoryPractice(existing?.theoryPractice, student.theoryPractice),
       lessons: mergeLessons(existing?.lessons || [], student.lessons || []),
     });
   });

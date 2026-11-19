@@ -360,6 +360,24 @@ menu {
   box-shadow: var(--shadow);
 }
 
+.curriculum-finder-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  color: var(--accent-strong);
+  background: #fbf0e4;
+  cursor: pointer;
+  list-style: none;
+}
+
+.curriculum-finder-toggle::-webkit-details-marker { display: none; }
+.curriculum-finder-toggle span { display: flex; align-items: baseline; gap: 10px; }
+.curriculum-finder-toggle b { font-size: 15px; }
+.curriculum-finder-toggle small { color: var(--muted); font-weight: 700; }
+.curriculum-finder-toggle::after { content: "+"; font-size: 20px; font-weight: 900; }
+.curriculum-finder[open] > .curriculum-finder-toggle::after { content: "−"; }
+
 .curriculum-finder-head {
   display: flex;
   align-items: center;
@@ -763,6 +781,24 @@ textarea {
   width: 100%;
 }
 
+.bulk-practice-metadata {
+  display: grid;
+  grid-template-columns: minmax(220px, .8fr) minmax(420px, 2fr) 110px auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfaf7;
+}
+
+.bulk-practice-metadata fieldset { display: flex; flex-wrap: wrap; gap: 7px 12px; min-width: 0; margin: 0; padding: 8px 10px; border: 1px solid rgba(166, 125, 92, .25); border-radius: 6px; }
+.bulk-practice-metadata legend { padding: 0 4px; color: var(--accent-strong); font-size: 12px; font-weight: 900; }
+.bulk-practice-metadata label { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; }
+.bulk-practice-metadata input[type="checkbox"] { width: 14px; min-height: 14px; accent-color: var(--accent); }
+.bulk-tempo-field { display: grid !important; gap: 5px !important; }
+.bulk-tempo-field input { width: 100%; }
+
 .bulk-curriculum-grid details {
   padding: 7px 0;
   border-top: 1px solid rgba(166, 125, 92, 0.15);
@@ -828,6 +864,9 @@ textarea {
   border-radius: 8px;
   background: #fff;
 }
+
+.block-card.drag-selected { border-color: var(--accent); background: #fff3e6; box-shadow: 0 0 0 2px rgba(184, 117, 69, .18); }
+.library-selection-marquee { position: fixed; z-index: 9999; border: 1px solid var(--accent); background: rgba(184, 117, 69, .12); pointer-events: none; }
 
 .block-card {
   min-height: 0;
@@ -5093,14 +5132,31 @@ dialog::backdrop {
 }
 
 .score-books-toolbar .search-box {
-  flex: 0 0 min(300px, 32vw);
+  flex: 0 0 min(260px, 28vw);
 }
+
+.score-book-search-box { display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: center; gap: 6px; min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.score-book-search-box span { display: grid; width: 20px; height: 20px; place-items: center; color: var(--muted); line-height: 1; }
+.score-book-search-box input { width: 100%; min-height: 36px; padding: 0; border: 0; outline: 0; background: transparent; box-shadow: none; }
+
+.score-book-sort { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.score-book-sort button { min-height: 30px; padding: 4px 9px; border: 0; border-radius: 4px; color: var(--muted); background: transparent; font-weight: 800; }
+.score-book-sort button.active { color: #fff; background: var(--accent); }
+.score-book-sort button.active::after { margin-left: 5px; content: "오름"; font-size: 10px; opacity: .82; }
+.score-book-sort button.active[data-direction="desc"]::after { content: "내림"; }
 
 .score-book-content {
   overflow: auto;
   padding: 0 20px 32px;
   scroll-behavior: smooth;
 }
+
+.score-book-song-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.score-book-song-open { display: grid; grid-template-columns: minmax(220px, 1.5fr) minmax(70px, .45fr) minmax(100px, .55fr) minmax(140px, .8fr); align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 9px 12px; border: 0; border-radius: 5px; color: var(--ink); background: transparent; text-align: left; }
+.score-book-song-open:hover { background: #f8efe6; }
+.score-book-song-open strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.score-book-song-open span { display: grid; gap: 2px; color: #5f5248; font-size: 13px; }
+.score-book-song-open span b { color: var(--muted); font-size: 10px; text-transform: uppercase; }
 
 .score-book-song {
   padding: 24px 0 30px;
@@ -5261,6 +5317,11 @@ dialog::backdrop {
     padding-inline: 12px;
   }
 
+  .score-book-sort { overflow-x: auto; }
+  .score-book-song-row { align-items: stretch; flex-direction: column; }
+  .score-book-song-open { grid-template-columns: minmax(0, 1fr) repeat(3, auto); }
+  .score-book-song-open strong { grid-column: 1 / -1; }
+
   .score-book-song > header {
     align-items: flex-start;
     flex-direction: column;
@@ -5279,6 +5340,12 @@ dialog::backdrop {
     grid-column: 3;
     grid-row: 1;
   }
+}
+
+@media (max-width: 980px) {
+  .bulk-practice-metadata { grid-template-columns: 1fr 1fr; }
+  .practice-category-fields,
+  .practice-genre-fields { grid-column: 1 / -1; }
 }
 
 .image-viewer-dialog.chord-only .image-viewer-actions {
@@ -5971,6 +6038,7 @@ dialog::backdrop {
   border-right: 2px solid #ad1822;
   border-bottom: 2px solid #ad1822;
   border-left: 2px solid #ad1822;
+  transform: scaleY(-1);
 }
 
 .analysis-motion {
@@ -6481,7 +6549,7 @@ dialog::backdrop {
 
 .practice-category-fields {
   display: flex;
-  grid-column: 1 / -1;
+  grid-column: span 1;
   flex-wrap: wrap;
   gap: 8px 14px;
   margin: 0;
@@ -6489,6 +6557,8 @@ dialog::backdrop {
   border: 1px solid rgba(185, 130, 85, 0.16);
   border-radius: 8px;
 }
+
+.practice-genre-fields { grid-column: span 2; }
 
 .practice-category-fields legend {
   padding: 0 6px;

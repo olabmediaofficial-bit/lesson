@@ -302,11 +302,38 @@ function mergeStudents(serverStudents = [], incomingStudents = []) {
     students.set(student.id, {
       ...(existing || {}),
       ...student,
+      theoryPractice: mergeTheoryPractice(existing?.theoryPractice, student.theoryPractice),
       lessons: mergeLessons(existing?.lessons || [], student.lessons || []),
     });
   });
 
   return [...students.values()];
+}
+
+function mergeTheoryPractice(existing = {}, incoming = {}) {
+  const existingTime = Date.parse(existing?.updatedAt || "");
+  const incomingTime = Date.parse(incoming?.updatedAt || "");
+  if (!Number.isNaN(existingTime) || !Number.isNaN(incomingTime)) {
+    if (Number.isNaN(incomingTime)) return existing;
+    if (Number.isNaN(existingTime) || incomingTime >= existingTime) return incoming;
+    return existing;
+  }
+  return mergeTheoryValues(existing, incoming);
+}
+
+function mergeTheoryValues(existing, incoming) {
+  if (Array.isArray(existing) || Array.isArray(incoming)) {
+    const previous = Array.isArray(existing) ? existing : [];
+    const next = Array.isArray(incoming) ? incoming : [];
+    return Array.from({ length: Math.max(previous.length, next.length) }, (_, index) => mergeTheoryValues(previous[index], next[index]));
+  }
+  if ((existing && typeof existing === "object") || (incoming && typeof incoming === "object")) {
+    const previous = existing && typeof existing === "object" ? existing : {};
+    const next = incoming && typeof incoming === "object" ? incoming : {};
+    return Object.fromEntries([...new Set([...Object.keys(previous), ...Object.keys(next)])].map((key) => [key, mergeTheoryValues(previous[key], next[key])]));
+  }
+  if (incoming === "" || incoming === null || incoming === undefined) return existing ?? incoming ?? "";
+  return incoming;
 }
 
 function mergeBlocks(serverBlocks = [], incomingBlocks = []) {
@@ -504,7 +531,7 @@ async function handlePublicRoom(request, response) {
   if (request.method === "POST") {
     try {
       const body = await readJsonBody(request, 256 * 1024);
-      student.theoryPractice = sanitizeTheoryPractice(body.theoryPractice);
+      student.theoryPractice = mergeTheoryPractice(student.theoryPractice, sanitizeTheoryPractice(body.theoryPractice));
       await writeState(state);
       send(response, 200, JSON.stringify({ ok: true }), "application/json; charset=utf-8");
     } catch (error) {
@@ -552,8 +579,9 @@ function sanitizeTheoryPractice(value = {}) {
     },
   ]));
   return {
+    updatedAt: String(value?.updatedAt || "").slice(0, 40),
     fretboard: {
-      cells: Array.from({ length: 36 }, (_, index) => String(value?.fretboard?.cells?.[index] || "").slice(0, 20)),
+      cells: Array.from({ length: 78 }, (_, index) => String(value?.fretboard?.cells?.[index] || "").slice(0, 20)),
       scaleNames: Array.from({ length: 7 }, (_, index) => String(value?.fretboard?.scaleNames?.[index] || "").slice(0, 20)),
     },
     triads: { rows: sanitizeChordRows(value?.triads?.rows, 3) },

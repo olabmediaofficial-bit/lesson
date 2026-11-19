@@ -471,6 +471,7 @@ let activeScoreBookId = "";
 let scoreBookDialogSource = "room";
 let scoreBookManageMode = false;
 let draggedScoreBookId = "";
+let scoreBookSort = { field: "title", direction: "asc" };
 let activeViewedLickId = "";
 let lessonRoomMode = "weekly";
 let scheduleViewMode = "weekly";
@@ -492,6 +493,8 @@ let openBlockCurriculumGroups = new Set();
 let openProgressCurriculumGroups = new Set();
 let blockCurriculumSearch = "";
 let bulkCurriculumSearch = "";
+let libraryDragSelection = null;
+let suppressLibraryClickUntil = 0;
 let selectedChordNames = [];
 let selectedRhythmIds = [];
 let editingBlockChordNames = [];
@@ -584,6 +587,8 @@ let lickBuilder = {
 };
 let visibleFretboardNotes = new Set();
 const DIATONIC_TABLE_KEYS = ["C", "G", "D", "A", "E", "B", "F# (=Gb)", "Gb (=F#)", "Db", "Ab", "Eb", "Bb", "F"];
+const PRACTICE_CATEGORIES = ["가요", "팝", "찬양", "그외"];
+const PRACTICE_GENRES = ["Ballad", "Rock", "Pop", "R&B", "Jazz", "Folk", "Country", "Funk", "Latin", "EDM"];
 const DIATONIC_MINOR_KEYS = ["Am", "Em", "Bm", "F#m", "C#m", "G#m", "D#m (=Ebm)", "Ebm (=D#m)", "Bbm", "Fm", "Cm", "Gm", "Dm"];
 const DIATONIC_TYPES = {
   major: { label: "메이저 스케일", description: "메이저 스케일(Major Scale) : 3-4, 7-8을 반음으로 하는 밝은 색채의 음계", keys: DIATONIC_TABLE_KEYS },
@@ -1338,6 +1343,7 @@ const els = {
   closeScoreBooks: $("#closeScoreBooks"),
   scoreBookTabs: $("#scoreBookTabs"),
   scoreBookSearch: $("#scoreBookSearch"),
+  scoreBookSort: $("#scoreBookSort"),
   manageScoreBooks: $("#manageScoreBooks"),
   scoreBookContent: $("#scoreBookContent"),
   editBlockChords: $("#editBlockChords"),
@@ -1346,6 +1352,7 @@ const els = {
   drawBlockRhythm: $("#drawBlockRhythm"),
   practiceSkillFields: $("#practiceSkillFields"),
   practiceCategories: document.querySelectorAll('input[name="practiceCategory"]'),
+  practiceGenres: document.querySelectorAll('input[name="practiceGenre"]'),
   appShell: $(".app-shell"),
   adminLogin: $("#adminLogin"),
   adminLoginForm: $("#adminLoginForm"),
@@ -1698,14 +1705,32 @@ function scoreBookResources(block) {
 function scoreBookBlocks(bookId) {
   return state.blocks
     .filter((block) => block.kind === "practice" && normalizeScoreBookIds(block.scoreBookIds).includes(bookId))
-    .filter((block) => scoreBookResources(block).length)
-    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "ko", { numeric: true }));
+    .filter((block) => scoreBookResources(block).length);
+}
+
+function scoreBookGenreLabel(block) {
+  return normalizePractice(block?.practice).genres.join(", ") || "-";
+}
+
+function sortedScoreBookBlocks(bookId, query = "") {
+  const normalizedQuery = normalizeText(query);
+  const direction = scoreBookSort.direction === "desc" ? -1 : 1;
+  return scoreBookBlocks(bookId)
+    .filter((block) => !normalizedQuery || normalizeText(block.title).includes(normalizedQuery))
+    .sort((a, b) => {
+      const aPractice = normalizePractice(a.practice);
+      const bPractice = normalizePractice(b.practice);
+      let comparison = 0;
+      if (scoreBookSort.field === "tempo") comparison = (Number(aPractice.tempo) || 0) - (Number(bPractice.tempo) || 0);
+      else if (scoreBookSort.field === "key") comparison = String(aPractice.key || "").localeCompare(String(bPractice.key || ""), "en", { numeric: true });
+      else if (scoreBookSort.field === "genre") comparison = scoreBookGenreLabel(a).localeCompare(scoreBookGenreLabel(b), "en");
+      else comparison = String(a.title || "").localeCompare(String(b.title || ""), "ko", { numeric: true });
+      return comparison * direction || String(a.title || "").localeCompare(String(b.title || ""), "ko", { numeric: true });
+    });
 }
 
 function scoreBookImageItems(bookId, query = "") {
-  const normalizedQuery = normalizeText(query);
-  return scoreBookBlocks(bookId)
-    .filter((block) => !normalizedQuery || normalizeText(block.title).includes(normalizedQuery))
+  return sortedScoreBookBlocks(bookId, query)
     .flatMap((block) => scoreBookResources(block)
       .filter((resource) => resourceType(resource) === "image")
       .map((resource, pageIndex) => ({
@@ -1755,6 +1780,7 @@ function renderScoreBooksDialog() {
   }
   els.scoreBookTabs.hidden = scoreBookManageMode;
   els.scoreBookSearch.closest("label")?.toggleAttribute("hidden", scoreBookManageMode);
+  if (els.scoreBookSort) els.scoreBookSort.hidden = scoreBookManageMode;
   if (scoreBookManageMode && canManage) {
     renderScoreBookManager(books);
     return;
@@ -1767,30 +1793,30 @@ function renderScoreBooksDialog() {
     els.scoreBookContent.innerHTML = `<div class="empty">실습 블럭 편집에서 악보집을 만들고 곡을 연결해주세요.</div>`;
     return;
   }
-  const query = normalizeText(els.scoreBookSearch?.value || "");
-  const blocks = scoreBookBlocks(activeScoreBookId).filter((block) => !query || normalizeText(block.title).includes(query));
-  const imageItems = scoreBookImageItems(activeScoreBookId, els.scoreBookSearch?.value || "");
-  let imageIndex = 0;
+  const query = els.scoreBookSearch?.value || "";
+  const blocks = sortedScoreBookBlocks(activeScoreBookId, query);
+  els.scoreBookSort?.querySelectorAll("button").forEach((button) => {
+    const active = button.dataset.scoreBookSort === scoreBookSort.field;
+    button.classList.toggle("active", active);
+    button.dataset.direction = active ? scoreBookSort.direction : "";
+    button.setAttribute("aria-label", `${button.textContent.trim()} ${active && scoreBookSort.direction === "desc" ? "내림차순" : "오름차순"}`);
+  });
   els.scoreBookContent.innerHTML = blocks.length
     ? blocks.map((block) => {
-        const resources = scoreBookResources(block);
-        const pages = resources.map((resource) => {
-          if (resourceType(resource) === "image") {
-            const currentIndex = imageIndex;
-            imageIndex += 1;
-            return `<button class="score-book-page" type="button" data-score-book-page="${currentIndex}"><img src="${escapeHTML(resourceHref(resource))}" alt="${escapeHTML(block.title)} 악보" loading="lazy" /></button>`;
-          }
-          return `<a class="score-book-pdf" href="${escapeHTML(resourceHref(resource))}" target="_blank" rel="noreferrer"><strong>PDF 악보 열기</strong><span>${escapeHTML(resourceLabel(resource))}</span></a>`;
-        }).join("");
+        const practice = normalizePractice(block.practice);
         const canAttach = !publicShareMode && scoreBookDialogSource === "room";
         const isPending = pendingBlockIds.has(block.id);
-        return `<article class="score-book-song">
-          <header><div><span>실습곡</span><h3>${escapeHTML(block.title)}</h3></div>${canAttach ? `<button class="secondary-button mini-button" type="button" data-add-score-book-block="${escapeHTML(block.id)}" ${isPending ? "disabled" : ""}>${isPending ? "추가됨" : "이번 일지에 넣기"}</button>` : ""}</header>
-          <div class="score-book-pages">${pages}</div>
+        return `<article class="score-book-song-row">
+          <button class="score-book-song-open" type="button" data-open-score-book-block="${escapeHTML(block.id)}">
+            <strong>${escapeHTML(block.title)}</strong>
+            <span><b>Key</b>${escapeHTML(practice.key || "-")}</span>
+            <span><b>Tempo</b>${practice.tempo ? `${escapeHTML(practice.tempo)} BPM` : "-"}</span>
+            <span><b>Genre</b>${escapeHTML(scoreBookGenreLabel(block))}</span>
+          </button>
+          ${canAttach ? `<button class="secondary-button mini-button" type="button" data-add-score-book-block="${escapeHTML(block.id)}" ${isPending ? "disabled" : ""}>${isPending ? "추가됨" : "이번 일지에 넣기"}</button>` : ""}
         </article>`;
       }).join("")
     : `<div class="empty">${query ? "검색 결과가 없습니다." : "이 악보집에 연결된 실습곡이 없습니다."}</div>`;
-  els.scoreBookContent.dataset.imageCount = String(imageItems.length);
 }
 
 function renderScoreBookManager(books = scoreBookDictionary()) {
@@ -1881,8 +1907,26 @@ function openScoreBookPage(index) {
   openImageViewerItems(items, Math.min(items.length - 1, Math.max(0, Number(index) || 0)), { mode: "score-book" });
 }
 
+function openScoreBookBlock(blockId) {
+  const block = getBlock(blockId);
+  if (!block) return;
+  const resources = scoreBookResources(block);
+  const images = resources.filter((resource) => resourceType(resource) === "image");
+  if (images.length) {
+    const allItems = scoreBookImageItems(activeScoreBookId, els.scoreBookSearch?.value || "");
+    const index = allItems.findIndex((item) => item.blockId === blockId);
+    imageViewerStack = [];
+    openImageViewerItems(allItems, Math.max(0, index), { mode: "score-book" });
+    return;
+  }
+  const firstResource = resources[0];
+  if (firstResource) window.open(resourceHref(firstResource), "_blank", "noopener,noreferrer");
+}
+
 async function persistTheoryPractice(student) {
   if (!student) return;
+  student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
+  student.theoryPractice.updatedAt = nowIso();
   if (!publicShareMode) {
     saveStateInBackground({}, `${student.name}의 이론 노트를 저장했습니다.`);
     return;
@@ -1936,11 +1980,17 @@ function addUsefulSite(event) {
 }
 
 function normalizePractice(practice = {}) {
+  const rawCategories = Array.isArray(practice.categories) ? practice.categories : [];
+  const categories = rawCategories.filter((item) => PRACTICE_CATEGORIES.includes(item));
+  const genres = Array.isArray(practice.genres) ? practice.genres.filter((item) => PRACTICE_GENRES.includes(item)) : [];
+  if (rawCategories.includes("재즈") && !genres.includes("Jazz")) genres.push("Jazz");
+  if (rawCategories.includes("재즈") && !categories.length) categories.push("그외");
   return {
     tempo: practice.tempo || "",
     key: practice.key || "",
     beat: practice.beat || "",
-    categories: Array.isArray(practice.categories) ? practice.categories : [],
+    categories,
+    genres,
     rightHand: practice.rightHand || "",
     leftHand: practice.leftHand || "",
     technique: practice.technique || "",
@@ -2956,6 +3006,10 @@ function openImageMarkupTextEditor(action, position = null) {
   const editor = document.createElement("textarea");
   editor.className = "image-markup-text-editor";
   editor.placeholder = "메모 입력";
+  editor.autocomplete = "off";
+  editor.setAttribute("autocorrect", "off");
+  editor.setAttribute("autocapitalize", "off");
+  editor.spellcheck = false;
   editor.style.left = `${x}%`;
   editor.style.top = `${y}%`;
   if (actionId) {
@@ -3025,6 +3079,12 @@ function openImageMarkupTextEditor(action, position = null) {
   };
   editor.addEventListener("blur", () => finish(false), { once: true });
   editor.addEventListener("keydown", (keyEvent) => {
+    if (keyEvent.key === "=" && !keyEvent.metaKey && !keyEvent.ctrlKey && !keyEvent.altKey) {
+      keyEvent.preventDefault();
+      editor.setRangeText("=", editor.selectionStart, editor.selectionEnd, "end");
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
     if ((keyEvent.metaKey || keyEvent.ctrlKey) && keyEvent.key === "Enter") editor.blur();
     if (keyEvent.key === "Escape") {
       keyEvent.preventDefault();
@@ -4404,6 +4464,12 @@ function renderBulkCurriculumPanel() {
       </div>
     </div>
     <div class="bulk-curriculum-search"><input type="search" data-bulk-curriculum-search value="${escapeHTML(bulkCurriculumSearch)}" placeholder="전체 학습 항목 검색" /></div>
+    <section class="bulk-practice-metadata">
+      <fieldset><legend>분류</legend>${PRACTICE_CATEGORIES.map((item) => `<label><input type="checkbox" data-bulk-category value="${escapeHTML(item)}" />${escapeHTML(item)}</label>`).join("")}</fieldset>
+      <fieldset><legend>장르</legend>${PRACTICE_GENRES.map((item) => `<label><input type="checkbox" data-bulk-genre value="${escapeHTML(item)}" />${escapeHTML(item)}</label>`).join("")}</fieldset>
+      <label class="bulk-tempo-field"><span>템포</span><input type="number" min="1" max="400" inputmode="numeric" data-bulk-tempo placeholder="BPM" /></label>
+      <button class="secondary-button" type="button" data-apply-bulk-metadata>분류 · 장르 · 템포 적용</button>
+    </section>
     <div class="bulk-curriculum-grid">
       ${CURRICULUM_AREAS.map(
         (area) => {
@@ -4425,6 +4491,38 @@ function renderBulkCurriculumPanel() {
       <button class="primary-button" type="button" data-apply-bulk-curriculum>선택 블럭에 적용</button>
     </div>
   `;
+}
+
+function applyBulkPracticeMetadata() {
+  const selectedIds = [...selectedBlockIds].filter((id) => getBlock(id)?.kind === "practice");
+  if (!selectedIds.length) {
+    showToast("먼저 실습 블럭을 선택하세요.");
+    return;
+  }
+  const categories = [...els.bulkCurriculumPanel.querySelectorAll("[data-bulk-category]:checked")].map((input) => input.value);
+  const genres = [...els.bulkCurriculumPanel.querySelectorAll("[data-bulk-genre]:checked")].map((input) => input.value);
+  const tempo = String(els.bulkCurriculumPanel.querySelector("[data-bulk-tempo]")?.value || "").trim();
+  if (!categories.length && !genres.length && !tempo) {
+    showToast("적용할 분류, 장르 또는 템포를 입력하세요.");
+    return;
+  }
+  const selectedSet = new Set(selectedIds);
+  state.blocks = state.blocks.map((block) => {
+    if (!selectedSet.has(block.id)) return block;
+    const practice = normalizePractice(block.practice);
+    return {
+      ...block,
+      practice: {
+        ...practice,
+        categories: categories.length ? categories : practice.categories,
+        genres: genres.length ? genres : practice.genres,
+        tempo: tempo || practice.tempo,
+      },
+      updatedAt: nowIso(),
+    };
+  });
+  render();
+  saveStateInBackground({}, `${selectedIds.length}개 실습 블럭의 정보를 일괄 저장했습니다.`);
 }
 
 function renderLibraryInsight() {
@@ -5676,8 +5774,7 @@ function renderKindGroups(blocks) {
 
 function renderPracticeCategoryGroups(blocks) {
   const practiceBlocks = blocks.filter((block) => block.kind === "practice");
-  const categories = ["가요", "찬양", "재즈", "그외"];
-  return categories
+  return PRACTICE_CATEGORIES
     .map((category) => {
       const group = practiceBlocks.filter((block) => {
         const blockCategories = normalizePractice(block.practice).categories;
@@ -5705,7 +5802,7 @@ function renderBlockGroup(title, blocks) {
 
 function renderBlockCard(block) {
   return `
-    <article class="material-card block-card compact-block-card ${blockKindClass(block.kind)}">
+    <article class="material-card block-card compact-block-card ${blockKindClass(block.kind)}" data-library-block-id="${escapeHTML(block.id)}">
       <label class="block-select-control icon-only">
         <input type="checkbox" data-block-check="${block.id}" ${selectedBlockIds.has(block.id) ? "checked" : ""} aria-label="${escapeHTML(block.title)} 선택" />
       </label>
@@ -5714,6 +5811,71 @@ function renderBlockCard(block) {
       </button>
     </article>
   `;
+}
+
+function selectionRectangle(startX, startY, currentX, currentY) {
+  return {
+    left: Math.min(startX, currentX),
+    top: Math.min(startY, currentY),
+    right: Math.max(startX, currentX),
+    bottom: Math.max(startY, currentY),
+  };
+}
+
+function rectanglesIntersect(a, b) {
+  return a.left <= b.right && a.right >= b.left && a.top <= b.bottom && a.bottom >= b.top;
+}
+
+function beginLibraryDragSelection(event) {
+  if (event.button !== 0 || currentView !== "library" || !els.materialGrid?.contains(event.target)) return;
+  if (event.target.closest("input, button, a, label")) return;
+  const marquee = document.createElement("div");
+  marquee.className = "library-selection-marquee";
+  document.body.append(marquee);
+  libraryDragSelection = {
+    startX: event.clientX,
+    startY: event.clientY,
+    currentX: event.clientX,
+    currentY: event.clientY,
+    moved: false,
+    marquee,
+  };
+  event.preventDefault();
+}
+
+function updateLibraryDragSelection(event) {
+  if (!libraryDragSelection) return;
+  const selection = libraryDragSelection;
+  selection.currentX = event.clientX;
+  selection.currentY = event.clientY;
+  selection.moved ||= Math.hypot(selection.currentX - selection.startX, selection.currentY - selection.startY) > 5;
+  if (!selection.moved) return;
+  const rect = selectionRectangle(selection.startX, selection.startY, selection.currentX, selection.currentY);
+  Object.assign(selection.marquee.style, {
+    left: `${rect.left}px`,
+    top: `${rect.top}px`,
+    width: `${rect.right - rect.left}px`,
+    height: `${rect.bottom - rect.top}px`,
+  });
+  els.materialGrid.querySelectorAll("[data-library-block-id]").forEach((card) => {
+    card.classList.toggle("drag-selected", rectanglesIntersect(rect, card.getBoundingClientRect()));
+  });
+}
+
+function finishLibraryDragSelection() {
+  if (!libraryDragSelection) return;
+  const selection = libraryDragSelection;
+  if (selection.moved) {
+    const rect = selectionRectangle(selection.startX, selection.startY, selection.currentX, selection.currentY);
+    selectedBlockIds.clear();
+    els.materialGrid.querySelectorAll("[data-library-block-id]").forEach((card) => {
+      if (rectanglesIntersect(rect, card.getBoundingClientRect())) selectedBlockIds.add(card.dataset.libraryBlockId);
+    });
+    suppressLibraryClickUntil = Date.now() + 250;
+    renderLibrary();
+  }
+  selection.marquee.remove();
+  libraryDragSelection = null;
 }
 
 function renderBlockViewerContent(block) {
@@ -7267,6 +7429,11 @@ function applyBulkCurriculumTags(mode = "add") {
 }
 
 document.addEventListener("click", (event) => {
+  if (Date.now() < suppressLibraryClickUntil && event.target.closest("[data-library-block-id]")) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
   const lessonTheory = event.target.closest("[data-open-lesson-theory]");
   if (lessonTheory) {
     openTheoryToolsDialog(publicShareMode ? "share" : "room", lessonTheory.dataset.openLessonTheory);
@@ -8030,6 +8197,8 @@ document.addEventListener("dragend", () => {
 });
 
 document.addEventListener("pointerdown", (event) => {
+  beginLibraryDragSelection(event);
+  if (libraryDragSelection) return;
   const handle = event.target.closest("[data-schedule-resize-slot]");
   if (!handle) return;
   const card = handle.closest("[data-schedule-drag-slot]");
@@ -8046,6 +8215,10 @@ document.addEventListener("pointerdown", (event) => {
   };
   card.classList.add("resizing");
 });
+
+document.addEventListener("pointermove", updateLibraryDragSelection);
+document.addEventListener("pointerup", finishLibraryDragSelection);
+document.addEventListener("pointercancel", finishLibraryDragSelection);
 
 document.addEventListener("pointermove", (event) => {
   if (!scheduleResizeState) return;
@@ -8683,6 +8856,11 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  if (event.target.closest("[data-apply-bulk-metadata]")) {
+    applyBulkPracticeMetadata();
+    return;
+  }
+
   if (event.target.closest("[data-clear-bulk-curriculum]")) {
     clearBulkCurriculumChecks();
     return;
@@ -8768,6 +8946,9 @@ function openBlockDialog(blockId = "") {
   if (els.newScoreBookName) els.newScoreBookName.value = "";
   els.practiceCategories.forEach((checkbox) => {
     checkbox.checked = practice.categories.includes(checkbox.value);
+  });
+  els.practiceGenres.forEach((checkbox) => {
+    checkbox.checked = practice.genres.includes(checkbox.value);
   });
   renderPracticeSkillFields();
   els.newFiles.value = "";
@@ -9028,6 +9209,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
         key: els.practiceKey.value,
         beat: els.practiceBeat.value,
         categories: [...els.practiceCategories].filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value),
+        genres: [...els.practiceGenres].filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value),
         rightHand: existing?.practice?.rightHand || "",
         leftHand: existing?.practice?.leftHand || "",
         technique: existing?.practice?.technique || "",
@@ -9387,6 +9569,14 @@ document.querySelectorAll("[data-open-score-books]").forEach((button) => {
 });
 els.closeScoreBooks?.addEventListener("click", () => els.scoreBooksDialog.close());
 els.scoreBookSearch?.addEventListener("input", renderScoreBooksDialog);
+els.scoreBookSort?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-score-book-sort]");
+  if (!button) return;
+  const field = button.dataset.scoreBookSort;
+  if (scoreBookSort.field === field) scoreBookSort.direction = scoreBookSort.direction === "asc" ? "desc" : "asc";
+  else scoreBookSort = { field, direction: "asc" };
+  renderScoreBooksDialog();
+});
 els.manageScoreBooks?.addEventListener("click", () => {
   scoreBookManageMode = !scoreBookManageMode;
   els.manageScoreBooks.classList.toggle("active", scoreBookManageMode);
@@ -9420,6 +9610,11 @@ els.scoreBookContent?.addEventListener("click", (event) => {
   const page = event.target.closest("[data-score-book-page]");
   if (page) {
     openScoreBookPage(Number(page.dataset.scoreBookPage));
+    return;
+  }
+  const openBlock = event.target.closest("[data-open-score-book-block]");
+  if (openBlock) {
+    openScoreBookBlock(openBlock.dataset.openScoreBookBlock);
     return;
   }
   const addButton = event.target.closest("[data-add-score-book-block]");

@@ -1,4 +1,4 @@
-import { json, readJson, readState, text, writeState } from "../_shared.js";
+import { json, mergeTheoryPractice, readJson, readState, text, writeState } from "../_shared.js";
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -14,7 +14,7 @@ export async function onRequest(context) {
 
     if (request.method === "POST") {
       const body = await readJson(request);
-      student.theoryPractice = sanitizeTheoryPractice(body.theoryPractice);
+      student.theoryPractice = mergeTheoryPractice(student.theoryPractice, sanitizeTheoryPractice(body.theoryPractice));
       await writeState(env, state);
       return json({ ok: true });
     }
@@ -52,8 +52,9 @@ function sanitizeTheoryPractice(value = {}) {
     },
   ]));
   return {
+    updatedAt: String(value?.updatedAt || "").slice(0, 40),
     fretboard: {
-      cells: Array.from({ length: 36 }, (_, index) => String(value?.fretboard?.cells?.[index] || "").slice(0, 20)),
+      cells: Array.from({ length: 78 }, (_, index) => String(value?.fretboard?.cells?.[index] || "").slice(0, 20)),
       scaleNames: Array.from({ length: 7 }, (_, index) => String(value?.fretboard?.scaleNames?.[index] || "").slice(0, 20)),
     },
     triads: { rows: sanitizeChordRows(value?.triads?.rows, 3) },

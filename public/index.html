@@ -109,7 +109,10 @@
             <button class="secondary-button" id="assignSelected" type="button">선택 블럭 넣기</button>
           </div>
 
-          <section class="curriculum-finder" aria-labelledby="curriculumFinderTitle">
+          <details class="curriculum-finder" open>
+            <summary class="curriculum-finder-toggle">
+              <span><b>학습 항목으로 블럭 찾기</b><small>학습 항목 기준으로 블럭을 좁혀봅니다.</small></span>
+            </summary>
             <div class="curriculum-finder-head">
               <div>
                 <p class="eyebrow">CURRICULUM FINDER</p>
@@ -119,7 +122,7 @@
               <div class="curriculum-finder-result" id="curriculumFinderResult"></div>
             </div>
             <div class="curriculum-finder-groups" id="curriculumFinder"></div>
-          </section>
+          </details>
 
           <div class="library-layout">
             <section class="panel">
@@ -593,10 +596,23 @@
           </label>
           <fieldset class="practice-category-fields">
             <legend>분류</legend>
-            <label><input type="checkbox" name="practiceCategory" value="찬양" /> 찬양</label>
             <label><input type="checkbox" name="practiceCategory" value="가요" /> 가요</label>
-            <label><input type="checkbox" name="practiceCategory" value="재즈" /> 재즈</label>
+            <label><input type="checkbox" name="practiceCategory" value="팝" /> 팝</label>
+            <label><input type="checkbox" name="practiceCategory" value="찬양" /> 찬양</label>
             <label><input type="checkbox" name="practiceCategory" value="그외" /> 그외</label>
+          </fieldset>
+          <fieldset class="practice-category-fields practice-genre-fields">
+            <legend>장르</legend>
+            <label><input type="checkbox" name="practiceGenre" value="Ballad" /> Ballad</label>
+            <label><input type="checkbox" name="practiceGenre" value="Rock" /> Rock</label>
+            <label><input type="checkbox" name="practiceGenre" value="Pop" /> Pop</label>
+            <label><input type="checkbox" name="practiceGenre" value="R&amp;B" /> R&amp;B</label>
+            <label><input type="checkbox" name="practiceGenre" value="Jazz" /> Jazz</label>
+            <label><input type="checkbox" name="practiceGenre" value="Folk" /> Folk</label>
+            <label><input type="checkbox" name="practiceGenre" value="Country" /> Country</label>
+            <label><input type="checkbox" name="practiceGenre" value="Funk" /> Funk</label>
+            <label><input type="checkbox" name="practiceGenre" value="Latin" /> Latin</label>
+            <label><input type="checkbox" name="practiceGenre" value="EDM" /> EDM</label>
           </fieldset>
           <label>
             사용 코드
@@ -831,10 +847,16 @@
         </div>
         <div class="score-books-toolbar">
           <div id="scoreBookTabs" class="segmented score-book-tabs" aria-label="악보집 선택"></div>
-          <label class="search-box">
+          <label class="search-box score-book-search-box">
             <span aria-hidden="true">⌕</span>
             <input id="scoreBookSearch" type="search" placeholder="곡 제목 검색" />
           </label>
+          <div class="score-book-sort" id="scoreBookSort" aria-label="악보 정렬">
+            <button class="active" type="button" data-score-book-sort="title">이름</button>
+            <button type="button" data-score-book-sort="key">키</button>
+            <button type="button" data-score-book-sort="tempo">템포</button>
+            <button type="button" data-score-book-sort="genre">장르</button>
+          </div>
           <button class="secondary-button" id="manageScoreBooks" type="button">악보집 관리</button>
         </div>
         <div id="scoreBookContent" class="score-book-content"></div>
