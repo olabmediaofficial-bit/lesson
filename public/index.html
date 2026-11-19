@@ -808,7 +808,12 @@
           </div>
           <div class="diatonic-table-wrap" id="theoryDiatonicTable"></div>
           <div class="dialog-actions">
-            <button class="secondary-button" id="clearTheoryDiatonic" type="button">입력 지우기</button>
+            <div class="theory-diatonic-answer-actions" id="theoryDiatonicAnswerActions">
+              <button class="secondary-button" type="button" data-fill-diatonic-section="scale">스케일 채우기</button>
+              <button class="secondary-button" type="button" data-fill-diatonic-section="chords">코드 채우기</button>
+              <button class="secondary-button" type="button" data-clear-diatonic-section="scale">스케일 지우기</button>
+              <button class="secondary-button" type="button" data-clear-diatonic-section="chords">코드 지우기</button>
+            </div>
             <button class="primary-button" id="saveTheoryDiatonic" type="button">저장</button>
           </div>
         </section>

@@ -1269,7 +1269,7 @@ const els = {
   theoryTriadWorkbook: $("#theoryTriadWorkbook"),
   theorySeventhWorkbook: $("#theorySeventhWorkbook"),
   theoryDiatonicTable: $("#theoryDiatonicTable"),
-  clearTheoryDiatonic: $("#clearTheoryDiatonic"),
+  theoryDiatonicAnswerActions: $("#theoryDiatonicAnswerActions"),
   saveTheoryDiatonic: $("#saveTheoryDiatonic"),
   imageViewerDialog: $("#imageViewerDialog"),
   imageViewerTitle: $("#imageViewerTitle"),
@@ -3577,8 +3577,46 @@ function fillEmptyTheoryValues(target, answers) {
   });
 }
 
+function diatonicAnswers(type, key) {
+  const answer = THEORY_DIATONIC_ANSWERS[type];
+  const scale = theorySpellScale(theoryKeyRoot(key), answer.intervals);
+  return {
+    scale,
+    chords: scale.map((note, index) => `${note}${answer.qualities[index]}`),
+  };
+}
+
+function fillDiatonicSection(section) {
+  if (publicShareMode || !["scale", "chords"].includes(section)) return;
+  const student = theoryToolStudent();
+  if (!student) return;
+  student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
+  const type = DIATONIC_TYPES[activeDiatonicType] ? activeDiatonicType : "major";
+  const rows = student.theoryPractice.diatonic.tables[type];
+  DIATONIC_TYPES[type].keys.forEach((key) => {
+    fillEmptyTheoryValues(rows[key][section], diatonicAnswers(type, key)[section]);
+  });
+  renderDiatonicPractice();
+  renderTheoryWorkbooks();
+  persistTheoryPractice(student);
+}
+
+function clearDiatonicSection(section) {
+  if (publicShareMode || !["scale", "chords"].includes(section)) return;
+  const student = theoryToolStudent();
+  if (!student) return;
+  student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
+  const type = DIATONIC_TYPES[activeDiatonicType] ? activeDiatonicType : "major";
+  Object.values(student.theoryPractice.diatonic.tables[type]).forEach((row) => {
+    row[section] = Array(8).fill("");
+  });
+  renderDiatonicPractice();
+  renderTheoryWorkbooks();
+  persistTheoryPractice(student);
+}
+
 function fillCurrentTheoryAnswers() {
-  if (publicShareMode || !["fretboard", "triads", "sevenths", "diatonic"].includes(activeTheoryTool)) return;
+  if (publicShareMode || !["fretboard", "triads", "sevenths"].includes(activeTheoryTool)) return;
   const student = theoryToolStudent();
   if (!student) return;
   student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
@@ -3615,17 +3653,6 @@ function fillCurrentTheoryAnswers() {
       const root = chord.match(/^[A-G](?:#|b)?/)?.[0] || "C";
       const rootPitch = theoryPitchClass(root);
       fillEmptyTheoryValues(practice.sevenths.rows[chord], seventhIntervals(chord).map((interval) => THEORY_NOTE_NAMES_SHARP[(rootPitch + interval) % 12]));
-    });
-  }
-
-  if (activeTheoryTool === "diatonic") {
-    const type = DIATONIC_TYPES[activeDiatonicType] ? activeDiatonicType : "major";
-    const answer = THEORY_DIATONIC_ANSWERS[type];
-    const rows = practice.diatonic.tables[type];
-    DIATONIC_TYPES[type].keys.forEach((key) => {
-      const scale = theorySpellScale(theoryKeyRoot(key), answer.intervals);
-      fillEmptyTheoryValues(rows[key].scale, scale);
-      fillEmptyTheoryValues(rows[key].chords, scale.map((note, index) => `${note}${answer.qualities[index]}`));
     });
   }
 
@@ -3745,7 +3772,8 @@ function renderTheoryWorkbooks() {
   renderTheoryToolMenu();
   document.querySelectorAll("[data-theory-tool]").forEach((button) => button.classList.toggle("active", button.dataset.theoryTool === activeTheoryTool));
   document.querySelectorAll("[data-theory-tool-panel]").forEach((panel) => { panel.hidden = panel.dataset.theoryToolPanel !== activeTheoryTool; });
-  if (els.fillTheoryAnswers) els.fillTheoryAnswers.hidden = publicShareMode || !["fretboard", "triads", "sevenths", "diatonic"].includes(activeTheoryTool);
+  if (els.fillTheoryAnswers) els.fillTheoryAnswers.hidden = publicShareMode || !["fretboard", "triads", "sevenths"].includes(activeTheoryTool);
+  if (els.theoryDiatonicAnswerActions) els.theoryDiatonicAnswerActions.hidden = publicShareMode;
 }
 
 function setTheoryPracticeValue(student, path, value) {
@@ -7580,6 +7608,18 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const fillDiatonic = event.target.closest("[data-fill-diatonic-section]");
+  if (fillDiatonic) {
+    fillDiatonicSection(fillDiatonic.dataset.fillDiatonicSection);
+    return;
+  }
+
+  const clearDiatonic = event.target.closest("[data-clear-diatonic-section]");
+  if (clearDiatonic) {
+    clearDiatonicSection(clearDiatonic.dataset.clearDiatonicSection);
+    return;
+  }
+
   if (event.target.closest("[data-save-theory-workbook]")) {
     persistTheoryPractice(theoryToolStudent());
     return;
@@ -9780,7 +9820,6 @@ els.theoryToolMenu?.addEventListener("dragend", () => {
 });
 els.closeTheoryTools?.addEventListener("click", () => els.theoryToolsDialog.close());
 els.fillTheoryAnswers?.addEventListener("click", fillCurrentTheoryAnswers);
-els.clearTheoryDiatonic?.addEventListener("click", () => clearDiatonicPractice(theoryToolStudent()));
 els.saveTheoryDiatonic?.addEventListener("click", () => persistTheoryPractice(theoryToolStudent()));
 els.usefulSiteForm?.addEventListener("submit", addUsefulSite);
 els.usefulSitesList?.addEventListener("click", (event) => {

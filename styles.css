@@ -3454,6 +3454,16 @@ textarea {
   gap: 8px;
 }
 
+.theory-diatonic-answer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.theory-diatonic-answer-actions[hidden] {
+  display: none;
+}
+
 #theoryToolsDialog .theory-tools-dialog-card {
   width: auto;
   max-height: calc(100dvh - 28px);
