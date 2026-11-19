@@ -469,6 +469,8 @@ let activeRhythmCategory = "all";
 let activeLickCategory = "blues";
 let activeScoreBookId = "";
 let scoreBookDialogSource = "room";
+let scoreBookManageMode = false;
+let draggedScoreBookId = "";
 let activeViewedLickId = "";
 let lessonRoomMode = "weekly";
 let scheduleViewMode = "weekly";
@@ -537,6 +539,9 @@ let imageMarkup = {
   pendingDrawingId: "",
   selectedId: "",
   interaction: null,
+  historyKey: "",
+  historyPast: [],
+  historyFuture: [],
 };
 let metronome = {
   audioContext: null,
@@ -1082,7 +1087,7 @@ function normalizeScoreBook(book = {}) {
 }
 
 function scoreBookDictionary() {
-  return (state.scoreBooks || []).map(normalizeScoreBook).sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true }));
+  return (state.scoreBooks || []).map(normalizeScoreBook);
 }
 
 function normalizeScoreBookIds(value) {
@@ -1281,8 +1286,10 @@ const els = {
   imageMarkupStampSizeWrap: $("#imageMarkupStampSizeWrap"),
   imageMarkupStampSize: $("#imageMarkupStampSize"),
   imageMarkupStampSizeLabel: $("#imageMarkupStampSizeLabel"),
+  imageMarkupAlignStamps: $("#imageMarkupAlignStamps"),
   imageMarkupDelete: $("#imageMarkupDelete"),
   imageMarkupUndo: $("#imageMarkupUndo"),
+  imageMarkupRedo: $("#imageMarkupRedo"),
   imageMarkupClear: $("#imageMarkupClear"),
   imageMarkupDone: $("#imageMarkupDone"),
   imageMarkupCanvas: $("#imageMarkupCanvas"),
@@ -1331,6 +1338,7 @@ const els = {
   closeScoreBooks: $("#closeScoreBooks"),
   scoreBookTabs: $("#scoreBookTabs"),
   scoreBookSearch: $("#scoreBookSearch"),
+  manageScoreBooks: $("#manageScoreBooks"),
   scoreBookContent: $("#scoreBookContent"),
   editBlockChords: $("#editBlockChords"),
   drawBlockChord: $("#drawBlockChord"),
@@ -1728,6 +1736,7 @@ function renderBlockScoreBookOptions(selectedIds = []) {
 
 function openScoreBooksDialog(source = "room") {
   scoreBookDialogSource = source;
+  scoreBookManageMode = false;
   const books = scoreBookDictionary();
   if (!books.some((book) => book.id === activeScoreBookId)) activeScoreBookId = books[0]?.id || "";
   if (els.scoreBookSearch) els.scoreBookSearch.value = "";
@@ -1738,6 +1747,18 @@ function openScoreBooksDialog(source = "room") {
 function renderScoreBooksDialog() {
   if (!els.scoreBookContent || !els.scoreBookTabs) return;
   const books = scoreBookDictionary();
+  const canManage = !publicShareMode && scoreBookDialogSource === "room";
+  if (els.manageScoreBooks) {
+    els.manageScoreBooks.hidden = !canManage;
+    els.manageScoreBooks.classList.toggle("active", scoreBookManageMode);
+    els.manageScoreBooks.textContent = scoreBookManageMode ? "악보집 보기" : "악보집 관리";
+  }
+  els.scoreBookTabs.hidden = scoreBookManageMode;
+  els.scoreBookSearch.closest("label")?.toggleAttribute("hidden", scoreBookManageMode);
+  if (scoreBookManageMode && canManage) {
+    renderScoreBookManager(books);
+    return;
+  }
   els.scoreBookTabs.innerHTML = books.map((book) => {
     const count = scoreBookBlocks(book.id).length;
     return `<button class="${book.id === activeScoreBookId ? "active" : ""}" type="button" data-score-book-tab="${escapeHTML(book.id)}">${escapeHTML(book.name)} <span>${count}</span></button>`;
@@ -1770,6 +1791,87 @@ function renderScoreBooksDialog() {
       }).join("")
     : `<div class="empty">${query ? "검색 결과가 없습니다." : "이 악보집에 연결된 실습곡이 없습니다."}</div>`;
   els.scoreBookContent.dataset.imageCount = String(imageItems.length);
+}
+
+function renderScoreBookManager(books = scoreBookDictionary()) {
+  els.scoreBookContent.innerHTML = `
+    <section class="score-book-manager">
+      <form class="score-book-create-form" data-create-score-book>
+        <label><span>새 악보집</span><input type="text" name="scoreBookName" placeholder="악보집 이름" required /></label>
+        <button class="primary-button" type="submit">추가</button>
+      </form>
+      <div class="score-book-manager-list">
+        ${books.length ? books.map((book) => `
+          <article class="score-book-manager-row" draggable="true" data-manage-score-book="${escapeHTML(book.id)}">
+            <span class="score-book-drag-handle" title="드래그해서 순서 바꾸기" aria-hidden="true">⠿</span>
+            <label><span class="sr-only">악보집 이름</span><input type="text" value="${escapeHTML(book.name)}" data-score-book-name="${escapeHTML(book.id)}" /></label>
+            <span class="score-book-song-count">${scoreBookBlocks(book.id).length}곡</span>
+            <button class="secondary-button mini-button" type="button" data-rename-score-book="${escapeHTML(book.id)}">이름 저장</button>
+            <button class="icon-button danger-text" type="button" data-delete-score-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.name)} 삭제">×</button>
+          </article>
+        `).join("") : `<div class="empty">아직 만든 악보집이 없습니다.</div>`}
+      </div>
+    </section>`;
+}
+
+function createScoreBook(name) {
+  const trimmed = String(name || "").trim();
+  if (!trimmed) return;
+  if (scoreBookDictionary().some((book) => normalizeText(book.name) === normalizeText(trimmed))) {
+    showToast("같은 이름의 악보집이 이미 있습니다.");
+    return;
+  }
+  const book = normalizeScoreBook({ name: trimmed });
+  state.scoreBooks = [...(state.scoreBooks || []), book];
+  activeScoreBookId = book.id;
+  renderScoreBooksDialog();
+  renderScoreBookControls();
+  saveStateInBackground({ mode: "overwrite" }, `${book.name} 악보집을 추가했습니다.`);
+}
+
+function renameScoreBook(bookId) {
+  const input = els.scoreBookContent.querySelector(`[data-score-book-name="${CSS.escape(bookId)}"]`);
+  const name = input?.value.trim() || "";
+  const book = scoreBookDictionary().find((item) => item.id === bookId);
+  if (!book || !name) {
+    showToast("악보집 이름을 입력해주세요.");
+    return;
+  }
+  if (scoreBookDictionary().some((item) => item.id !== bookId && normalizeText(item.name) === normalizeText(name))) {
+    showToast("같은 이름의 악보집이 이미 있습니다.");
+    return;
+  }
+  state.scoreBooks = scoreBookDictionary().map((item) => item.id === bookId ? { ...item, name, updatedAt: nowIso() } : item);
+  renderScoreBooksDialog();
+  renderScoreBookControls();
+  saveStateInBackground({ mode: "overwrite" }, "악보집 이름을 저장했습니다.");
+}
+
+function deleteScoreBook(bookId) {
+  const book = scoreBookDictionary().find((item) => item.id === bookId);
+  if (!book || !window.confirm(`"${book.name}" 악보집을 삭제할까요? 실습곡 블럭과 악보 파일은 그대로 남습니다.`)) return;
+  state.scoreBooks = scoreBookDictionary().filter((item) => item.id !== bookId);
+  state.blocks = state.blocks.map((block) => ({
+    ...block,
+    scoreBookIds: normalizeScoreBookIds(block.scoreBookIds).filter((id) => id !== bookId),
+  }));
+  if (activeScoreBookId === bookId) activeScoreBookId = state.scoreBooks[0]?.id || "";
+  renderScoreBooksDialog();
+  renderScoreBookControls();
+  saveStateInBackground({ mode: "overwrite" }, "악보집을 삭제했습니다.");
+}
+
+function reorderScoreBooks(sourceId, targetId) {
+  const books = scoreBookDictionary();
+  const sourceIndex = books.findIndex((book) => book.id === sourceId);
+  const targetIndex = books.findIndex((book) => book.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+  const [moved] = books.splice(sourceIndex, 1);
+  books.splice(targetIndex, 0, moved);
+  state.scoreBooks = books;
+  renderScoreBooksDialog();
+  renderScoreBookControls();
+  saveStateInBackground({ mode: "overwrite" }, "악보집 순서를 저장했습니다.");
 }
 
 function openScoreBookPage(index) {
@@ -2011,7 +2113,11 @@ function uid(prefix) {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function nowIso() {
@@ -2514,6 +2620,92 @@ function currentScoreMarkup(create = false) {
   return markup;
 }
 
+function imageMarkupContextKey() {
+  const context = imageViewerMarkupContext();
+  return context ? `${context.student.id}:${context.lesson.id}:${context.blockId}:${context.scoreIndex}` : "";
+}
+
+function imageMarkupActionsSnapshot() {
+  return structuredClone(ensureImageMarkupActions(currentScoreMarkup(false) || { actions: [] }).actions);
+}
+
+function resetImageMarkupHistory() {
+  imageMarkup.historyKey = imageMarkupContextKey();
+  imageMarkup.historyPast = [imageMarkupActionsSnapshot()];
+  imageMarkup.historyFuture = [];
+}
+
+function commitImageMarkupHistory() {
+  const key = imageMarkupContextKey();
+  if (imageMarkup.historyKey !== key || !imageMarkup.historyPast.length) resetImageMarkupHistory();
+  const snapshot = imageMarkupActionsSnapshot();
+  const previous = imageMarkup.historyPast[imageMarkup.historyPast.length - 1] || [];
+  if (JSON.stringify(previous) === JSON.stringify(snapshot)) return;
+  imageMarkup.historyPast.push(snapshot);
+  if (imageMarkup.historyPast.length > 80) imageMarkup.historyPast.shift();
+  imageMarkup.historyFuture = [];
+}
+
+function restoreImageMarkupHistory(actions, message) {
+  const markup = currentScoreMarkup(true);
+  markup.actions = structuredClone(actions || []);
+  imageMarkup.selectedId = "";
+  imageMarkup.pendingDrawingId = "";
+  imageMarkup.drawing = null;
+  imageMarkup.interaction = null;
+  renderImageMarkup();
+  saveImageMarkup(message, { trackHistory: false });
+}
+
+function undoImageMarkup() {
+  if (imageMarkup.historyKey !== imageMarkupContextKey() || !imageMarkup.historyPast.length) resetImageMarkupHistory();
+  if (imageMarkup.historyPast.length < 2) return;
+  const current = imageMarkup.historyPast.pop();
+  imageMarkup.historyFuture.push(current);
+  restoreImageMarkupHistory(imageMarkup.historyPast[imageMarkup.historyPast.length - 1], "필기를 되돌렸습니다.");
+}
+
+function redoImageMarkup() {
+  if (imageMarkup.historyKey !== imageMarkupContextKey() || !imageMarkup.historyPast.length) resetImageMarkupHistory();
+  const next = imageMarkup.historyFuture.pop();
+  if (!next) return;
+  imageMarkup.historyPast.push(structuredClone(next));
+  restoreImageMarkupHistory(next, "필기를 다시 실행했습니다.");
+}
+
+function alignImageMarkupStampRows() {
+  const markup = ensureImageMarkupActions(currentScoreMarkup(true));
+  const stamps = markup.actions.filter((action) => action.type === "stamp");
+  if (stamps.length < 2) return;
+  const tolerance = 4.5;
+  const rows = [];
+  [...stamps].sort((a, b) => Number(a.y) - Number(b.y)).forEach((stamp) => {
+    let row = rows.find((item) => Math.abs(item.center - Number(stamp.y)) <= tolerance);
+    if (!row) {
+      row = { center: Number(stamp.y), stamps: [] };
+      rows.push(row);
+    }
+    row.stamps.push(stamp);
+    row.center = row.stamps.reduce((sum, item) => sum + Number(item.y), 0) / row.stamps.length;
+  });
+  let changed = 0;
+  rows.forEach((row) => {
+    if (row.stamps.length < 2) return;
+    const reference = [...row.stamps].sort((a, b) => Number(a.x) - Number(b.x))[0];
+    row.stamps.forEach((stamp) => {
+      if (Number(stamp.y) !== Number(reference.y)) changed += 1;
+      stamp.y = Number(reference.y);
+      stamp.updatedAt = nowIso();
+    });
+  });
+  if (!changed) {
+    showToast("정렬할 도장 높이 차이가 없습니다.");
+    return;
+  }
+  renderImageMarkup();
+  saveImageMarkup("도장 행을 정렬했습니다.");
+}
+
 function lessonBlockAssets(studentId, lessonId, blockId, create = false) {
   const student = state.students.find((entry) => entry.id === studentId);
   const lesson = student?.lessons.find((entry) => entry.id === lessonId);
@@ -2555,7 +2747,10 @@ function setImageMarkupActive(active) {
   imageMarkup.pendingDrawingId = "";
   imageMarkup.interaction = null;
   imageMarkup.selectedId = "";
-  if (imageMarkup.active) setImageMarkupTool("select");
+  if (imageMarkup.active) {
+    setImageMarkupTool("select");
+    resetImageMarkupHistory();
+  }
   if (els.imageMarkupToolbar) els.imageMarkupToolbar.hidden = !imageMarkup.active;
   if (els.imageViewerMarkup) els.imageViewerMarkup.classList.toggle("active", imageMarkup.active);
   if (els.imageMarkupCanvas) els.imageMarkupCanvas.classList.toggle("editing", imageMarkup.active);
@@ -2722,6 +2917,9 @@ function renderImageMarkup() {
       : "");
   els.imageMarkupCanvas?.classList.toggle("has-markup", markup.actions.length > 0);
   if (els.imageMarkupDelete) els.imageMarkupDelete.disabled = !selectedImageMarkupAction();
+  if (els.imageMarkupUndo) els.imageMarkupUndo.disabled = imageMarkup.historyPast.length < 2;
+  if (els.imageMarkupRedo) els.imageMarkupRedo.disabled = !imageMarkup.historyFuture.length;
+  if (els.imageMarkupAlignStamps) els.imageMarkupAlignStamps.disabled = stamps.length < 2;
   if (els.imageMarkupToolbar) els.imageMarkupToolbar.hidden = !imageMarkup.active;
 }
 
@@ -2733,9 +2931,13 @@ function markupPoint(event) {
   };
 }
 
-function saveImageMarkup(message = "필기를 저장했습니다.") {
+function saveImageMarkup(message = "필기를 저장했습니다.", { trackHistory = true } = {}) {
   const context = imageViewerMarkupContext();
   if (!context) return;
+  if (trackHistory) {
+    commitImageMarkupHistory();
+    if (imageMarkup.active) renderImageMarkup();
+  }
   const markup = currentScoreMarkup(true);
   markup.updatedAt = nowIso();
   markup.revision = Math.max(0, Number(markup.revision) || 0) + 1;
@@ -6634,7 +6836,8 @@ function renderKindPicker(picker, kind, searchQuery = "") {
   picker.innerHTML = available
     .map((block) => `<option value="${block.id}">${escapeHTML(String(block.title || "").normalize("NFC"))}</option>`)
     .join("");
-  if (available.some((block) => block.id === previousValue)) picker.value = previousValue;
+  if (query && available.length) picker.value = available[0].id;
+  else if (available.some((block) => block.id === previousValue)) picker.value = previousValue;
   picker.disabled = !available.length;
   picker.title = available.length ? `${available.length}개 블럭` : "검색 결과 없음";
 }
@@ -8131,13 +8334,9 @@ els.imageMarkupStampSize?.addEventListener("input", () => {
 });
 els.imageMarkupDone.addEventListener("click", () => setImageMarkupActive(false));
 els.imageMarkupDelete.addEventListener("click", deleteSelectedImageMarkup);
-els.imageMarkupUndo.addEventListener("click", () => {
-  const markup = currentScoreMarkup(true);
-  if (!markup.actions.length) return;
-  markup.actions.pop();
-  renderImageMarkup();
-  saveImageMarkup("마지막 필기를 취소했습니다.");
-});
+els.imageMarkupAlignStamps?.addEventListener("click", alignImageMarkupStampRows);
+els.imageMarkupUndo.addEventListener("click", undoImageMarkup);
+els.imageMarkupRedo?.addEventListener("click", redoImageMarkup);
 els.imageMarkupClear.addEventListener("click", () => {
   const markup = currentScoreMarkup(true);
   if (!markup.actions.length || !window.confirm("이 악보의 필기를 모두 지울까요?")) return;
@@ -8385,6 +8584,18 @@ document.addEventListener("keydown", (event) => {
   }
   if (!els.imageViewerDialog.open) return;
   const isEditingField = event.target.matches("input, textarea, [contenteditable='true']");
+  const modifier = event.metaKey || event.ctrlKey;
+  if (imageMarkup.active && !isEditingField && modifier && event.key.toLowerCase() === "z") {
+    event.preventDefault();
+    if (event.shiftKey) redoImageMarkup();
+    else undoImageMarkup();
+    return;
+  }
+  if (imageMarkup.active && !isEditingField && event.ctrlKey && event.key.toLowerCase() === "y") {
+    event.preventDefault();
+    redoImageMarkup();
+    return;
+  }
   const degreeStampActive = ["major", "minor", "dominant"].includes(imageMarkup.stampKind);
   if (imageMarkup.active && imageMarkup.tool === "stamp" && degreeStampActive && !isEditingField) {
     if (/^[1-7]$/.test(event.key)) {
@@ -9176,13 +9387,36 @@ document.querySelectorAll("[data-open-score-books]").forEach((button) => {
 });
 els.closeScoreBooks?.addEventListener("click", () => els.scoreBooksDialog.close());
 els.scoreBookSearch?.addEventListener("input", renderScoreBooksDialog);
+els.manageScoreBooks?.addEventListener("click", () => {
+  scoreBookManageMode = !scoreBookManageMode;
+  els.manageScoreBooks.classList.toggle("active", scoreBookManageMode);
+  renderScoreBooksDialog();
+});
 els.scoreBookTabs?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-score-book-tab]");
   if (!button) return;
+  scoreBookManageMode = false;
+  els.manageScoreBooks?.classList.remove("active");
   activeScoreBookId = button.dataset.scoreBookTab;
   renderScoreBooksDialog();
 });
+els.scoreBookContent?.addEventListener("submit", (event) => {
+  const form = event.target.closest("[data-create-score-book]");
+  if (!form) return;
+  event.preventDefault();
+  createScoreBook(new FormData(form).get("scoreBookName"));
+});
 els.scoreBookContent?.addEventListener("click", (event) => {
+  const renameButton = event.target.closest("[data-rename-score-book]");
+  if (renameButton) {
+    renameScoreBook(renameButton.dataset.renameScoreBook);
+    return;
+  }
+  const deleteButton = event.target.closest("[data-delete-score-book]");
+  if (deleteButton) {
+    deleteScoreBook(deleteButton.dataset.deleteScoreBook);
+    return;
+  }
   const page = event.target.closest("[data-score-book-page]");
   if (page) {
     openScoreBookPage(Number(page.dataset.scoreBookPage));
@@ -9196,6 +9430,40 @@ els.scoreBookContent?.addEventListener("click", (event) => {
   renderLessonPicker();
   renderScoreBooksDialog();
   showToast(`${block.title} 블럭을 이번 날짜에 붙였습니다.`);
+});
+els.scoreBookContent?.addEventListener("keydown", (event) => {
+  const input = event.target.closest("[data-score-book-name]");
+  if (input && event.key === "Enter") {
+    event.preventDefault();
+    renameScoreBook(input.dataset.scoreBookName);
+  }
+});
+els.scoreBookContent?.addEventListener("dragstart", (event) => {
+  const row = event.target.closest("[data-manage-score-book]");
+  if (!row) return;
+  draggedScoreBookId = row.dataset.manageScoreBook;
+  row.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", draggedScoreBookId);
+});
+els.scoreBookContent?.addEventListener("dragover", (event) => {
+  const row = event.target.closest("[data-manage-score-book]");
+  if (!row || !draggedScoreBookId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  els.scoreBookContent.querySelectorAll(".drag-over").forEach((item) => item.classList.remove("drag-over"));
+  row.classList.add("drag-over");
+});
+els.scoreBookContent?.addEventListener("drop", (event) => {
+  const row = event.target.closest("[data-manage-score-book]");
+  if (!row || !draggedScoreBookId) return;
+  event.preventDefault();
+  reorderScoreBooks(draggedScoreBookId, row.dataset.manageScoreBook);
+  draggedScoreBookId = "";
+});
+els.scoreBookContent?.addEventListener("dragend", () => {
+  draggedScoreBookId = "";
+  els.scoreBookContent.querySelectorAll(".dragging, .drag-over").forEach((item) => item.classList.remove("dragging", "drag-over"));
 });
 let draggedTheoryToolId = "";
 els.theoryToolMenu?.addEventListener("dragstart", (event) => {

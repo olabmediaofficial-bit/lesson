@@ -5072,6 +5072,10 @@ dialog::backdrop {
   background: #f8efe6;
 }
 
+.score-books-toolbar [hidden] {
+  display: none !important;
+}
+
 .score-book-tabs {
   flex: 1 1 auto;
   justify-content: flex-start;
@@ -5167,6 +5171,81 @@ dialog::backdrop {
   white-space: nowrap;
 }
 
+#manageScoreBooks.active {
+  color: #fff;
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+}
+
+.score-book-manager {
+  width: min(820px, 100%);
+  margin: 0 auto;
+  padding: 28px 0;
+}
+
+.score-book-create-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.score-book-create-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.score-book-manager-list {
+  display: grid;
+  gap: 8px;
+  padding-top: 18px;
+}
+
+.score-book-manager-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto 36px;
+  align-items: center;
+  gap: 9px;
+  min-height: 54px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 150ms ease, opacity 150ms ease;
+}
+
+.score-book-manager-row.dragging {
+  opacity: 0.42;
+}
+
+.score-book-manager-row.drag-over {
+  border-color: var(--accent-strong);
+}
+
+.score-book-drag-handle {
+  color: var(--muted);
+  font-size: 22px;
+  cursor: grab;
+}
+
+.score-book-manager-row label,
+.score-book-manager-row input {
+  min-width: 0;
+  width: 100%;
+}
+
+.score-book-song-count {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 @media (max-width: 700px) {
   .score-books-toolbar {
     align-items: stretch;
@@ -5185,6 +5264,20 @@ dialog::backdrop {
   .score-book-song > header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .score-book-manager-row {
+    grid-template-columns: 24px minmax(0, 1fr) 36px;
+  }
+
+  .score-book-manager-row .score-book-song-count,
+  .score-book-manager-row .mini-button {
+    grid-column: 2;
+  }
+
+  .score-book-manager-row .icon-button {
+    grid-column: 3;
+    grid-row: 1;
   }
 }
 
