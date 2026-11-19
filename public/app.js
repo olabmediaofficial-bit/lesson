@@ -1262,6 +1262,7 @@ const els = {
   closeUsefulSites: $("#closeUsefulSites"),
   theoryToolsDialog: $("#theoryToolsDialog"),
   theoryToolMenu: $("#theoryToolMenu"),
+  fillTheoryAnswers: $("#fillTheoryAnswers"),
   closeTheoryTools: $("#closeTheoryTools"),
   theoryFretboardWorkbook: $("#theoryFretboardWorkbook"),
   theoryFretboardScalePicker: $("#theoryFretboardScalePicker"),
@@ -3543,6 +3544,96 @@ function theoryPitchClass(value) {
   return ({ C: 0, "C#": 1, DB: 1, D: 2, "D#": 3, EB: 3, E: 4, FB: 4, "E#": 5, F: 5, "F#": 6, GB: 6, G: 7, "G#": 8, AB: 8, A: 9, "A#": 10, BB: 10, B: 11, CB: 11 })[note];
 }
 
+const THEORY_NOTE_NAMES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const THEORY_NATURAL_PITCHES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const THEORY_NOTE_LETTERS = ["C", "D", "E", "F", "G", "A", "B"];
+const THEORY_DIATONIC_ANSWERS = {
+  major: { intervals: [0, 2, 4, 5, 7, 9, 11, 12], qualities: ["", "m", "m", "", "", "m", "dim", ""] },
+  naturalMinor: { intervals: [0, 2, 3, 5, 7, 8, 10, 12], qualities: ["m", "dim", "", "m", "m", "", "", "m"] },
+  harmonicMinor: { intervals: [0, 2, 3, 5, 7, 8, 11, 12], qualities: ["m", "dim", "aug", "m", "", "", "dim", "m"] },
+  melodicMinor: { intervals: [0, 2, 3, 5, 7, 9, 11, 12], qualities: ["m", "m", "aug", "", "", "dim", "dim", "m"] },
+};
+
+function theoryKeyRoot(key) {
+  return String(key || "").match(/[A-G](?:#|b)?/)?.[0] || "C";
+}
+
+function theorySpellScale(root, intervals) {
+  const rootPitch = theoryPitchClass(root);
+  const rootLetterIndex = THEORY_NOTE_LETTERS.indexOf(root[0]);
+  if (!Number.isInteger(rootPitch) || rootLetterIndex < 0) return [];
+  return intervals.map((interval, index) => {
+    const letter = THEORY_NOTE_LETTERS[(rootLetterIndex + index) % 7];
+    const targetPitch = (rootPitch + interval) % 12;
+    const difference = (targetPitch - THEORY_NATURAL_PITCHES[letter] + 12) % 12;
+    const accidental = difference === 0 ? "" : difference === 1 ? "#" : difference === 11 ? "b" : difference === 2 ? "##" : difference === 10 ? "bb" : "";
+    return `${letter}${accidental}`;
+  });
+}
+
+function fillEmptyTheoryValues(target, answers) {
+  answers.forEach((answer, index) => {
+    if (!String(target[index] || "").trim()) target[index] = answer;
+  });
+}
+
+function fillCurrentTheoryAnswers() {
+  if (publicShareMode || !["fretboard", "triads", "sevenths", "diatonic"].includes(activeTheoryTool)) return;
+  const student = theoryToolStudent();
+  if (!student) return;
+  student.theoryPractice = normalizeTheoryPractice(student.theoryPractice);
+  const practice = student.theoryPractice;
+
+  if (activeTheoryTool === "fretboard") {
+    const openPitches = [4, 11, 7, 2, 9, 4];
+    openPitches.forEach((openPitch, stringIndex) => {
+      Array.from({ length: 13 }, (_, fret) => {
+        const index = stringIndex * 13 + fret;
+        if (!String(practice.fretboard.cells[index] || "").trim()) {
+          practice.fretboard.cells[index] = THEORY_NOTE_NAMES_SHARP[(openPitch + fret) % 12];
+        }
+      });
+    });
+    fillEmptyTheoryValues(practice.fretboard.scaleNames, ["C", "D", "E", "F", "G", "A", "B"]);
+  }
+
+  if (activeTheoryTool === "triads") {
+    THEORY_TRIAD_CHORDS.forEach((chord) => {
+      const root = chord.replace(/m$/, "");
+      const rootPitch = theoryPitchClass(root);
+      const intervals = chord.endsWith("m") ? [0, 3, 7] : [0, 4, 7];
+      fillEmptyTheoryValues(practice.triads.rows[chord], intervals.map((interval) => THEORY_NOTE_NAMES_SHARP[(rootPitch + interval) % 12]));
+    });
+  }
+
+  if (activeTheoryTool === "sevenths") {
+    const seventhIntervals = (chord) => chord.endsWith("mM7") ? [0, 3, 7, 11]
+      : chord.endsWith("m7") ? [0, 3, 7, 10]
+        : chord.endsWith("M7") ? [0, 4, 7, 11]
+          : [0, 4, 7, 10];
+    THEORY_SEVENTH_CHORDS.forEach((chord) => {
+      const root = chord.match(/^[A-G](?:#|b)?/)?.[0] || "C";
+      const rootPitch = theoryPitchClass(root);
+      fillEmptyTheoryValues(practice.sevenths.rows[chord], seventhIntervals(chord).map((interval) => THEORY_NOTE_NAMES_SHARP[(rootPitch + interval) % 12]));
+    });
+  }
+
+  if (activeTheoryTool === "diatonic") {
+    const type = DIATONIC_TYPES[activeDiatonicType] ? activeDiatonicType : "major";
+    const answer = THEORY_DIATONIC_ANSWERS[type];
+    const rows = practice.diatonic.tables[type];
+    DIATONIC_TYPES[type].keys.forEach((key) => {
+      const scale = theorySpellScale(theoryKeyRoot(key), answer.intervals);
+      fillEmptyTheoryValues(rows[key].scale, scale);
+      fillEmptyTheoryValues(rows[key].chords, scale.map((note, index) => `${note}${answer.qualities[index]}`));
+    });
+  }
+
+  renderDiatonicPractice();
+  renderTheoryWorkbooks();
+  persistTheoryPractice(student);
+}
+
 const FRETBOARD_HIGHLIGHT_TYPES = [
   { key: "major", label: "Major Scale", intervals: [0, 2, 4, 5, 7, 9, 11] },
   { key: "minor", label: "Minor Scale", intervals: [0, 2, 3, 5, 7, 8, 10] },
@@ -3654,6 +3745,7 @@ function renderTheoryWorkbooks() {
   renderTheoryToolMenu();
   document.querySelectorAll("[data-theory-tool]").forEach((button) => button.classList.toggle("active", button.dataset.theoryTool === activeTheoryTool));
   document.querySelectorAll("[data-theory-tool-panel]").forEach((panel) => { panel.hidden = panel.dataset.theoryToolPanel !== activeTheoryTool; });
+  if (els.fillTheoryAnswers) els.fillTheoryAnswers.hidden = publicShareMode || !["fretboard", "triads", "sevenths", "diatonic"].includes(activeTheoryTool);
 }
 
 function setTheoryPracticeValue(student, path, value) {
@@ -9687,6 +9779,7 @@ els.theoryToolMenu?.addEventListener("dragend", () => {
   els.theoryToolMenu.querySelectorAll(".dragging, .drag-over").forEach((node) => node.classList.remove("dragging", "drag-over"));
 });
 els.closeTheoryTools?.addEventListener("click", () => els.theoryToolsDialog.close());
+els.fillTheoryAnswers?.addEventListener("click", fillCurrentTheoryAnswers);
 els.clearTheoryDiatonic?.addEventListener("click", () => clearDiatonicPractice(theoryToolStudent()));
 els.saveTheoryDiatonic?.addEventListener("click", () => persistTheoryPractice(theoryToolStudent()));
 els.usefulSiteForm?.addEventListener("submit", addUsefulSite);
