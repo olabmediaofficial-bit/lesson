@@ -362,6 +362,7 @@ const THEORY_TOOLS = [
   { id: "harmony-code", label: "하모닉 코드" },
   { id: "triads", label: "3화음 코드" },
   { id: "sevenths", label: "7th 코드" },
+  { id: "chord-classification", label: "기타 코드의 분류" },
   { id: "diatonic", label: "다이어토닉" },
   { id: "diatonic-function", label: "다이어토닉·펑션·세컨더리 도미넌트" },
   { id: "code-expansion", label: "코드 확장 및 활용" },
@@ -370,6 +371,17 @@ const THEORY_TOOLS = [
 ];
 const DEFAULT_THEORY_TOOL_ORDER = THEORY_TOOLS.map((tool) => tool.id);
 const LEGACY_THEORY_TOOL_ORDER = ["fretboard", "triads", "sevenths", "diatonic", "diatonic-function", "code-expansion", "chord-progression", "harmony-application", "harmony-code"];
+
+function mergeTheoryToolOrder(saved = []) {
+  const order = [...new Set(saved.filter((id) => DEFAULT_THEORY_TOOL_ORDER.includes(id)))];
+  DEFAULT_THEORY_TOOL_ORDER.forEach((id, defaultIndex) => {
+    if (order.includes(id)) return;
+    const previous = DEFAULT_THEORY_TOOL_ORDER.slice(0, defaultIndex).reverse().find((candidate) => order.includes(candidate));
+    if (previous) order.splice(order.indexOf(previous) + 1, 0, id);
+    else order.push(id);
+  });
+  return order;
+}
 
 const starterData = {
   practiceProgressScale: "four-step",
@@ -1526,7 +1538,7 @@ function migrateState(data) {
     && savedTheoryOrder.every((id, index) => id === LEGACY_THEORY_TOOL_ORDER[index]);
   data.theoryToolOrder = usesLegacyTheoryOrder
     ? [...DEFAULT_THEORY_TOOL_ORDER]
-    : [...new Set([...savedTheoryOrder, ...DEFAULT_THEORY_TOOL_ORDER])];
+    : mergeTheoryToolOrder(savedTheoryOrder);
   data.usefulSites = Array.isArray(data.usefulSites)
     ? data.usefulSites
         .map(normalizeUsefulSite)
@@ -1641,7 +1653,7 @@ function renderUsefulSitesDialog() {
 
 function theoryToolOrder() {
   const saved = Array.isArray(state.theoryToolOrder) ? state.theoryToolOrder : [];
-  return [...new Set([...saved.filter((id) => DEFAULT_THEORY_TOOL_ORDER.includes(id)), ...DEFAULT_THEORY_TOOL_ORDER])];
+  return mergeTheoryToolOrder(saved);
 }
 
 function renderTheoryToolMenu() {

@@ -5970,6 +5970,37 @@ dialog::backdrop {
 .theory-data-table { width: 100%; min-width: 720px; border-collapse: collapse; table-layout: fixed; }
 .theory-data-table th, .theory-data-table td { padding: 12px 8px; border: 1px solid #ad9985; text-align: center; }
 .theory-data-table th:first-child { width: 140px; background: #f5ece2; }
+
+.chord-classification-table th:first-child {
+  width: 72px;
+}
+
+.chord-classification-table th:nth-child(2) {
+  width: 260px;
+}
+
+.chord-classification-table tbody th,
+.chord-classification-table tbody td {
+  text-align: left;
+  line-height: 1.55;
+}
+
+.chord-classification-table tbody td:first-child {
+  text-align: center;
+  font-weight: 800;
+  color: #7c4b31;
+}
+
+.chord-classification-table small {
+  color: #7a6b60;
+  font-weight: 600;
+}
+
+.theory-table-note {
+  margin: 12px 0 0;
+  color: #7a6b60;
+  font-size: 13px;
+}
 .theory-notation-grid { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)); gap: 10px; }
 .theory-notation-grid > div { display: grid; min-height: 86px; place-items: center; gap: 8px; padding: 12px; border: 1px solid #ddcbb9; }
 .theory-notation-grid small { color: #826b59; font-weight: 800; }
