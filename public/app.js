@@ -530,6 +530,7 @@ let expandedLibraryBlockIds = new Set();
 let editingLessonId = "";
 let publicShareInitialized = false;
 let publicShareMode = false;
+let migratedPracticeDuplicateCount = 0;
 let shareOrigin = "";
 let saveQueue = Promise.resolve();
 let imageViewer = {
@@ -1528,6 +1529,148 @@ function normalizeTheoryPractice(value = {}) {
   };
 }
 
+function practiceBlockOptionCount(block) {
+  const practice = normalizePractice(block.practice);
+  const curriculumCount = Object.values(normalizeCurriculum(block.curriculum)).reduce((sum, values) => sum + values.length, 0);
+  return curriculumCount
+    + (block.tags || []).length
+    + practice.categories.length
+    + practice.genres.length
+    + [practice.tempo, practice.key, practice.beat, practice.rightHand, practice.leftHand, practice.technique].filter(Boolean).length;
+}
+
+function practiceBlockRichness(block) {
+  return practiceBlockOptionCount(block)
+    + normalizeScores(block).length
+    + normalizeResources(block).length
+    + normalizeChordNames(block.chords || []).length
+    + normalizeRhythmIds(block.rhythms || []).length
+    + normalizeScoreBookIds(block.scoreBookIds || []).length
+    + (block.summary ? 1 : 0)
+    + (block.audioLink ? 1 : 0);
+}
+
+function uniqueResources(resources = []) {
+  const seen = new Set();
+  return resources.filter((resource) => {
+    const key = `${resourceHref(resource)}\u0000${resourceLabel(resource)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function mergePracticeBlockRecords(primary, secondary) {
+  const primaryPractice = normalizePractice(primary.practice);
+  const secondaryPractice = normalizePractice(secondary.practice);
+  const primaryCurriculum = normalizeCurriculum(primary.curriculum);
+  const secondaryCurriculum = normalizeCurriculum(secondary.curriculum);
+  const curriculum = emptyCurriculum();
+  Object.keys(curriculum).forEach((area) => {
+    curriculum[area] = [...new Set([...(primaryCurriculum[area] || []), ...(secondaryCurriculum[area] || [])])];
+  });
+  return {
+    ...primary,
+    summary: primary.summary || secondary.summary || "",
+    tags: [...new Set([...(primary.tags || []), ...(secondary.tags || [])])],
+    audioLink: primary.audioLink || secondary.audioLink || "",
+    chords: normalizeChordNames([...(primary.chords || []), ...(secondary.chords || [])]),
+    rhythms: normalizeRhythmIds([...(primary.rhythms || []), ...(secondary.rhythms || [])]),
+    scoreBookIds: normalizeScoreBookIds([...(primary.scoreBookIds || []), ...(secondary.scoreBookIds || [])]),
+    scores: uniqueResources([...normalizeScores(primary), ...normalizeScores(secondary)]),
+    resources: uniqueResources([...normalizeResources(primary), ...normalizeResources(secondary)]),
+    curriculum,
+    curriculumVersion: 2,
+    practice: {
+      tempo: primaryPractice.tempo || secondaryPractice.tempo,
+      key: primaryPractice.key || secondaryPractice.key,
+      beat: primaryPractice.beat || secondaryPractice.beat,
+      categories: [...new Set([...primaryPractice.categories, ...secondaryPractice.categories])],
+      genres: [...new Set([...primaryPractice.genres, ...secondaryPractice.genres])],
+      rightHand: primaryPractice.rightHand || secondaryPractice.rightHand,
+      leftHand: primaryPractice.leftHand || secondaryPractice.leftHand,
+      technique: primaryPractice.technique || secondaryPractice.technique,
+    },
+    updatedAt: Date.parse(primary.updatedAt || "") >= Date.parse(secondary.updatedAt || "") ? primary.updatedAt : secondary.updatedAt,
+  };
+}
+
+function mergeLessonBlockAssets(target = {}, source = {}) {
+  const uniqueObjects = (items) => {
+    const seen = new Set();
+    return items.filter((item) => {
+      const key = JSON.stringify(item);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  return {
+    ...source,
+    ...target,
+    chords: uniqueObjects([...(target.chords || []), ...(source.chords || [])]),
+    rhythms: uniqueObjects([...(target.rhythms || []), ...(source.rhythms || [])]),
+  };
+}
+
+function deduplicatePracticeBlocks(data) {
+  const blocks = Array.isArray(data?.blocks) ? data.blocks : [];
+  const groups = new Map();
+  blocks.forEach((block) => {
+    if (block.kind !== "practice") return;
+    const key = normalizeText(block.title);
+    if (!key || key === normalizeText("제목 없는 블럭")) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(block);
+  });
+
+  const replacements = new Map();
+  const mergedById = new Map();
+  groups.forEach((group) => {
+    if (group.length < 2) return;
+    const ranked = [...group].sort((left, right) =>
+      practiceBlockOptionCount(right) - practiceBlockOptionCount(left)
+      || practiceBlockRichness(right) - practiceBlockRichness(left)
+      || Date.parse(right.updatedAt || "") - Date.parse(left.updatedAt || ""),
+    );
+    const keeper = ranked[0];
+    let merged = keeper;
+    ranked.slice(1).forEach((duplicate) => {
+      replacements.set(duplicate.id, keeper.id);
+      merged = mergePracticeBlockRecords(merged, duplicate);
+    });
+    mergedById.set(keeper.id, merged);
+  });
+
+  if (!replacements.size) return 0;
+  data.blocks = blocks
+    .filter((block) => !replacements.has(block.id))
+    .map((block) => mergedById.get(block.id) || block);
+
+  (data.students || []).forEach((student) => {
+    const progress = student.practiceProgress && typeof student.practiceProgress === "object" ? student.practiceProgress : {};
+    replacements.forEach((keeperId, duplicateId) => {
+      if (progress[duplicateId] != null) progress[keeperId] = Math.max(Number(progress[keeperId]) || 0, Number(progress[duplicateId]) || 0);
+      delete progress[duplicateId];
+    });
+    student.practiceProgress = progress;
+    (student.lessons || []).forEach((lesson) => {
+      lesson.blockIds = [...new Set((lesson.blockIds || lesson.materialIds || []).map((id) => replacements.get(id) || id))];
+      replacements.forEach((keeperId, duplicateId) => {
+        if (lesson.blockAssets?.[duplicateId]) {
+          lesson.blockAssets[keeperId] = mergeLessonBlockAssets(lesson.blockAssets[keeperId], lesson.blockAssets[duplicateId]);
+          delete lesson.blockAssets[duplicateId];
+        }
+        if (lesson.scoreMarkups?.[duplicateId]) {
+          lesson.scoreMarkups[keeperId] = { ...lesson.scoreMarkups[duplicateId], ...(lesson.scoreMarkups[keeperId] || {}) };
+          delete lesson.scoreMarkups[duplicateId];
+        }
+      });
+    });
+  });
+  return replacements.size;
+}
+
 function migrateState(data) {
   if (!data.blocks) return structuredClone(starterData);
   data.resourceLibraryUrl = data.resourceLibraryUrl || "";
@@ -1591,6 +1734,7 @@ function migrateState(data) {
       })),
     };
   });
+  migratedPracticeDuplicateCount = deduplicatePracticeBlocks(data);
   const studentIds = new Set(data.students.map((student) => student.id));
   const savedStudentOrder = Array.isArray(data.studentOrder) ? data.studentOrder.filter((id) => studentIds.has(id)) : [];
   data.studentOrder = [...new Set([...savedStudentOrder, ...data.students.map((student) => student.id)])];
@@ -2132,6 +2276,11 @@ async function saveState(options = {}) {
 }
 
 function saveStateInBackground(options = {}, successMessage = "저장되었습니다.") {
+  const removedDuplicates = deduplicatePracticeBlocks(state);
+  if (removedDuplicates) {
+    options = { ...options, mode: "overwrite" };
+    render();
+  }
   const snapshot = structuredClone(state);
   saveQueue = saveQueue
     .catch(() => {})
@@ -9931,6 +10080,12 @@ async function init() {
   activeStudentId = state.students[0]?.id || "";
   activeShareStudentId = activeStudentId;
   render();
+  if (migratedPracticeDuplicateCount) {
+    saveStateInBackground(
+      { mode: "overwrite" },
+      `중복 실습곡 ${migratedPracticeDuplicateCount}개를 정리했습니다.`,
+    );
+  }
 }
 
 init().catch((error) => {
