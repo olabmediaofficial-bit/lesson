@@ -106,8 +106,9 @@
             <button class="secondary-button" id="applyBulkTags" type="button">태그 넣기</button>
             <button class="secondary-button danger" id="deleteSelectedBlocks" type="button">선택 삭제</button>
             <label class="drop-score-book-control" id="dropScoreBookControl" hidden>
-              추가할 악보집
-              <select id="dropScoreBookPicker" aria-label="드래그한 실습곡을 넣을 악보집"></select>
+              선택곡 악보집
+              <select id="dropScoreBookPicker" aria-label="선택한 실습곡을 넣을 악보집"></select>
+              <button class="secondary-button" id="addSelectedToScoreBook" type="button">선택곡 넣기</button>
             </label>
             <input id="quickLessonDate" type="date" aria-label="배정 날짜" />
             <button class="secondary-button" id="assignSelected" type="button">선택 블럭 넣기</button>
@@ -413,6 +414,7 @@
             <div class="control-row">
               <label class="search-box"><span aria-hidden="true">⌕</span><input id="copyLinkSearch" type="search" placeholder="이름 또는 내용 검색" /></label>
             </div>
+            <div class="copy-link-table-head" aria-hidden="true"><span>이름</span><span>내용</span><span>링크</span></div>
             <div id="copyLinkList" class="copy-link-list"></div>
           </section>
         </section>
@@ -528,10 +530,10 @@
                   <p class="eyebrow">Shared lesson room</p>
                   <h2 id="shareStudentName">학생 레슨룸</h2>
                   <a class="resource-library-button" id="shareResourceLibrary" href="#" target="_blank" rel="noreferrer" hidden>레슨 자료실</a>
-                  <button class="secondary-button chord-dictionary-link" data-view="chords" type="button">코드사전</button>
-                  <button class="secondary-button" data-open-theory-tools="share" type="button">이론</button>
-                  <button class="secondary-button" data-open-score-books="share" type="button">악보집</button>
-                  <button class="secondary-button useful-sites-button" data-open-useful-sites type="button">유용한 사이트</button>
+                  <button class="secondary-button share-nav-button chord-dictionary-link" data-view="chords" type="button">코드사전</button>
+                  <button class="secondary-button share-nav-button" data-open-theory-tools="share" type="button">이론</button>
+                  <button class="secondary-button share-nav-button" data-open-score-books="share" type="button">악보집</button>
+                  <button class="secondary-button share-nav-button useful-sites-button" data-open-useful-sites type="button">유용한 사이트</button>
                 </div>
                 <div class="share-actions">
                   <select id="shareStudentPicker" aria-label="공유 학생 선택"></select>

@@ -1152,6 +1152,7 @@ const els = {
   deleteSelectedBlocks: $("#deleteSelectedBlocks"),
   dropScoreBookControl: $("#dropScoreBookControl"),
   dropScoreBookPicker: $("#dropScoreBookPicker"),
+  addSelectedToScoreBook: $("#addSelectedToScoreBook"),
   blockKindTabs: $("#blockKindTabs"),
   bulkCurriculumPanel: $("#bulkCurriculumPanel"),
   libraryInsight: $("#libraryInsight"),
@@ -1828,15 +1829,18 @@ function renderCopyDictionary() {
   els.copyLinkList.innerHTML = items.length
     ? items.map((item) => `
       <article class="copy-link-item" draggable="true" data-copy-link-id="${escapeHTML(item.id)}">
-        <div class="copy-link-item-main">
+        <a class="copy-link-name" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHTML(item.name)} 재생">
           <strong>${escapeHTML(item.name)}</strong>
-          ${item.content ? `<p>${escapeHTML(item.content)}</p>` : ""}
-          <small>${escapeHTML(usefulSiteHost(item.url))}</small>
+        </a>
+        <div class="copy-link-content-cell">
+          ${item.content ? `<details class="copy-link-content-details"><summary>${escapeHTML(item.content)}</summary><p>${escapeHTML(item.content)}</p></details>` : `<span class="empty-inline">내용 없음</span>`}
         </div>
-        <div class="copy-link-item-actions">
-          <a class="primary-button mini-button" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer">재생</a>
-          <button class="secondary-button mini-button" type="button" data-edit-copy-link="${escapeHTML(item.id)}">수정</button>
-          <button class="icon-button tiny-button danger" type="button" data-delete-copy-link="${escapeHTML(item.id)}" aria-label="${escapeHTML(item.name)} 삭제">×</button>
+        <div class="copy-link-url-cell">
+          <a href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHTML(item.url)}">${escapeHTML(usefulSiteHost(item.url))}</a>
+          <div class="copy-link-item-actions">
+            <button class="secondary-button mini-button" type="button" data-edit-copy-link="${escapeHTML(item.id)}">수정</button>
+            <button class="icon-button tiny-button danger" type="button" data-delete-copy-link="${escapeHTML(item.id)}" aria-label="${escapeHTML(item.name)} 삭제">×</button>
+          </div>
         </div>
       </article>`).join("")
     : `<div class="empty">등록된 카피 링크가 없습니다.</div>`;
@@ -2025,8 +2029,29 @@ function renderScoreBookControls() {
   const books = scoreBookDictionary();
   const previous = els.dropScoreBookPicker.value;
   els.dropScoreBookControl.hidden = activeKindFilter !== "practice";
-  els.dropScoreBookPicker.innerHTML = `<option value="">악보집 미지정</option>${books.map((book) => `<option value="${escapeHTML(book.id)}">${escapeHTML(book.name)}</option>`).join("")}`;
+  els.dropScoreBookPicker.innerHTML = `<option value="">악보집 선택</option>${books.map((book) => `<option value="${escapeHTML(book.id)}">${escapeHTML(book.name)}</option>`).join("")}`;
   if (books.some((book) => book.id === previous)) els.dropScoreBookPicker.value = previous;
+  if (els.addSelectedToScoreBook) els.addSelectedToScoreBook.disabled = !books.length || !selectedPracticeBlockCount();
+}
+
+function addSelectedPracticeBlocksToScoreBook() {
+  const bookId = els.dropScoreBookPicker?.value || "";
+  const book = scoreBookDictionary().find((item) => item.id === bookId);
+  const selectedIds = [...selectedBlockIds].filter((id) => getBlock(id)?.kind === "practice");
+  if (!selectedIds.length) {
+    showToast("먼저 실습곡을 선택하세요.");
+    return;
+  }
+  if (!book) {
+    showToast("추가할 악보집을 선택하세요.");
+    return;
+  }
+  const selectedSet = new Set(selectedIds);
+  state.blocks = state.blocks.map((block) => selectedSet.has(block.id)
+    ? { ...block, scoreBookIds: normalizeScoreBookIds([...(block.scoreBookIds || []), bookId]), updatedAt: nowIso() }
+    : block);
+  render();
+  saveStateInBackground({ mode: "overwrite" }, `${selectedIds.length}곡을 ${book.name} 악보집에 넣었습니다.`);
 }
 
 function renderBlockScoreBookOptions(selectedIds = []) {
@@ -4847,13 +4872,16 @@ function renderLibrary() {
 }
 
 function selectedPracticeBlockCount() {
-  return [...selectedBlockIds].map(getBlock).filter(Boolean).length;
+  return [...selectedBlockIds].map(getBlock).filter((block) => block?.kind === "practice").length;
 }
 
 function updateBulkCurriculumSelectedCount() {
   document.querySelectorAll("[data-selected-practice-count]").forEach((node) => {
     node.textContent = selectedPracticeBlockCount();
   });
+  if (els.addSelectedToScoreBook) {
+    els.addSelectedToScoreBook.disabled = !scoreBookDictionary().length || !selectedPracticeBlockCount();
+  }
 }
 
 function renderBulkCurriculumPanel() {
@@ -6259,6 +6287,8 @@ function beginLibraryDragSelection(event) {
     currentY: event.clientY,
     moved: false,
     marquee,
+    mode: event.metaKey || event.ctrlKey ? "toggle" : event.shiftKey ? "add" : "replace",
+    initialSelection: new Set(selectedBlockIds),
   };
   event.preventDefault();
 }
@@ -6287,10 +6317,19 @@ function finishLibraryDragSelection() {
   const selection = libraryDragSelection;
   if (selection.moved) {
     const rect = selectionRectangle(selection.startX, selection.startY, selection.currentX, selection.currentY);
-    selectedBlockIds.clear();
+    const hits = new Set();
     els.materialGrid.querySelectorAll("[data-library-block-id]").forEach((card) => {
-      if (rectanglesIntersect(rect, card.getBoundingClientRect())) selectedBlockIds.add(card.dataset.libraryBlockId);
+      if (rectanglesIntersect(rect, card.getBoundingClientRect())) hits.add(card.dataset.libraryBlockId);
     });
+    if (selection.mode === "replace") selectedBlockIds = hits;
+    else if (selection.mode === "add") selectedBlockIds = new Set([...selection.initialSelection, ...hits]);
+    else {
+      selectedBlockIds = new Set(selection.initialSelection);
+      hits.forEach((id) => {
+        if (selectedBlockIds.has(id)) selectedBlockIds.delete(id);
+        else selectedBlockIds.add(id);
+      });
+    }
     suppressLibraryClickUntil = Date.now() + 250;
     renderLibrary();
   }
@@ -9913,6 +9952,7 @@ els.deleteStudent.addEventListener("click", deleteActiveStudent);
 els.addScheduleSlot.addEventListener("click", addScheduleSlot);
 els.addPianoScheduleStudent.addEventListener("click", addPianoScheduleStudent);
 els.deleteSelectedBlocks.addEventListener("click", deleteSelectedLibraryBlocks);
+els.addSelectedToScoreBook?.addEventListener("click", addSelectedPracticeBlocksToScoreBook);
 els.closeBlockViewer.addEventListener("click", closeLibraryBlockViewer);
 els.closeBlockViewerBottom.addEventListener("click", closeLibraryBlockViewer);
 els.editViewedBlock.addEventListener("click", () => {

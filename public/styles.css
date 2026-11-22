@@ -123,8 +123,7 @@ button {
 .public-share button,
 .public-share .resource-button,
 .public-share .resource-library-button,
-.public-share .chord-dictionary-link,
-.public-share .useful-sites-button {
+.public-share .share-nav-button {
   font-size: 13px;
   line-height: 1;
 }
@@ -545,6 +544,8 @@ menu {
 select,
 input,
 textarea {
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -6003,9 +6004,10 @@ dialog::backdrop {
 }
 
 .copy-link-form {
+  --copy-link-columns: minmax(190px, 0.9fr) minmax(300px, 1.5fr) minmax(220px, 1fr);
   display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.4fr) minmax(240px, 1fr) auto;
-  align-items: end;
+  grid-template-columns: var(--copy-link-columns);
+  align-items: start;
   gap: 10px;
   margin-bottom: 16px;
   padding: 14px;
@@ -6016,17 +6018,25 @@ dialog::backdrop {
 
 .copy-link-form label {
   display: grid;
+  grid-template-rows: auto 52px;
   gap: 6px;
+  min-width: 0;
   font-weight: 800;
 }
 
+.copy-link-form input,
 .copy-link-form textarea {
-  min-height: 44px;
-  resize: vertical;
+  width: 100%;
+  height: 52px;
+  min-height: 52px;
+  margin: 0;
+  resize: none;
 }
 
 .copy-link-form-actions {
   display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
   gap: 6px;
 }
 
@@ -6035,11 +6045,25 @@ dialog::backdrop {
   gap: 8px;
 }
 
+.copy-link-table-head,
 .copy-link-item {
+  --copy-link-columns: minmax(190px, 0.9fr) minmax(300px, 1.5fr) minmax(220px, 1fr);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: var(--copy-link-columns);
+  gap: 16px;
+}
+
+.copy-link-table-head {
   align-items: center;
+  margin-bottom: 6px;
+  padding: 0 14px;
+  color: #705b4c;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.copy-link-item {
+  align-items: start;
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -6048,9 +6072,23 @@ dialog::backdrop {
 
 .copy-link-item.dragging { opacity: 0.45; }
 .copy-link-item.drag-over { border-color: #a96742; background: #fff3e9; }
-.copy-link-item-main { display: grid; gap: 4px; min-width: 0; }
-.copy-link-item-main p { margin: 0; color: var(--muted); white-space: pre-wrap; }
-.copy-link-item-main small { color: #8a6951; }
+.copy-link-name { min-width: 0; color: var(--ink); text-decoration: none; line-height: 1.45; }
+.copy-link-name:hover { color: #8a4f2d; text-decoration: underline; }
+.copy-link-content-cell { min-width: 0; color: var(--muted); }
+.copy-link-content-details summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  line-height: 1.45;
+  cursor: pointer;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.copy-link-content-details summary::marker { content: ""; }
+.copy-link-content-details[open] summary { margin-bottom: 6px; -webkit-line-clamp: 1; }
+.copy-link-content-details p { margin: 0; color: var(--muted); line-height: 1.55; white-space: pre-wrap; }
+.copy-link-url-cell { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; min-width: 0; }
+.copy-link-url-cell > a { overflow: hidden; min-width: 0; color: #7b533c; text-overflow: ellipsis; white-space: nowrap; }
 .copy-link-item-actions { display: flex; align-items: center; gap: 6px; }
 
 .copy-link-option-list {
@@ -6078,6 +6116,9 @@ dialog::backdrop {
 
 @media (max-width: 900px) {
   .copy-link-form { grid-template-columns: 1fr; }
+  .copy-link-form-actions { grid-column: auto; }
+  .copy-link-table-head { display: none; }
+  .copy-link-item { grid-template-columns: 1fr; gap: 8px; }
 }
 .theory-notation-grid { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)); gap: 10px; }
 .theory-notation-grid > div { display: grid; min-height: 86px; place-items: center; gap: 8px; padding: 12px; border: 1px solid #ddcbb9; }
@@ -8335,8 +8376,7 @@ textarea,
 }
 
 .resource-library-button,
-.chord-dictionary-link,
-.useful-sites-button {
+.share-nav-button {
   display: inline-flex;
   width: max-content;
   min-height: 38px;
@@ -8350,6 +8390,24 @@ textarea,
   box-shadow:
     5px 5px 12px rgba(117, 82, 55, 0.13),
     -5px -5px 12px rgba(255, 252, 247, 0.88);
+}
+
+.drop-score-book-control {
+  display: inline-grid;
+  grid-template-columns: auto minmax(150px, 220px) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.drop-score-book-control .secondary-button {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .drop-score-book-control {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
 }
 
 .useful-sites-dialog-card {
