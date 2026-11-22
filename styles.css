@@ -6001,6 +6001,84 @@ dialog::backdrop {
   color: #7a6b60;
   font-size: 13px;
 }
+
+.copy-link-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.4fr) minmax(240px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf5;
+}
+
+.copy-link-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.copy-link-form textarea {
+  min-height: 44px;
+  resize: vertical;
+}
+
+.copy-link-form-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.copy-link-list {
+  display: grid;
+  gap: 8px;
+}
+
+.copy-link-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.copy-link-item.dragging { opacity: 0.45; }
+.copy-link-item.drag-over { border-color: #a96742; background: #fff3e9; }
+.copy-link-item-main { display: grid; gap: 4px; min-width: 0; }
+.copy-link-item-main p { margin: 0; color: var(--muted); white-space: pre-wrap; }
+.copy-link-item-main small { color: #8a6951; }
+.copy-link-item-actions { display: flex; align-items: center; gap: 6px; }
+
+.copy-link-option-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.copy-link-option-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.copy-link-option-list span { display: grid; gap: 2px; }
+.copy-link-option-list small { color: var(--muted); font-weight: 500; }
+.copy-resource-list { display: grid; gap: 6px; }
+.copy-resource-link { display: flex; align-items: center; gap: 8px; width: fit-content; }
+.copy-resource-description { color: var(--muted); font-size: 13px; }
+
+@media (max-width: 900px) {
+  .copy-link-form { grid-template-columns: 1fr; }
+}
 .theory-notation-grid { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)); gap: 10px; }
 .theory-notation-grid > div { display: grid; min-height: 86px; place-items: center; gap: 8px; padding: 12px; border: 1px solid #ddcbb9; }
 .theory-notation-grid small { color: #826b59; font-weight: 800; }

@@ -562,6 +562,7 @@ async function handlePublicRoom(request, response) {
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
       usefulSites: state.usefulSites,
+      copyLinks: state.copyLinks || [],
     scoreBooks: state.scoreBooks || [],
       theoryToolOrder: state.theoryToolOrder,
     }),

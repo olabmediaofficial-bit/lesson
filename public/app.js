@@ -387,6 +387,7 @@ const starterData = {
   practiceProgressScale: "four-step",
   resourceLibraryUrl: "",
   usefulSites: structuredClone(DEFAULT_USEFUL_SITES),
+  copyLinks: [],
   theoryToolOrder: [...DEFAULT_THEORY_TOOL_ORDER],
   schedule: [],
   schedulePeople: [],
@@ -511,6 +512,8 @@ let selectedChordNames = [];
 let selectedRhythmIds = [];
 let editingBlockChordNames = [];
 let editingBlockRhythmIds = [];
+let editingBlockCopyLinkIds = [];
+let draggedCopyLinkId = "";
 let chordBuilder = {
   id: "",
   baseFret: 1,
@@ -1112,6 +1115,10 @@ function normalizeScoreBookIds(value) {
   return [...new Set((Array.isArray(value) ? value : []).map(String).filter(Boolean))];
 }
 
+function normalizeCopyLinkIds(value) {
+  return [...new Set((Array.isArray(value) ? value : []).map(String).filter(Boolean))];
+}
+
 function normalizeRhythmIds(value) {
   const items = Array.isArray(value) ? value : String(value || "").split(",");
   return [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
@@ -1132,6 +1139,7 @@ const els = {
     chords: $("#chordsView"),
     rhythms: $("#rhythmsView"),
     licks: $("#licksView"),
+    copies: $("#copiesView"),
     practiceTools: $("#practiceToolsView"),
     share: $("#shareView"),
   },
@@ -1173,6 +1181,14 @@ const els = {
   lickSearch: $("#lickSearch"),
   lickCategoryTabs: $("#lickCategoryTabs"),
   lickGrid: $("#lickGrid"),
+  copyLinkForm: $("#copyLinkForm"),
+  editingCopyLinkId: $("#editingCopyLinkId"),
+  copyLinkName: $("#copyLinkName"),
+  copyLinkContent: $("#copyLinkContent"),
+  copyLinkUrl: $("#copyLinkUrl"),
+  cancelCopyLinkEdit: $("#cancelCopyLinkEdit"),
+  copyLinkSearch: $("#copyLinkSearch"),
+  copyLinkList: $("#copyLinkList"),
   openLickBuilder: $("#openLickBuilder"),
   lickBuilderDialog: $("#lickBuilderDialog"),
   lickBuilderName: $("#lickBuilderName"),
@@ -1353,6 +1369,7 @@ const els = {
   newScoreBookName: $("#newScoreBookName"),
   blockChordAssetList: $("#blockChordAssetList"),
   blockRhythmAssetList: $("#blockRhythmAssetList"),
+  blockCopyLinkOptions: $("#blockCopyLinkOptions"),
   scoreBooksDialog: $("#scoreBooksDialog"),
   closeScoreBooks: $("#closeScoreBooks"),
   scoreBookTabs: $("#scoreBookTabs"),
@@ -1545,6 +1562,7 @@ function practiceBlockRichness(block) {
     + normalizeResources(block).length
     + normalizeChordNames(block.chords || []).length
     + normalizeRhythmIds(block.rhythms || []).length
+    + normalizeCopyLinkIds(block.copyLinkIds || []).length
     + normalizeScoreBookIds(block.scoreBookIds || []).length
     + (block.summary ? 1 : 0)
     + (block.audioLink ? 1 : 0);
@@ -1577,6 +1595,7 @@ function mergePracticeBlockRecords(primary, secondary) {
     chords: normalizeChordNames([...(primary.chords || []), ...(secondary.chords || [])]),
     rhythms: normalizeRhythmIds([...(primary.rhythms || []), ...(secondary.rhythms || [])]),
     scoreBookIds: normalizeScoreBookIds([...(primary.scoreBookIds || []), ...(secondary.scoreBookIds || [])]),
+    copyLinkIds: normalizeCopyLinkIds([...(primary.copyLinkIds || []), ...(secondary.copyLinkIds || [])]),
     scores: uniqueResources([...normalizeScores(primary), ...normalizeScores(secondary)]),
     resources: uniqueResources([...normalizeResources(primary), ...normalizeResources(secondary)]),
     curriculum,
@@ -1688,6 +1707,7 @@ function migrateState(data) {
         .map((site) => ({ ...site, url: safeExternalUrl(site.url) }))
         .filter((site) => site.name && site.url)
     : structuredClone(DEFAULT_USEFUL_SITES);
+  data.copyLinks = Array.isArray(data.copyLinks) ? data.copyLinks.map(normalizeCopyLink).filter((item) => item.name && item.url) : [];
   data.schedule = Array.isArray(data.schedule) ? data.schedule : [];
   data.schedulePeople = Array.isArray(data.schedulePeople) ? data.schedulePeople : [];
   data.customChords = Array.isArray(data.customChords) ? data.customChords.map(normalizeCustomChord) : [];
@@ -1703,6 +1723,7 @@ function migrateState(data) {
     chords: normalizeChordNames(block.chords || []),
     rhythms: normalizeRhythmIds(block.rhythms || []),
     scoreBookIds: normalizeScoreBookIds(block.scoreBookIds || []),
+    copyLinkIds: normalizeCopyLinkIds(block.copyLinkIds || []),
     curriculum: migrateBlockCurriculum(block),
     curriculumVersion: 2,
     practice: normalizePractice(block.practice),
@@ -1774,6 +1795,107 @@ function usefulSites() {
     .map(normalizeUsefulSite)
     .map((site) => ({ ...site, url: safeExternalUrl(site.url) }))
     .filter((site) => site.name && site.url);
+}
+
+function normalizeCopyLink(item = {}) {
+  return {
+    id: item.id || uid("copy"),
+    name: String(item.name || "").trim(),
+    content: String(item.content || "").trim(),
+    url: safeExternalUrl(item.url),
+    updatedAt: item.updatedAt || nowIso(),
+  };
+}
+
+function copyLinks() {
+  return (state.copyLinks || []).map(normalizeCopyLink).filter((item) => item.name && item.url);
+}
+
+function getCopyLink(id) {
+  return copyLinks().find((item) => item.id === id);
+}
+
+function resetCopyLinkForm() {
+  els.copyLinkForm?.reset();
+  if (els.editingCopyLinkId) els.editingCopyLinkId.value = "";
+  if (els.cancelCopyLinkEdit) els.cancelCopyLinkEdit.hidden = true;
+}
+
+function renderCopyDictionary() {
+  if (!els.copyLinkList) return;
+  const query = normalizeText(els.copyLinkSearch?.value || "");
+  const items = copyLinks().filter((item) => !query || normalizeText(`${item.name} ${item.content}`).includes(query));
+  els.copyLinkList.innerHTML = items.length
+    ? items.map((item) => `
+      <article class="copy-link-item" draggable="true" data-copy-link-id="${escapeHTML(item.id)}">
+        <div class="copy-link-item-main">
+          <strong>${escapeHTML(item.name)}</strong>
+          ${item.content ? `<p>${escapeHTML(item.content)}</p>` : ""}
+          <small>${escapeHTML(usefulSiteHost(item.url))}</small>
+        </div>
+        <div class="copy-link-item-actions">
+          <a class="primary-button mini-button" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer">재생</a>
+          <button class="secondary-button mini-button" type="button" data-edit-copy-link="${escapeHTML(item.id)}">수정</button>
+          <button class="icon-button tiny-button danger" type="button" data-delete-copy-link="${escapeHTML(item.id)}" aria-label="${escapeHTML(item.name)} 삭제">×</button>
+        </div>
+      </article>`).join("")
+    : `<div class="empty">등록된 카피 링크가 없습니다.</div>`;
+}
+
+function saveCopyLink(event) {
+  event.preventDefault();
+  const name = els.copyLinkName.value.trim();
+  const content = els.copyLinkContent.value.trim();
+  const url = safeExternalUrl(els.copyLinkUrl.value);
+  if (!name || !url) {
+    showToast("링크 이름과 올바른 주소를 입력해주세요.");
+    return;
+  }
+  const id = els.editingCopyLinkId.value;
+  const item = normalizeCopyLink({ id: id || uid("copy"), name, content, url, updatedAt: nowIso() });
+  state.copyLinks = id
+    ? copyLinks().map((entry) => entry.id === id ? item : entry)
+    : [...copyLinks(), item];
+  resetCopyLinkForm();
+  renderCopyDictionary();
+  renderBlockCopyLinkOptions();
+  saveStateInBackground({ mode: "overwrite" }, `${name} 카피 링크를 저장했습니다.`);
+}
+
+function editCopyLink(id) {
+  const item = getCopyLink(id);
+  if (!item) return;
+  els.editingCopyLinkId.value = item.id;
+  els.copyLinkName.value = item.name;
+  els.copyLinkContent.value = item.content;
+  els.copyLinkUrl.value = item.url;
+  els.cancelCopyLinkEdit.hidden = false;
+  els.copyLinkName.focus();
+}
+
+function deleteCopyLink(id) {
+  const item = getCopyLink(id);
+  if (!item || !window.confirm(`"${item.name}" 카피 링크를 삭제할까요?`)) return;
+  state.copyLinks = copyLinks().filter((entry) => entry.id !== id);
+  state.blocks.forEach((block) => {
+    block.copyLinkIds = normalizeCopyLinkIds(block.copyLinkIds).filter((copyId) => copyId !== id);
+  });
+  editingBlockCopyLinkIds = editingBlockCopyLinkIds.filter((copyId) => copyId !== id);
+  render();
+  saveStateInBackground({ mode: "overwrite" }, "카피 링크를 삭제했습니다.");
+}
+
+function moveCopyLink(sourceId, targetId) {
+  const items = copyLinks();
+  const sourceIndex = items.findIndex((item) => item.id === sourceId);
+  const targetIndex = items.findIndex((item) => item.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+  const [moved] = items.splice(sourceIndex, 1);
+  items.splice(targetIndex, 0, moved);
+  state.copyLinks = items;
+  renderCopyDictionary();
+  renderBlockCopyLinkOptions();
+  saveStateInBackground({ mode: "overwrite" }, "카피 링크 순서를 저장했습니다.");
 }
 
 function renderUsefulSitesDialog() {
@@ -3506,6 +3628,7 @@ function switchView(view) {
     chords: "코드사전",
     rhythms: "리듬 사전",
     licks: "릭 사전",
+    copies: "카피 사전",
     practiceTools: "실습 도구",
     share: "공유 화면",
   };
@@ -3530,6 +3653,7 @@ function render() {
   renderChordDictionary();
   renderRhythmDictionary();
   renderLickDictionary();
+  renderCopyDictionary();
   renderFretboardTrainer();
   renderDiatonicPractice();
   renderTheoryWorkbooks();
@@ -5617,6 +5741,21 @@ function renderBlockRhythmDictionary(block, { editable = false, studentId = "", 
   `;
 }
 
+function renderBlockCopyLinks(block) {
+  const ids = normalizeCopyLinkIds(block.copyLinkIds || []);
+  const items = ids.map(getCopyLink).filter(Boolean);
+  if (!items.length) return "";
+  return `<details class="used-chord-panel copy-link-panel">
+    <summary><span>카피 ${items.length}개</span></summary>
+    <div class="copy-resource-list">
+      ${items.map((item) => `<div>
+        <a class="audio-button copy-resource-link" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer">카피 · ${escapeHTML(item.name)}</a>
+        ${item.content ? `<div class="copy-resource-description">${escapeHTML(item.content)}</div>` : ""}
+      </div>`).join("")}
+    </div>
+  </details>`;
+}
+
 function filteredPickerChords() {
   const query = normalizeChordSearch(els.chordPickerSearch?.value || "");
   const chords = chordDictionary();
@@ -6167,6 +6306,7 @@ function renderBlockViewerContent(block) {
     <div class="tag-row">${block.tags.map((tag) => `<span class="tag">${escapeHTML(tag)}</span>`).join("") || `<span class="empty-inline">태그 없음</span>`}</div>
     ${renderBlockChordDictionary(block, { editable: true })}
     ${renderBlockRhythmDictionary(block, { editable: true })}
+    ${renderBlockCopyLinks(block)}
     ${renderScoreResources(block, "compact")}
     ${renderResources(block, "compact")}
   `;
@@ -7517,8 +7657,9 @@ function renderLessonResourceChips(block, { editable = false, studentId = "", le
   const audio = block.audioLink ? renderAudioButton(block.audioLink) : "";
   const chords = renderBlockChordDictionary(resourceBlock, { editable });
   const rhythms = renderBlockRhythmDictionary(resourceBlock, { editable, studentId, lessonId });
-  if (!audio && !chords && !rhythms) return "";
-  return `<div class="lesson-resource-chips">${audio}${chords}${rhythms}</div>`;
+  const copies = renderBlockCopyLinks(resourceBlock);
+  if (!audio && !chords && !rhythms && !copies) return "";
+  return `<div class="lesson-resource-chips">${audio}${chords}${rhythms}${copies}</div>`;
 }
 
 function renderMasteryControl(student, block, editable = false) {
@@ -9221,6 +9362,7 @@ function openBlockDialog(blockId = "") {
   blockCurriculumSearch = "";
   editingBlockChordNames = normalizeChordNames(block?.chords || []);
   editingBlockRhythmIds = normalizeRhythmIds(block?.rhythms || []);
+  editingBlockCopyLinkIds = normalizeCopyLinkIds(block?.copyLinkIds || []);
   els.blockDialogTitle.textContent = block ? "블럭 편집" : "블럭 추가";
   els.editingBlockId.value = block?.id || "";
   $("#newTitle").value = block?.title || "";
@@ -9285,6 +9427,19 @@ function renderBlockAssetLists() {
           .join("")
       : `<span class="empty-inline">연결된 리듬표가 없습니다.</span>`;
   }
+  renderBlockCopyLinkOptions();
+}
+
+function renderBlockCopyLinkOptions() {
+  if (!els.blockCopyLinkOptions) return;
+  const selected = new Set(editingBlockCopyLinkIds);
+  const items = copyLinks();
+  els.blockCopyLinkOptions.innerHTML = items.length
+    ? items.map((item) => `<label>
+        <input type="checkbox" data-block-copy-link="${escapeHTML(item.id)}" ${selected.has(item.id) ? "checked" : ""} />
+        <span><strong>${escapeHTML(item.name)}</strong>${item.content ? `<small>${escapeHTML(item.content)}</small>` : ""}</span>
+      </label>`).join("")
+    : `<span class="empty-inline">카피 사전에 등록된 링크가 없습니다.</span>`;
 }
 
 function renderExistingScoreList(block) {
@@ -9493,6 +9648,7 @@ $("#materialForm").addEventListener("submit", async (event) => {
       audioLink: els.newAudioLink.value.trim(),
       chords: editedChords,
       rhythms: normalizeRhythmIds(editingBlockRhythmIds),
+      copyLinkIds: normalizeCopyLinkIds(editingBlockCopyLinkIds),
       scoreBookIds: kind === "practice" ? normalizeScoreBookIds(selectedScoreBookIds) : [],
       curriculum: selectedBlockCurriculum(),
       curriculumVersion: 2,
@@ -9991,6 +10147,49 @@ els.usefulSitesList?.addEventListener("click", (event) => {
   }
   const button = event.target.closest("[data-delete-useful-site]");
   if (button) deleteUsefulSite(button.dataset.deleteUsefulSite);
+});
+
+els.copyLinkForm?.addEventListener("submit", saveCopyLink);
+els.cancelCopyLinkEdit?.addEventListener("click", resetCopyLinkForm);
+els.copyLinkSearch?.addEventListener("input", renderCopyDictionary);
+els.copyLinkList?.addEventListener("click", (event) => {
+  const editButton = event.target.closest("[data-edit-copy-link]");
+  if (editButton) {
+    editCopyLink(editButton.dataset.editCopyLink);
+    return;
+  }
+  const deleteButton = event.target.closest("[data-delete-copy-link]");
+  if (deleteButton) deleteCopyLink(deleteButton.dataset.deleteCopyLink);
+});
+els.copyLinkList?.addEventListener("dragstart", (event) => {
+  const item = event.target.closest("[data-copy-link-id]");
+  if (!item) return;
+  draggedCopyLinkId = item.dataset.copyLinkId;
+  item.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+});
+els.copyLinkList?.addEventListener("dragover", (event) => {
+  const item = event.target.closest("[data-copy-link-id]");
+  if (!item || !draggedCopyLinkId) return;
+  event.preventDefault();
+  els.copyLinkList.querySelectorAll(".drag-over").forEach((node) => node.classList.remove("drag-over"));
+  item.classList.add("drag-over");
+});
+els.copyLinkList?.addEventListener("drop", (event) => {
+  const item = event.target.closest("[data-copy-link-id]");
+  if (!item || !draggedCopyLinkId) return;
+  event.preventDefault();
+  moveCopyLink(draggedCopyLinkId, item.dataset.copyLinkId);
+});
+els.copyLinkList?.addEventListener("dragend", () => {
+  draggedCopyLinkId = "";
+  els.copyLinkList.querySelectorAll(".dragging, .drag-over").forEach((node) => node.classList.remove("dragging", "drag-over"));
+});
+els.blockCopyLinkOptions?.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-block-copy-link]");
+  if (!input) return;
+  if (input.checked) editingBlockCopyLinkIds = normalizeCopyLinkIds([...editingBlockCopyLinkIds, input.dataset.blockCopyLink]);
+  else editingBlockCopyLinkIds = editingBlockCopyLinkIds.filter((id) => id !== input.dataset.blockCopyLink);
 });
 
 els.copyPreviewShareLink.addEventListener("click", async () => {

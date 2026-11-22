@@ -34,6 +34,7 @@ export async function onRequest(context) {
       practiceProgressScale: state.practiceProgressScale || "four-step",
       resourceLibraryUrl: state.resourceLibraryUrl || "",
       usefulSites: state.usefulSites,
+      copyLinks: state.copyLinks || [],
       scoreBooks: state.scoreBooks || [],
       theoryToolOrder: state.theoryToolOrder,
     });

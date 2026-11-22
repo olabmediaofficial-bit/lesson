@@ -60,6 +60,10 @@
             <span aria-hidden="true">𝄢</span>
             릭 사전
           </button>
+          <button class="nav-item" data-view="copies" type="button">
+            <span aria-hidden="true">▶</span>
+            카피 사전
+          </button>
           <button class="nav-item" data-view="practiceTools" type="button">
             <span aria-hidden="true">⌗</span>
             실습 도구
@@ -387,6 +391,32 @@
           </section>
         </section>
 
+        <section class="view" id="copiesView" aria-label="카피 사전">
+          <section class="panel copy-dictionary-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Copy dictionary</p>
+                <h2>카피 사전</h2>
+                <p>카피할 곡과 참고 내용을 링크로 모아둡니다.</p>
+              </div>
+            </div>
+            <form id="copyLinkForm" class="copy-link-form">
+              <input id="editingCopyLinkId" type="hidden" />
+              <label>링크 이름<input id="copyLinkName" type="text" placeholder="예: 봄봄봄 기타 카피" required /></label>
+              <label>내용<textarea id="copyLinkContent" rows="2" placeholder="카피할 구간이나 연습 포인트"></textarea></label>
+              <label>링크<input id="copyLinkUrl" type="url" placeholder="https://..." required /></label>
+              <div class="copy-link-form-actions">
+                <button class="primary-button" type="submit">저장</button>
+                <button class="secondary-button" id="cancelCopyLinkEdit" type="button" hidden>취소</button>
+              </div>
+            </form>
+            <div class="control-row">
+              <label class="search-box"><span aria-hidden="true">⌕</span><input id="copyLinkSearch" type="search" placeholder="이름 또는 내용 검색" /></label>
+            </div>
+            <div id="copyLinkList" class="copy-link-list"></div>
+          </section>
+        </section>
+
         <section class="view" id="practiceToolsView" aria-label="실습 도구">
           <section class="panel practice-tools-panel">
             <div class="panel-head">
@@ -653,6 +683,12 @@
             <div class="block-asset-actions">
               <button class="secondary-button mini-button" id="editBlockRhythms" type="button">리듬 사전에서 추가</button>
               <button class="secondary-button mini-button" id="drawBlockRhythm" type="button">리듬 그리기</button>
+            </div>
+          </div>
+          <div class="block-asset-row copy-link-assignment-row">
+            <div>
+              <strong>카피 링크</strong>
+              <div class="copy-link-option-list" id="blockCopyLinkOptions"></div>
             </div>
           </div>
         </section>
