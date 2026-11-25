@@ -5987,8 +5987,8 @@ dialog::backdrop {
 
 .image-markup-stamp.stamp-twofive,
 .image-markup-stamp.stamp-motion {
-  min-width: 58px;
-  min-height: 24px;
+  min-width: calc(var(--markup-base-font-size, 15px) * 3.85);
+  min-height: calc(var(--markup-base-font-size, 15px) * 1.6);
   padding: 2px 4px;
   border-color: transparent;
   background: transparent;
@@ -5996,8 +5996,8 @@ dialog::backdrop {
 }
 
 .image-markup-stamp.stamp-chord {
-  width: 48px;
-  height: 40px;
+  width: calc(var(--markup-base-font-size, 15px) * 3.2);
+  height: calc(var(--markup-base-font-size, 15px) * 2.66);
   padding: 0;
   border: 0;
   background: transparent;
@@ -6409,12 +6409,50 @@ dialog::backdrop {
   border-radius: 8px;
   background: #fffaf4;
   color: var(--ink);
-  cursor: zoom-in;
+  cursor: grab;
   font-family: inherit;
   text-align: left;
   box-shadow:
     5px 5px 14px rgba(91, 62, 43, 0.08),
     -5px -5px 14px rgba(255, 255, 255, 0.86);
+}
+
+.image-viewer-chord-card.dragging {
+  opacity: 0.45;
+}
+
+.image-viewer-chord-open {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: zoom-in;
+  text-align: left;
+}
+
+.image-viewer-chord-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.image-viewer-chord-actions button {
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.image-viewer-chord-actions button.danger {
+  color: #9f3131;
 }
 
 .image-viewer-chord-card strong {

@@ -546,6 +546,7 @@ let imageViewer = {
   title: "",
 };
 let imageViewerStack = [];
+let viewerChordDragIndex = -1;
 let imageMarkup = {
   active: false,
   tool: "select",
@@ -2829,7 +2830,7 @@ function updateImageViewer() {
     els.imageViewerImage.removeAttribute("alt");
     els.imageViewerImage.removeAttribute("style");
     imageViewer.src = "";
-    els.imageViewerTitle.textContent = "";
+    els.imageViewerTitle.textContent = imageViewer.title || "사용 코드";
     renderImageViewerMastery();
     renderImageViewerAudio();
     renderImageViewerResourceButtons();
@@ -2850,8 +2851,8 @@ function updateImageViewer() {
   renderImageViewerMastery();
   renderImageViewerAudio();
   renderImageViewerResourceButtons();
-  renderImageMarkup();
   fitImageViewerToScreen();
+  renderImageMarkup();
   els.imageViewerZoomLabel.textContent = `${Math.round(imageViewer.zoom * 100)}%`;
   els.imageViewerCounter.textContent = `${imageViewer.index + 1} / ${imageViewer.items.length}`;
   els.imageViewerPrev.disabled = imageViewer.items.length < 2;
@@ -2882,10 +2883,16 @@ function renderImageViewerChordGrid() {
   return imageViewer.items
     .map(
       (item, index) => `
-        <button class="image-viewer-chord-card" type="button" data-viewer-chord-index="${index}">
-          <strong>${escapeHTML(item.chordName || item.title || "코드")}</strong>
-          <img src="${item.src}" alt="${escapeHTML(item.title || "코드표")}" loading="lazy" />
-        </button>
+        <article class="image-viewer-chord-card" draggable="true" data-viewer-chord-index="${index}" data-viewer-chord-file="${escapeHTML(item.chordFile || "")}">
+          <button class="image-viewer-chord-open" type="button" data-open-viewer-chord="${index}">
+            <strong>${escapeHTML(item.chordName || item.title || "코드")}</strong>
+            <img src="${item.src}" alt="${escapeHTML(item.title || "코드표")}" loading="lazy" />
+          </button>
+          ${String(item.chordFile || "").startsWith("custom:") && !publicShareMode ? `<div class="image-viewer-chord-actions">
+            <button type="button" data-edit-viewer-chord="${escapeHTML(item.chordFile)}">수정</button>
+            <button class="danger" type="button" data-delete-viewer-chord="${escapeHTML(item.chordFile)}">삭제</button>
+          </div>` : ""}
+        </article>
       `,
     )
     .join("");
@@ -2899,7 +2906,7 @@ function restorePreviousImageViewer() {
 }
 
 function captureImageViewerContext() {
-  if (!els.imageViewerDialog?.open || imageViewer.mode !== "score") return null;
+  if (!els.imageViewerDialog?.open) return null;
   return {
     viewer: { ...imageViewer, items: imageViewer.items.map((item) => ({ ...item })) },
     stack: imageViewerStack.map((entry) => ({ ...entry, items: entry.items.map((item) => ({ ...item })) })),
@@ -2915,6 +2922,7 @@ function restoreCapturedImageViewer(context) {
     src: "",
   };
   updateImageViewer();
+  if (imageViewer.mode === "chord-grid") refreshImageViewerChordGrid();
 }
 
 function currentImageViewerBlock() {
@@ -3078,10 +3086,11 @@ function lessonBlockAssets(studentId, lessonId, blockId, create = false) {
   }
   if (!lesson.blockAssets[blockId]) {
     if (!create) return null;
-    lesson.blockAssets[blockId] = { chords: [], rhythms: [] };
+    lesson.blockAssets[blockId] = { chords: [], chordOrder: [], rhythms: [] };
   }
   const assets = lesson.blockAssets[blockId];
   assets.chords = normalizeChordNames(assets.chords || []);
+  assets.chordOrder = normalizeChordNames(assets.chordOrder || []);
   assets.rhythms = normalizeRhythmIds(assets.rhythms || []);
   return { student, lesson, assets };
 }
@@ -3090,9 +3099,11 @@ function lessonResourceBlock(block, studentId = "", lessonId = "") {
   if (!block) return null;
   const local = lessonBlockAssets(studentId, lessonId, block.id, false)?.assets;
   if (!local) return block;
+  const chords = normalizeChordNames([...(block.chords || []), ...local.chords]);
+  const orderedChords = normalizeChordNames(local.chordOrder || []).filter((name) => chords.includes(name));
   return {
     ...block,
-    chords: normalizeChordNames([...(block.chords || []), ...local.chords]),
+    chords: [...orderedChords, ...chords.filter((name) => !orderedChords.includes(name))],
     rhythms: normalizeRhythmIds([...(block.rhythms || []), ...local.rhythms]),
   };
 }
@@ -3460,9 +3471,54 @@ function openImageViewerChords() {
       src: chord.src,
       title: `${chord.name} 코드`,
       chordName: chord.name,
+      chordFile: chord.fileName,
+      blockId: item?.blockId || "",
+      studentId: item?.studentId || "",
+      lessonId: item?.lessonId || "",
     }));
   if (!items.length) return;
-  openLearningResourceWindow(items, { title: `${block.title} · 사용 코드`, kind: "chords" });
+  openImageViewerItems(items, 0, { mode: "chord-grid", title: `${block.title} · 사용 코드`, pushCurrent: true });
+}
+
+function refreshImageViewerChordGrid() {
+  if (imageViewer.mode !== "chord-grid") return;
+  const context = imageViewer.items[0] || {};
+  const block = lessonResourceBlock(getBlock(context.blockId || ""), context.studentId || "", context.lessonId || "");
+  if (!block) return;
+  imageViewer.items = normalizeChordNames(block.chords || [])
+    .map(getChordByName)
+    .filter(Boolean)
+    .map((chord) => ({
+      src: chord.src,
+      title: `${chord.name} 코드`,
+      chordName: chord.name,
+      chordFile: chord.fileName,
+      blockId: context.blockId || "",
+      studentId: context.studentId || "",
+      lessonId: context.lessonId || "",
+    }));
+  if (!imageViewer.items.length) {
+    restorePreviousImageViewer();
+    return;
+  }
+  imageViewer.index = Math.min(imageViewer.index, Math.max(0, imageViewer.items.length - 1));
+  updateImageViewer();
+}
+
+function reorderImageViewerChords(fromIndex, toIndex) {
+  if (imageViewer.mode !== "chord-grid" || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+  const items = [...imageViewer.items];
+  if (!items[fromIndex] || !items[toIndex]) return;
+  const [moved] = items.splice(fromIndex, 1);
+  items.splice(toIndex, 0, moved);
+  imageViewer.items = items;
+  const context = items[0] || {};
+  const local = lessonBlockAssets(context.studentId || "", context.lessonId || "", context.blockId || "", true);
+  if (!local) return;
+  local.assets.chordOrder = items.map((entry) => entry.chordFile).filter(Boolean);
+  local.lesson.updatedAt = nowIso();
+  updateImageViewer();
+  saveStateInBackground({ mode: "overwrite" }, "코드 순서를 저장했습니다.");
 }
 
 function rhythmViewerItems(block) {
@@ -3545,6 +3601,7 @@ function fitImageViewerToScreen() {
   const image = els.imageViewerImage;
   if (imageViewer.mode === "chord") {
     image.removeAttribute("style");
+    els.imageMarkupCanvas?.removeAttribute("style");
     return;
   }
   const scroller = image.closest(".image-viewer-scroll");
@@ -3554,8 +3611,11 @@ function fitImageViewerToScreen() {
   const availableHeight = Math.max(120, scroller.clientHeight - 4);
   const fitScale = Math.min(availableWidth / image.naturalWidth, availableHeight / image.naturalHeight);
   const fittedWidth = Math.max(80, Math.floor(image.naturalWidth * fitScale * imageViewer.zoom));
+  const fittedHeight = Math.max(80, Math.floor(image.naturalHeight * fitScale * imageViewer.zoom));
+  els.imageMarkupCanvas.style.width = `${fittedWidth}px`;
+  els.imageMarkupCanvas.style.height = `${fittedHeight}px`;
   image.style.width = `${fittedWidth}px`;
-  image.style.height = "auto";
+  image.style.height = `${fittedHeight}px`;
 }
 
 function changeImageViewerZoom(delta) {
@@ -6088,7 +6148,16 @@ function deleteCustomChord(fileName) {
       updatedAt: nowIso(),
     }),
   );
+  state.students.forEach((student) => {
+    (student.lessons || []).forEach((lesson) => {
+      Object.values(lesson.blockAssets || {}).forEach((assets) => {
+        assets.chords = normalizeChordNames(assets.chords || []).filter((name) => name !== fileName);
+        assets.chordOrder = normalizeChordNames(assets.chordOrder || []).filter((name) => name !== fileName);
+      });
+    });
+  });
   render();
+  refreshImageViewerChordGrid();
   saveStateInBackground({}, `${chord.name} 코드표를 삭제했습니다.`);
 }
 
@@ -8302,12 +8371,33 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const viewerChordCard = event.target.closest("[data-viewer-chord-index]");
-  if (viewerChordCard) {
+  const viewerChordOpen = event.target.closest("[data-open-viewer-chord]");
+  if (viewerChordOpen) {
     event.preventDefault();
-    const item = imageViewer.items[Number(viewerChordCard.dataset.viewerChordIndex)];
+    const index = Number(viewerChordOpen.dataset.openViewerChord);
+    const item = imageViewer.items[index];
     if (!item) return;
-    openImageViewerItems(imageViewer.items, Number(viewerChordCard.dataset.viewerChordIndex), { mode: "chord", pushCurrent: true });
+    openImageViewerItems(imageViewer.items, index, { mode: "chord", pushCurrent: true });
+    return;
+  }
+
+  const editViewerChord = event.target.closest("[data-edit-viewer-chord]");
+  if (editViewerChord) {
+    event.preventDefault();
+    const chord = getChordByName(editViewerChord.dataset.editViewerChord);
+    if (chord) openChordBuilder({
+      editChord: chord,
+      studentId: imageViewer.items[0]?.studentId || "",
+      blockId: imageViewer.items[0]?.blockId || "",
+      lessonId: imageViewer.items[0]?.lessonId || "",
+    });
+    return;
+  }
+
+  const deleteViewerChord = event.target.closest("[data-delete-viewer-chord]");
+  if (deleteViewerChord) {
+    event.preventDefault();
+    deleteCustomChord(deleteViewerChord.dataset.deleteViewerChord);
     return;
   }
 
@@ -9247,6 +9337,30 @@ els.imageMarkupTextLayer.addEventListener("dblclick", (event) => {
 els.imageViewerImage.addEventListener("load", () => {
   fitImageViewerToScreen();
   renderImageMarkup();
+});
+els.imageViewerChordGrid?.addEventListener("dragstart", (event) => {
+  const card = event.target.closest("[data-viewer-chord-index]");
+  if (!card) return;
+  viewerChordDragIndex = Number(card.dataset.viewerChordIndex);
+  card.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+});
+els.imageViewerChordGrid?.addEventListener("dragover", (event) => {
+  const card = event.target.closest("[data-viewer-chord-index]");
+  if (!card || viewerChordDragIndex < 0) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+});
+els.imageViewerChordGrid?.addEventListener("drop", (event) => {
+  const card = event.target.closest("[data-viewer-chord-index]");
+  if (!card || viewerChordDragIndex < 0) return;
+  event.preventDefault();
+  reorderImageViewerChords(viewerChordDragIndex, Number(card.dataset.viewerChordIndex));
+  viewerChordDragIndex = -1;
+});
+els.imageViewerChordGrid?.addEventListener("dragend", () => {
+  viewerChordDragIndex = -1;
+  els.imageViewerChordGrid.querySelectorAll(".dragging").forEach((card) => card.classList.remove("dragging"));
 });
 els.imageViewerDialog.addEventListener(
   "wheel",
