@@ -6159,7 +6159,7 @@ function saveCustomChordFromBuilder() {
   });
   state.customChords = [
     chord,
-    ...(state.customChords || []).filter((item) => item.id !== chord.id && !(normalizeChordSearch(item.name) === normalizeChordSearch(chord.name) && (item.studentId || "") === (chord.studentId || ""))),
+    ...(state.customChords || []).filter((item) => item.id !== chord.id),
   ];
   if (chordBuilder.attachToLesson) {
     const block = ensurePendingBlankBlock();

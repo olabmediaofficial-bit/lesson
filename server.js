@@ -256,6 +256,20 @@ function unique(items = []) {
   return [...new Set(items.filter(Boolean))];
 }
 
+function mergeLessonBlockAssets(existing = {}, incoming = {}) {
+  const result = { ...(existing || {}) };
+  Object.entries(incoming || {}).forEach(([blockId, assets]) => {
+    const previous = result[blockId] || {};
+    result[blockId] = {
+      ...previous,
+      ...(assets || {}),
+      chords: unique([...(previous.chords || []), ...(assets?.chords || [])]),
+      rhythms: unique([...(previous.rhythms || []), ...(assets?.rhythms || [])]),
+    };
+  });
+  return result;
+}
+
 function isIncomingNewer(existing = {}, incoming = {}) {
   const existingTime = Date.parse(existing.updatedAt || "");
   const incomingTime = Date.parse(incoming.updatedAt || "");
@@ -281,6 +295,7 @@ function mergeLessons(serverLessons = [], incomingLessons = []) {
     lessons.set(lesson.id, {
       ...base,
       blockIds: unique([...(existing?.blockIds || []), ...(lesson.blockIds || lesson.materialIds || [])]),
+      blockAssets: mergeLessonBlockAssets(existing?.blockAssets, lesson.blockAssets),
     });
   });
 
@@ -625,8 +640,7 @@ async function handlePublicCustomChord(request, response) {
       studentId: student.id,
       updatedAt: new Date().toISOString(),
     };
-    const sameOwnerAndName = (item) => (item.studentId || "") === student.id && String(item.name || "").trim().toLowerCase() === String(customChord.name || "").trim().toLowerCase();
-    state.customChords = [customChord, ...(state.customChords || []).filter((item) => !sameOwnerAndName(item))];
+    state.customChords = [customChord, ...(state.customChords || []).filter((item) => item.id !== customChord.id)];
     await writeState(state);
     send(response, 200, JSON.stringify({ ok: true, chord: customChord }), "application/json; charset=utf-8");
   } catch (error) {

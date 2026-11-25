@@ -147,6 +147,20 @@ export function unique(items = []) {
   return [...new Set(items.filter(Boolean))];
 }
 
+function mergeLessonBlockAssets(existing = {}, incoming = {}) {
+  const result = { ...(existing || {}) };
+  Object.entries(incoming || {}).forEach(([blockId, assets]) => {
+    const previous = result[blockId] || {};
+    result[blockId] = {
+      ...previous,
+      ...(assets || {}),
+      chords: unique([...(previous.chords || []), ...(assets?.chords || [])]),
+      rhythms: unique([...(previous.rhythms || []), ...(assets?.rhythms || [])]),
+    };
+  });
+  return result;
+}
+
 export function mergeState(serverState, incomingState) {
   if (!serverState) return incomingState;
   return {
@@ -261,6 +275,7 @@ function mergeLessons(serverLessons = [], incomingLessons = []) {
     lessons.set(lesson.id, {
       ...base,
       blockIds: unique([...(existing?.blockIds || []), ...(lesson.blockIds || lesson.materialIds || [])]),
+      blockAssets: mergeLessonBlockAssets(existing?.blockAssets, lesson.blockAssets),
     });
   });
   return [...lessons.values()];
