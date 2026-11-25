@@ -553,6 +553,7 @@ let imageMarkup = {
   stampDegree: 1,
   stampAccidental: 0,
   stampSize: 1,
+  stampChordFile: "",
   stampPreview: null,
   drawing: null,
   pendingDrawingId: "",
@@ -1318,6 +1319,8 @@ const els = {
   imageMarkupStampDominant: $("#imageMarkupStampDominant"),
   imageMarkupStampTwoFive: $("#imageMarkupStampTwoFive"),
   imageMarkupStampMotion: $("#imageMarkupStampMotion"),
+  imageMarkupChordStamps: $("#imageMarkupChordStamps"),
+  imageMarkupChordStampList: $("#imageMarkupChordStampList"),
   imageMarkupStampStatus: $("#imageMarkupStampStatus"),
   imageMarkupStampSizeWrap: $("#imageMarkupStampSizeWrap"),
   imageMarkupStampSize: $("#imageMarkupStampSize"),
@@ -3127,6 +3130,7 @@ function setImageMarkupTool(tool) {
   els.imageMarkupStampDominant?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "dominant");
   els.imageMarkupStampTwoFive?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "twofive");
   els.imageMarkupStampMotion?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "motion");
+  els.imageMarkupChordStamps?.classList.toggle("active", imageMarkup.tool === "stamp" && imageMarkup.stampKind === "chord");
   els.imageMarkupCanvas?.classList.toggle("text-tool", imageMarkup.tool === "text");
   els.imageMarkupCanvas?.classList.toggle("stamp-tool", imageMarkup.tool === "stamp");
   els.imageMarkupCanvas?.classList.toggle("select-tool", imageMarkup.tool === "select");
@@ -3138,6 +3142,7 @@ const ROMAN_DEGREES = ["I", "II", "III", "IV", "V", "VI", "VII"];
 function imageMarkupStampLabel(action = imageMarkup) {
   const degree = Math.max(1, Math.min(7, Number(action.degree ?? action.stampDegree) || 1));
   const kind = action.kind || action.stampKind || "major";
+  if (kind === "chord") return imageMarkupChordForStamp(action)?.name || "코드";
   if (kind === "twofive") return "II–V";
   if (kind === "motion") return "V→I";
   const accidental = Math.max(-1, Math.min(1, Number(action.accidental ?? action.stampAccidental) || 0));
@@ -3150,6 +3155,10 @@ function imageMarkupStampLabel(action = imageMarkup) {
 
 function imageMarkupStampContent(action = imageMarkup) {
   const kind = action.kind || action.stampKind || "major";
+  if (kind === "chord") {
+    const chord = imageMarkupChordForStamp(action);
+    return chord ? `<img src="${escapeHTML(chord.src)}" alt="${escapeHTML(chord.name)} 코드 도장" />` : `<span class="missing-chord-stamp">?</span>`;
+  }
   if (kind === "twofive") return `<span class="analysis-relationship analysis-twofive" aria-label="2-5 관계"></span>`;
   if (kind === "motion") return `<span class="analysis-relationship analysis-motion" aria-label="5-1 도미넌트 모션"></span>`;
   return escapeHTML(imageMarkupStampLabel(action));
@@ -3165,8 +3174,36 @@ function renderImageMarkupStampStatus() {
   if (els.imageMarkupStampSizeLabel) els.imageMarkupStampSizeLabel.value = `${Math.round(imageMarkup.stampSize * 100)}%`;
 }
 
-function setImageMarkupStamp(kind) {
-  imageMarkup.stampKind = ["minor", "dominant", "twofive", "motion"].includes(kind) ? kind : "major";
+function imageMarkupChordStampOptions() {
+  const block = currentImageViewerResourceBlock();
+  if (!block) return [];
+  return normalizeChordNames(block.chords || [])
+    .filter((name) => String(name).startsWith("custom:"))
+    .map(getChordByName)
+    .filter(Boolean);
+}
+
+function imageMarkupChordForStamp(action = imageMarkup) {
+  if (action.chordSnapshot) return customChordEntry(action.chordSnapshot);
+  const fileName = action.chordFile || action.stampChordFile || "";
+  return fileName ? getChordByName(fileName) : null;
+}
+
+function renderImageMarkupChordStampList() {
+  if (!els.imageMarkupChordStampList) return;
+  const chords = imageMarkupChordStampOptions();
+  const signature = chords.map((chord) => `${chord.fileName}:${chord.updatedAt || ""}`).join("|");
+  if (els.imageMarkupChordStampList.dataset.signature === signature) return;
+  els.imageMarkupChordStampList.dataset.signature = signature;
+  els.imageMarkupChordStampList.innerHTML = chords.length
+    ? chords.map((chord) => `<button class="${imageMarkup.stampKind === "chord" && imageMarkup.stampChordFile === chord.fileName ? "active" : ""}" type="button" data-markup-chord-stamp="${escapeHTML(chord.fileName)}" title="${escapeHTML(chord.name)} 코드 도장 선택">${escapeHTML(chord.name)}</button>`).join("")
+    : `<span>이 실습 블럭에 그려둔 코드가 없습니다.</span>`;
+}
+
+function setImageMarkupStamp(kind, chordFile = "") {
+  imageMarkup.stampKind = ["minor", "dominant", "twofive", "motion", "chord"].includes(kind) ? kind : "major";
+  imageMarkup.stampChordFile = imageMarkup.stampKind === "chord" ? chordFile : "";
+  if (els.imageMarkupChordStampList) els.imageMarkupChordStampList.dataset.signature = "";
   setImageMarkupTool("stamp");
 }
 
@@ -3179,10 +3216,10 @@ function ensureImageMarkupActions(markup) {
       if (!Number.isFinite(Number(action.height))) action.height = 4;
     }
     if (action.type === "stamp") {
-      action.kind = ["minor", "dominant", "twofive", "motion"].includes(action.kind) ? action.kind : "major";
+      action.kind = ["minor", "dominant", "twofive", "motion", "chord"].includes(action.kind) ? action.kind : "major";
       action.degree = Math.max(1, Math.min(7, Number(action.degree) || 1));
       action.accidental = Math.max(-1, Math.min(1, Number(action.accidental) || 0));
-      action.size = Math.max(0.6, Math.min(1.8, Number(action.size) || 1));
+      action.size = Math.max(0.4, Math.min(2.5, Number(action.size) || 1));
     }
     if (action.type === "drawing" && !Array.isArray(action.paths)) action.paths = [];
   });
@@ -3270,7 +3307,7 @@ function renderImageMarkup() {
     })
     .join("") + stamps.map((action) => {
       const selected = imageMarkup.active && action.id === imageMarkup.selectedId;
-      return `<div class="image-markup-stamp stamp-${escapeHTML(action.kind || "major")}${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-stamp-id="${escapeHTML(action.id)}" title="${escapeHTML(imageMarkupStampLabel(action))} 분석 도장" style="left:${Math.max(0, Math.min(96, Number(action.x) || 0))}%;top:${Math.max(0, Math.min(96, Number(action.y) || 0))}%;--stamp-scale:${Math.max(0.6, Math.min(1.8, Number(action.size) || 1))}">${imageMarkupStampContent(action)}</div>`;
+      return `<div class="image-markup-stamp stamp-${escapeHTML(action.kind || "major")}${selected ? " selected" : ""}" data-markup-action-id="${escapeHTML(action.id)}" data-markup-stamp-id="${escapeHTML(action.id)}" title="${escapeHTML(imageMarkupStampLabel(action))} 도장" style="left:${Math.max(0, Math.min(96, Number(action.x) || 0))}%;top:${Math.max(0, Math.min(96, Number(action.y) || 0))}%;--stamp-scale:${Math.max(0.4, Math.min(2.5, Number(action.size) || 1))}">${imageMarkupStampContent(action)}${selected ? `<button class="image-markup-stamp-resize" data-markup-resize-id="${escapeHTML(action.id)}" type="button" title="도장 크기 조절"></button>` : ""}</div>`;
     }).join("") + (imageMarkup.active && imageMarkup.tool === "stamp" && imageMarkup.stampPreview
       ? `<div class="image-markup-stamp stamp-${escapeHTML(imageMarkup.stampKind)} preview" aria-hidden="true" style="left:${imageMarkup.stampPreview.x}%;top:${imageMarkup.stampPreview.y}%;--stamp-scale:${imageMarkup.stampSize}">${imageMarkupStampContent()}</div>`
       : "");
@@ -3280,6 +3317,7 @@ function renderImageMarkup() {
   if (els.imageMarkupRedo) els.imageMarkupRedo.disabled = !imageMarkup.historyFuture.length;
   if (els.imageMarkupAlignStamps) els.imageMarkupAlignStamps.disabled = stamps.length < 2;
   if (els.imageMarkupToolbar) els.imageMarkupToolbar.hidden = !imageMarkup.active;
+  renderImageMarkupChordStampList();
 }
 
 function markupPoint(event) {
@@ -8973,10 +9011,24 @@ els.imageMarkupStampMinor?.addEventListener("click", () => setImageMarkupStamp("
 els.imageMarkupStampDominant?.addEventListener("click", () => setImageMarkupStamp("dominant"));
 els.imageMarkupStampTwoFive?.addEventListener("click", () => setImageMarkupStamp("twofive"));
 els.imageMarkupStampMotion?.addEventListener("click", () => setImageMarkupStamp("motion"));
+els.imageMarkupChordStampList?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-markup-chord-stamp]");
+  if (!button) return;
+  setImageMarkupStamp("chord", button.dataset.markupChordStamp);
+  if (els.imageMarkupChordStamps) els.imageMarkupChordStamps.open = false;
+});
 els.imageMarkupStampSize?.addEventListener("input", () => {
-  imageMarkup.stampSize = Math.max(0.6, Math.min(1.8, Number(els.imageMarkupStampSize.value) / 100 || 1));
+  imageMarkup.stampSize = Math.max(0.4, Math.min(2.5, Number(els.imageMarkupStampSize.value) / 100 || 1));
+  const selected = selectedImageMarkupAction();
+  if (selected?.type === "stamp") {
+    selected.size = imageMarkup.stampSize;
+    selected.updatedAt = nowIso();
+  }
   renderImageMarkupStampStatus();
   renderImageMarkup();
+});
+els.imageMarkupStampSize?.addEventListener("change", () => {
+  if (selectedImageMarkupAction()?.type === "stamp") saveImageMarkup("도장 크기를 저장했습니다.");
 });
 els.imageMarkupDone.addEventListener("click", () => setImageMarkupActive(false));
 els.imageMarkupDelete.addEventListener("click", deleteSelectedImageMarkup);
@@ -9001,6 +9053,12 @@ els.imageMarkupCanvas.addEventListener("pointerdown", (event) => {
     imageMarkup.selectedId = targetId;
     let action = selectedImageMarkupAction();
     if (!action) return;
+    if (action.type === "stamp") {
+      imageMarkup.stampKind = action.kind || "major";
+      imageMarkup.stampSize = Math.max(0.4, Math.min(2.5, Number(action.size) || 1));
+      imageMarkup.stampChordFile = action.chordFile || "";
+      renderImageMarkupStampStatus();
+    }
     if (action.type === "text" && !resizeTarget && !event.altKey) {
       const textRect = actionTarget.getBoundingClientRect();
       const edge = Math.min(
@@ -9053,6 +9111,8 @@ els.imageMarkupCanvas.addEventListener("pointerdown", (event) => {
       degree: imageMarkup.stampDegree,
       accidental: imageMarkup.stampAccidental,
       size: imageMarkup.stampSize,
+      chordFile: imageMarkup.stampKind === "chord" ? imageMarkup.stampChordFile : "",
+      chordSnapshot: imageMarkup.stampKind === "chord" ? normalizeCustomChord(imageMarkupChordForStamp()) : null,
       updatedAt: nowIso(),
     };
     currentScoreMarkup(true).actions.push(action);
@@ -9107,6 +9167,11 @@ els.imageMarkupCanvas.addEventListener("pointermove", (event) => {
       action.width = Math.max(2, Math.min(98 - Number(action.x || 0), (Number(snapshot.width) || 10) + dx / 10));
       action.height = Math.max(2, Math.min(98 - Number(action.y || 0), (Number(snapshot.height) || 4) + dy / 10));
       action.scale = Math.max(0.5, Math.min(3, (Number(snapshot.scale) || 1) + Math.max(dx, dy) / 260));
+    } else if (action.type === "stamp") {
+      action.size = Math.max(0.4, Math.min(2.5, (Number(snapshot.size) || 1) + Math.max(dx, dy) / 300));
+      imageMarkup.stampSize = action.size;
+      action.updatedAt = nowIso();
+      renderImageMarkupStampStatus();
     }
     renderImageMarkup();
     return;

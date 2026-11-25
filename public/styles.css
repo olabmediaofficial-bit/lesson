@@ -5731,6 +5731,47 @@ dialog::backdrop {
   font-size: 15px;
 }
 
+.image-markup-chord-stamps { position: relative; }
+
+.image-markup-chord-stamps summary {
+  min-height: 34px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 7px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  list-style: none;
+}
+
+.image-markup-chord-stamps summary::-webkit-details-marker { display: none; }
+.image-markup-chord-stamps.active summary { border-color: #ff8a82; background: #c93636; }
+
+.image-markup-chord-stamps > div {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + 7px);
+  left: 0;
+  display: grid;
+  width: max-content;
+  min-width: 150px;
+  max-width: min(280px, 75vw);
+  max-height: 240px;
+  gap: 4px;
+  overflow: auto;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: #2d2926;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
+}
+
+.image-markup-chord-stamps > div button { width: 100%; text-align: left; }
+.image-markup-chord-stamps > div button.active { border-color: #ff8a82; background: #c93636; }
+.image-markup-chord-stamps > div span { padding: 8px; color: rgba(255, 255, 255, 0.72); }
+
 .image-markup-stamp-status {
   display: inline-grid;
   min-width: 38px;
@@ -5952,6 +5993,39 @@ dialog::backdrop {
   border-color: transparent;
   background: transparent;
   box-shadow: none;
+}
+
+.image-markup-stamp.stamp-chord {
+  width: 48px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.image-markup-stamp.stamp-chord img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border: 1px solid rgba(173, 24, 34, 0.72);
+  border-radius: 2px;
+  background: #fffaf4;
+}
+
+.image-markup-stamp-resize {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 18px !important;
+  min-width: 18px !important;
+  height: 18px;
+  min-height: 18px !important;
+  padding: 0 !important;
+  border: 3px solid #3189e8 !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  cursor: nwse-resize;
 }
 
 .theory-reading-page {
